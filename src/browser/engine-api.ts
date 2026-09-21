@@ -8,7 +8,14 @@
  */
 
 import { SimulationEngine } from '../sim/engine.js';
-import { STRATEGIES, type StrategyName } from '../sim/operator.js';
+import {
+  DECISION_CATEGORIES, STRATEGIES, allAutopilot,
+  type AutopilotState, type DecisionCategory, type StrategyName,
+} from '../sim/operator.js';
+import {
+  RACK_ORDER_SIZES, applyAction, enumerateActions, hallName,
+  type ActionResult, type PlayerAction,
+} from '../sim/player.js';
 import type { AnnualReport } from '../sim/report.js';
 import type { AnnualScore, DiagnosticEntry } from '../state/types.js';
 import { buildBrowserRegistry, type BundledContent } from './registry.js';
@@ -65,44 +72,6 @@ export interface YearResult {
   readonly score: AnnualScore;
 }
 
-export interface CampaignRun {
-  readonly totalYears: number;
-  readonly totalTicks: number;
-  /** Ticks still to run. */
-  remainingTicks(): number;
-  /**
-   * Advances at most `ticks` and returns any years that closed during the call.
-   *
-   * Finer than a year: the console advances in small slices so the progress bar
-   * moves and the page stays responsive, and collects a year's report on the
-   * slice where it closes.
-   */
-  advance(ticks: number): YearResult[];
-  /** Objective progress against the most recently closed year. */
-  objectives(): ObjectiveResult[];
-  diagnostics(): DiagnosticEntry[];
-  /** A description of the operation as it stands, for the fleet panel. */
-  fleet(): FleetSummary;
-}
-
-export interface FleetSummary {
-  readonly halls: ReadonlyArray<{
-    readonly id: string;
-    readonly cooling: string;
-    readonly racks: number;
-    readonly capacity: number;
-    readonly inletTempC: number;
-    readonly throttle01: number;
-    readonly condition01: number;
-    readonly underConstruction: boolean;
-  }>;
-  readonly hardware: ReadonlyArray<{ readonly name: string; readonly racks: number }>;
-  readonly power: ReadonlyArray<{ readonly name: string; readonly capacityMw: number; readonly clean: boolean }>;
-  readonly contracts: ReadonlyArray<{ readonly name: string; readonly computeUnits: number; readonly workload: string }>;
-  readonly research: ReadonlyArray<{ readonly name: string; readonly branch: string; readonly tier: number }>;
-  readonly researching: string | null;
-}
-
 function describeScenarios(): ScenarioSummary[] {
   const summaries: ScenarioSummary[] = [];
   for (const scenario of registry.all('scenarios').values()) {
@@ -145,6 +114,7 @@ function describeScenarios(): ScenarioSummary[] {
   return summaries.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Resolves a dotted objective metric against an annual report. */
 function readMetric(report: AnnualReport, metric: string): number | null {
   let current: unknown = report;
   for (const part of metric.split('.')) {
@@ -164,36 +134,294 @@ function compare(value: number, comparison: string, target: number): boolean {
   }
 }
 
-function createRun(scenarioId: string, seed: string, strategy: StrategyName, years: number): CampaignRun {
-  const engine = new SimulationEngine(registry, { scenarioId, campaignSeed: seed, strategy });
-  const ticksPerYear = engine.clock.ticksForDays(365.25);
-  let reported = 0;
+export interface TurnAlert {
+  readonly severity: 'critical' | 'serious' | 'warning' | 'good';
+  readonly title: string;
+  readonly detail: string;
+}
 
+export interface TurnSummary {
+  /** Simulated date at the end of the turn. */
+  readonly dateIso: string;
+  readonly month: number;
+  readonly year: number;
+  /** Years that closed during this turn, with their scored reports. */
+  readonly closedYears: YearResult[];
+  /** What happened that the player should know about. */
+  readonly alerts: TurnAlert[];
+  /** Diagnostics emitted during this turn. */
+  readonly log: DiagnosticEntry[];
+  readonly finished: boolean;
+}
+
+export interface Dashboard {
+  readonly cash: number;
+  readonly debt: number;
+  readonly budget: number;
+  readonly reputation: number;
+  readonly trust: number;
+  readonly researchPoints: number;
+  readonly researching: string | null;
+  readonly researchProgress01: number;
+  readonly itCapacityMw: number;
+  readonly rackCount: number;
+  readonly contractCount: number;
+  readonly committedUnits: number;
+  readonly staff: number;
+  /** Live plant readings, so the player can see a hall in trouble now. */
+  readonly ambientC: number;
+  readonly worstInletC: number;
+  readonly throttling: boolean;
+  readonly gridAvailable: boolean;
+  readonly activeEvents: ReadonlyArray<{ name: string; mitigation: string }>;
+}
+
+export interface CampaignRun {
+  readonly totalYears: number;
+  readonly totalTicks: number;
+  remainingTicks(): number;
+  /** Advances one simulated month and reports what happened. */
+  advanceMonth(): TurnSummary;
+  /** Advances without stopping, for players who want to hand it back. */
+  advanceYear(): TurnSummary;
+  actions(): PlayerAction[];
+  act(actionId: string, quantity?: number): ActionResult;
+  autopilot(): AutopilotState;
+  setAutopilot(category: DecisionCategory, enabled: boolean): void;
+  dashboard(): Dashboard;
+  objectives(): ObjectiveResult[];
+  diagnostics(): DiagnosticEntry[];
+  fleet(): FleetSummary;
+  years(): YearResult[];
+}
+
+export interface FleetSummary {
+  readonly halls: ReadonlyArray<{
+    readonly id: string;
+    readonly cooling: string;
+    readonly racks: number;
+    readonly capacity: number;
+    readonly inletTempC: number;
+    readonly throttle01: number;
+    readonly condition01: number;
+    readonly underConstruction: boolean;
+  }>;
+  readonly hardware: ReadonlyArray<{ readonly name: string; readonly racks: number }>;
+  readonly power: ReadonlyArray<{ readonly name: string; readonly capacityMw: number; readonly clean: boolean }>;
+  readonly contracts: ReadonlyArray<{ readonly name: string; readonly computeUnits: number; readonly workload: string }>;
+  readonly research: ReadonlyArray<{ readonly name: string; readonly branch: string; readonly tier: number }>;
+  readonly researching: string | null;
+}
+
+function createRun(scenarioId: string, seed: string, strategy: StrategyName, years: number,
+                   manual: boolean): CampaignRun {
+  const engine = new SimulationEngine(registry, {
+    scenarioId, campaignSeed: seed, strategy,
+    autopilot: allAutopilot(!manual),
+  });
+  const context = engine.context;
+  const operator = engine.operator;
+  const ticksPerYear = engine.clock.ticksForDays(365.25);
+  const ticksPerMonth = engine.clock.ticksForDays(30.44);
   const totalTicks = ticksPerYear * years;
   let ticksRun = 0;
+  let reported = 0;
+  const collected: YearResult[] = [];
+
+  function collectYears(): YearResult[] {
+    const closed: YearResult[] = [];
+    while (reported < engine.annualReports.length && reported < engine.state.annualScores.length) {
+      const report = engine.annualReports[reported];
+      const score = engine.state.annualScores[reported];
+      if (!report || !score) break;
+      closed.push({ report, score });
+      collected.push({ report, score });
+      reported += 1;
+    }
+    return closed;
+  }
+
+  /**
+   * What the player needs to know from the month just simulated.
+   *
+   * Built from the diagnostics this turn plus the state they left behind, so an
+   * alert always points at something the player can look up in the log.
+   */
+  function buildAlerts(log: DiagnosticEntry[], closed: YearResult[]): TurnAlert[] {
+    const alerts: TurnAlert[] = [];
+    const company = engine.state.company;
+
+    const throttling = engine.state.facilities.flatMap((f) => f.halls)
+      .filter((hall) => hall.throttle01 > 0.02);
+    if (throttling.length > 0) {
+      const worst = throttling.reduce((a, b) => (a.throttle01 > b.throttle01 ? a : b));
+      alerts.push({
+        severity: worst.throttle01 > 0.4 ? 'critical' : 'serious',
+        title: `${throttling.length} hall${throttling.length > 1 ? 's' : ''} throttling`,
+        detail: `Inlet ${worst.inletTempC.toFixed(0)} \u00b0C is above the throttle point, so load is being shed. `
+          + 'Retrofit to denser cooling, or stop adding racks until it recovers.',
+      });
+    }
+
+    const breaches = log.filter((entry) => entry.kind === 'sla.breach');
+    if (breaches.length > 0) {
+      alerts.push({
+        severity: 'critical',
+        title: `${breaches.length} SLA breach${breaches.length > 1 ? 'es' : ''}`,
+        detail: 'Contracted capacity went unserved. Penalties are charged against the month\u2019s revenue '
+          + 'and reputation falls, which closes off the better contracts.',
+      });
+    }
+
+    const failures = log.filter((entry) => entry.kind.indexOf('failure.') === 0);
+    if (failures.length >= 3) {
+      alerts.push({
+        severity: 'warning',
+        title: `${failures.length} equipment failures`,
+        detail: 'Maintenance clears the backlog with the cash and staff it has. A growing backlog raises '
+          + 'the hazard on everything else.',
+      });
+    }
+
+    for (const active of engine.state.activeEvents) {
+      const definition = registry.all('events').get(active.definitionId);
+      if (!definition) continue;
+      if (active.startTick < engine.state.meta.tickIndex - ticksPerMonth) continue;
+      alerts.push({
+        severity: definition.eventClass === 'opportunity' ? 'good' : 'serious',
+        title: definition.name,
+        detail: `${definition.description ?? ''} ${definition.mitigation}`.trim(),
+      });
+    }
+
+    if (company.cash <= 0) {
+      alerts.push({
+        severity: 'critical',
+        title: 'Out of cash',
+        detail: 'Operating costs are being carried on credit, which trips the insolvency gate and caps '
+          + 'this year\u2019s rating at C however well everything else goes.',
+      });
+    } else if (operator.budget(context) <= 0) {
+      alerts.push({
+        severity: 'warning',
+        title: 'No free capital',
+        detail: 'Cash is inside the reserve the operator holds against running costs. Nothing can be '
+          + 'ordered until revenue rebuilds it.',
+      });
+    }
+
+    for (const year of closed) {
+      alerts.push({
+        severity: year.score.rating === 'D' ? 'critical'
+          : year.score.rating === 'C' ? 'warning' : 'good',
+        title: `${year.report.year} closed: ${year.score.rating} (${year.score.overall.toFixed(1)})`,
+        detail: `${year.score.label}. PUE ${year.report.environment.pue?.toFixed(3) ?? 'n/a'}, `
+          + `availability ${(year.report.reliability.availability01 * 100).toFixed(2)}%, `
+          + `margin ${(year.report.financial.operatingMargin01 * 100).toFixed(0)}%.`,
+      });
+    }
+
+    // Only raise the contract market when there is something the fleet could
+    // actually take on. "Six offers on the table" every month, most of them
+    // beyond what the halls can serve, teaches the player to ignore alerts.
+    if (!operator.autopilotState().contracts) {
+      let signable = 0;
+      for (const offer of engine.state.contractOffers) {
+        const definition = registry.contract(offer.definitionId, offer.instanceId);
+        if (definition.minimumReputation > engine.state.company.reputation) continue;
+        if (!definition.requiredTechnologies.every((id) => engine.state.research.completed.includes(id))) continue;
+        const headroom = operator.servableFor(context, definition.workloadId) * 0.85
+          - operator.reservedFor(context, definition.workloadId);
+        if (offer.computeUnits <= headroom) signable += 1;
+      }
+      if (signable > 0) {
+        alerts.push({
+          severity: 'good',
+          title: `${signable} contract${signable > 1 ? 's' : ''} you can serve`,
+          detail: 'Your fleet has the capacity for these today. Offers leave the table after about '
+            + 'three months, and capacity you do not sell earns nothing.',
+        });
+      }
+    }
+
+    return alerts;
+  }
+
+  function advance(ticks: number): TurnSummary {
+    const before = engine.state.diagnostics.length;
+    const budget = Math.min(ticks, totalTicks - ticksRun);
+    if (budget > 0) ticksRun += engine.advanceTicks(budget);
+
+    const log = engine.state.diagnostics.slice(before);
+    const closed = collectYears();
+    const time = new Date(engine.state.meta.gameTimeIso);
+    return {
+      dateIso: engine.state.meta.gameTimeIso,
+      month: time.getUTCMonth() + 1,
+      year: time.getUTCFullYear(),
+      closedYears: closed,
+      alerts: buildAlerts(log, closed),
+      log,
+      finished: totalTicks - ticksRun <= 0,
+    };
+  }
 
   return {
     totalYears: years,
     totalTicks,
     remainingTicks: () => Math.max(0, totalTicks - ticksRun),
-    advance(ticks: number): YearResult[] {
-      const budget = Math.min(ticks, totalTicks - ticksRun);
-      if (budget <= 0) return [];
-      ticksRun += engine.advanceTicks(budget);
-
-      const closed: YearResult[] = [];
-      while (reported < engine.annualReports.length && reported < engine.state.annualScores.length) {
-        const report = engine.annualReports[reported];
-        const score = engine.state.annualScores[reported];
-        if (!report || !score) break;
-        closed.push({ report, score });
-        reported += 1;
-      }
-      return closed;
+    advanceMonth: () => advance(ticksPerMonth),
+    advanceYear: () => advance(ticksPerYear),
+    actions: () => enumerateActions(context, operator),
+    act: (actionId, quantity) => applyAction(context, operator, actionId, quantity),
+    autopilot: () => operator.autopilotState(),
+    setAutopilot: (category, enabled) => operator.setAutopilot(category, enabled),
+    years: () => collected.slice(),
+    dashboard(): Dashboard {
+      const state = engine.state;
+      const halls = state.facilities.flatMap((f) => f.halls);
+      const worstInlet = halls.reduce((worst, hall) => Math.max(worst, hall.inletTempC), 0);
+      const activeTech = state.research.activeId
+        ? registry.technology(state.research.activeId, 'console')
+        : null;
+      return {
+        cash: state.company.cash,
+        debt: state.company.debt,
+        budget: operator.budget(context),
+        reputation: state.company.reputation,
+        trust: state.company.communityTrust,
+        researchPoints: state.company.researchPoints,
+        researching: activeTech ? activeTech.name : null,
+        researchProgress01: activeTech
+          ? Math.min(1, state.research.activeProgressRP / Math.max(1, activeTech.research.costRP))
+          : 0,
+        itCapacityMw: halls.reduce((mw, hall) => {
+          if (hall.constructionProgress01 < 1) return mw;
+          return mw + hall.rackGroups.reduce((kw, group) => kw + group.count
+            * context.balance.baseRackPowerKw
+            * registry.hardware(group.hardwareId, group.instanceId).powerFactor, 0) / 1000;
+        }, 0),
+        rackCount: halls.reduce((total, hall) =>
+          total + hall.rackGroups.reduce((n, group) => n + group.count, 0), 0),
+        contractCount: state.contracts.length,
+        committedUnits: state.contracts.reduce((total, c) => total + c.computeUnits, 0),
+        staff: Math.round(state.company.staffCount),
+        ambientC: state.world.weather.dryBulbC,
+        worstInletC: worstInlet,
+        throttling: halls.some((hall) => hall.throttle01 > 0.02),
+        gridAvailable: state.world.market.gridAvailable,
+        activeEvents: state.activeEvents.map((active) => {
+          const definition = registry.all('events').get(active.definitionId);
+          return {
+            name: definition ? definition.name : active.definitionId,
+            mitigation: definition ? definition.mitigation : '',
+          };
+        }),
+      };
     },
     objectives(): ObjectiveResult[] {
       const latest = engine.annualReports.at(-1);
-      return engine.context.scenario.objectives.map((objective) => {
+      return context.scenario.objectives.map((objective) => {
         const value = latest ? readMetric(latest, objective.metric) : null;
         return {
           description: objective.description,
@@ -218,7 +446,7 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
             hardware.set(name, (hardware.get(name) ?? 0) + group.count);
           }
           halls.push({
-            id: hall.instanceId.replace(/^hall\.region\./, ''),
+            id: hallName(hall),
             cooling: registry.cooling(hall.coolingId, hall.instanceId).name,
             racks,
             capacity: hall.rackCapacity,
@@ -229,12 +457,10 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
           });
         }
       }
-
       const power = engine.state.facilities.flatMap((f) => f.powerAssets).map((asset) => {
         const definition = registry.power(asset.definitionId, asset.instanceId);
         return { name: definition.name, capacityMw: asset.capacityMw, clean: definition.clean };
       });
-
       const contracts = engine.state.contracts.map((contract) => {
         const definition = registry.contract(contract.definitionId, contract.instanceId);
         return {
@@ -243,12 +469,10 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
           workload: registry.workload(definition.workloadId, definition.id).name,
         };
       });
-
       const research = engine.state.research.completed.map((id) => {
         const technology = registry.technology(id, 'console');
         return { name: technology.name, branch: technology.branch, tier: technology.tier };
       });
-
       const activeId = engine.state.research.activeId;
       return {
         halls,
@@ -277,6 +501,8 @@ const api = {
     })),
   }),
   createRun,
+  decisionCategories: DECISION_CATEGORIES,
+  rackOrderSizes: RACK_ORDER_SIZES,
 };
 
 (globalThis as unknown as { DCT: typeof api }).DCT = api;

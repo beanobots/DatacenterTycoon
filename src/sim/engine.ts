@@ -39,7 +39,10 @@ import { FinanceSystem } from './systems/finance.js';
 import { CommunitySystem } from './systems/community.js';
 import { ContractMarketSystem } from './systems/contract-market.js';
 import { AnnualScoringSystem } from './systems/annual-scoring.js';
-import { OperatorSystem, STRATEGIES, type StrategyName } from './operator.js';
+import {
+  OperatorSystem, STRATEGIES, allAutopilot,
+  type AutopilotState, type StrategyName,
+} from './operator.js';
 import type { AnnualReport } from './report.js';
 
 /** Diagnostics kept in memory. Older entries are dropped, not persisted twice. */
@@ -50,6 +53,12 @@ export interface EngineOptions {
   readonly campaignSeed: string;
   readonly minutesPerTick?: number;
   readonly strategy?: StrategyName;
+  /**
+   * Which decisions the built-in heuristic still makes. Everything switched
+   * off is the player's to decide through `src/sim/player.ts`; the default is
+   * a fully autonomous operator, which is what the headless runs need.
+   */
+  readonly autopilot?: AutopilotState;
   /** Restores a saved campaign instead of starting a new one. */
   readonly restoreState?: GameState;
 }
@@ -60,6 +69,8 @@ export class SimulationEngine {
   private readonly systems: readonly ISimulationSystem[];
   private readonly scoringSystem: AnnualScoringSystem;
   readonly strategy: StrategyName;
+  /** The operations layer, shared by the heuristic and any player driving it. */
+  readonly operator: OperatorSystem;
 
   constructor(registry: ContentRegistry, options: EngineOptions) {
     const scenario: ScenarioDefinition = registry.scenario(options.scenarioId, '<engine options>');
@@ -98,6 +109,10 @@ export class SimulationEngine {
     this.context = context;
     rebuildModifiers(context);
 
+    this.operator = new OperatorSystem(
+      STRATEGIES[this.strategy], options.autopilot ?? allAutopilot(true),
+    );
+
     this.systems = [
       // Pipeline, chapter 9, steps 1-10.
       new WeatherSystem(),
@@ -118,7 +133,7 @@ export class SimulationEngine {
       new FinanceSystem(),
       new CommunitySystem(),
       new ContractMarketSystem(),
-      new OperatorSystem(STRATEGIES[this.strategy]),
+      this.operator,
       this.scoringSystem,
     ].sort((a, b) => a.order - b.order);
 

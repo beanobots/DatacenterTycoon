@@ -48,6 +48,14 @@ Every number decomposes. `--diagnostics 40` prints the event stream behind it �
 grid outages, thermal throttling, rack failures, retrofits, research, SLA
 breaches — each with the values that produced it.
 
+## Playing it
+
+`npm run build:web` bundles the engine for the browser and writes `web/`. Serve
+that directory and open it, or use the published artifact. Each month the
+simulation stops and hands you the decisions the autopilot would otherwise make:
+research, contracts, hardware, halls, cooling retrofits and power. Untick a
+category's autopilot to take it over, tick it to hand it back.
+
 ## Commands
 
 | Command | What it does |
@@ -88,6 +96,13 @@ branches, 17 events, 10 contract archetypes, 4 regions, 4 scenarios.
 bands, the anti-exploit gates, and a per-component decomposition for every
 number.
 
+**A playable turn loop.** `src/sim/player.ts` enumerates what the operator could
+do this month and applies the choice; `src/sim/operator.ts` is now an operations
+layer with an optional heuristic on top, switchable per decision category. A
+player and the autopilot call the same operations, so a hall the player builds
+is priced, aged and failed exactly like one the heuristic builds. The browser
+build in `web/` is the game: advance a month, read what happened, decide.
+
 **Determinism and saves** — nine independent counter-based random streams,
 persisted stream state, content hashing, and save migrations across three
 schema versions.
@@ -103,9 +118,15 @@ schema versions.
   reserving compute occupies it whether or not their jobs run; utilisation
   decides the power those units draw. That is what makes a disaster-recovery
   tenant cheap to host and an AI training cluster expensive.
-- **The operator policy is not a game rule.** `src/sim/operator.ts` stands in
-  for player input so a headless campaign does something. Four presets weight
-  the same decisions differently. A UI would replace it.
+- **The operator is an autopilot, not a rule.** `src/sim/operator.ts` holds the
+  mechanics of running the business plus a heuristic that decides when to use
+  them. Hand any category to the player and the heuristic stops acting on it;
+  the mechanics are unchanged. Four strategy presets weight the heuristic's
+  judgement differently.
+- **Every action states its trade-off.** The first design pillar is that a
+  technology improves at most two outcomes while adding a cost or constraint.
+  That is only a pillar if the player sees the other half before committing, so
+  the action list carries it as text.
 
 See `docs/ARCHITECTURE.md` for the layering and `docs/MODIFIER-TARGETS.md` for
 the effect namespace that technologies, events and policies write against.

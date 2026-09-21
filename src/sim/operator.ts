@@ -83,12 +83,53 @@ const DEBT_TO_REVENUE_CEILING = 2.5;
 /** Purchases within this many ticks merge into one group, bounding group count. */
 const GROUP_MERGE_TICKS = 90 * 24 * 4;
 
+/**
+ * The decisions a player can take over from the autopilot.
+ *
+ * Retirement and maintenance are absent on purpose: hardware reaching end of
+ * life and plant needing repair are consequences, not choices, and the systems
+ * that own them run regardless of who is deciding.
+ */
+export type DecisionCategory = 'research' | 'contracts' | 'capacity' | 'cooling' | 'power';
+
+export const DECISION_CATEGORIES: readonly DecisionCategory[] =
+  ['research', 'contracts', 'capacity', 'cooling', 'power'];
+
+export type AutopilotState = Record<DecisionCategory, boolean>;
+
+export function allAutopilot(enabled: boolean): AutopilotState {
+  return {
+    research: enabled, contracts: enabled, capacity: enabled, cooling: enabled, power: enabled,
+  };
+}
+
 export class OperatorSystem implements ISimulationSystem {
   readonly name = 'operator';
   readonly order = 130;
   private nextInstance = 0;
+  /**
+   * Which decisions the heuristic still makes. A category switched off is the
+   * player's: the autopilot stops acting on it and the action list offers it up
+   * instead. Both paths run the same operations underneath, so a hall the
+   * player builds costs and behaves exactly like one the autopilot builds.
+   */
+  private autopilot: AutopilotState;
 
-  constructor(private readonly strategy: StrategyWeights) {}
+  constructor(private readonly strategy: StrategyWeights, autopilot: AutopilotState = allAutopilot(true)) {
+    this.autopilot = { ...autopilot };
+  }
+
+  setAutopilot(category: DecisionCategory, enabled: boolean): void {
+    this.autopilot[category] = enabled;
+  }
+
+  autopilotState(): AutopilotState {
+    return { ...this.autopilot };
+  }
+
+  strategyWeights(): StrategyWeights {
+    return this.strategy;
+  }
 
   initialize(context: SimulationContext): void {
     // Opening move: one hall, the best cooling available at the start, enough
@@ -111,18 +152,187 @@ export class OperatorSystem implements ISimulationSystem {
       * context.balance.baseRackPowerKw / 1000 * 1.8);
     this.buildPower(context, 'power.grid', Math.min(openingMw, context.region.grid.capacityMw), true);
     this.buildPower(context, 'power.diesel_backup', Math.max(1, openingMw * 0.3), true);
-    this.signContracts(context, 0);
-    this.chooseResearch(context);
+
+    // The opening hall, its racks and the grid connection are the starting
+    // position, not a decision - a campaign that begins on bare land has no
+    // operation to reason about. The first contract and the first research
+    // project ARE decisions, so they are only made here for an autonomous
+    // operator; a player is handed them on turn one.
+    if (this.autopilot.contracts) this.signContracts(context, 0);
+    if (this.autopilot.research) this.chooseResearch(context);
   }
 
   tick(tick: SimulationTick, context: SimulationContext): void {
     if (!tick.cadence.month) return;
-    this.chooseResearch(context);
-    this.signContracts(context, tick.index);
+    if (this.autopilot.research) this.chooseResearch(context);
+    if (this.autopilot.contracts) this.signContracts(context, tick.index);
+    // Contracts reaching term renew or lapse whoever is deciding: that is the
+    // customer's call, not the operator's.
+    else this.resolveExpiringContracts(context, tick.index);
     this.retireEndOfLife(context, tick);
-    this.retrofitCooling(context, tick);
-    this.expand(context, tick);
-    this.investInPower(context);
+    if (this.autopilot.cooling) this.retrofitCooling(context, tick);
+    if (this.autopilot.capacity) this.expand(context, tick);
+    if (this.autopilot.power) this.investInPower(context);
+  }
+
+  // ---------------------------------------------------------- operations
+  /*
+   * Everything below is the operations layer: the mechanics of running the
+   * business, with no judgement about WHEN to do them. The heuristic above
+   * calls these after deciding; a player calls the same ones through
+   * src/sim/player.ts. Keeping one implementation is what guarantees a
+   * player-built hall costs, ages and fails exactly like an autopilot-built
+   * one - two code paths would drift, and the simulation would quietly start
+   * treating the player differently.
+   */
+
+  /** Free cash the operator may commit this month. */
+  budget(context: SimulationContext): number {
+    return this.availableBudget(context);
+  }
+
+  /** Free cash after setting aside what the fleet needs to stay its size. */
+  discretionary(context: SimulationContext): number {
+    return this.discretionaryBudget(context);
+  }
+
+  /** Price of one rack of this hardware, including any technology effects. */
+  rackPrice(context: SimulationContext, hardware: HardwareDefinition): number {
+    return context.balance.baseRackPurchaseCost * hardware.purchaseFactor
+      * context.modifiers.value('hardware.purchaseCost', 1);
+  }
+
+  /** Price of a hall shell of `racks` capacity with this cooling technology. */
+  priceHall(context: SimulationContext, racks: number, cooling: CoolingTechnologyDefinition): number {
+    return this.hallCost(context, racks, cooling);
+  }
+
+  /** Price of `mw` of a power source. */
+  pricePower(context: SimulationContext, definitionId: string, mw: number): number {
+    return this.powerCost(context, definitionId, mw);
+  }
+
+  /** Price of re-plumbing a hall to a different cooling technology. */
+  priceRetrofit(context: SimulationContext, hall: HallState, cooling: CoolingTechnologyDefinition): number {
+    const current = context.registry.cooling(hall.coolingId, hall.instanceId);
+    const capacityMw = this.requiredCoolingKw(context, hall) / 1000;
+    const newPlant = capacityMw * context.balance.baseCoolingCapexPerMw * cooling.capexFactor;
+    const oldResidual = (hall.ratedCoolingKw / 1000)
+      * context.balance.baseCoolingCapexPerMw * current.capexFactor * hall.condition01 * 0.4;
+    return Math.max(newPlant * 0.25, newPlant - oldResidual) * RETROFIT_PREMIUM;
+  }
+
+  /** Rack power this hall's cooling can serve, kW. */
+  coolingCeilingKw(context: SimulationContext, hall: HallState): number {
+    return context.registry.cooling(hall.coolingId, hall.instanceId).densityKwPerRack
+      * context.modifiers.value('cooling.densityKwPerRack', 1);
+  }
+
+  /** Orders racks into a hall. Returns how many were actually installed. */
+  orderRacks(context: SimulationContext, hall: HallState, hardware: HardwareDefinition, count: number): number {
+    const installed = hall.rackGroups.reduce((total, group) => total + group.count, 0);
+    const space = Math.max(0, hall.rackCapacity - installed);
+    const wanted = Math.min(count, space);
+    if (wanted <= 0) return 0;
+    const price = this.rackPrice(context, hardware);
+    if (!this.commit(context, wanted * price, context.state.meta.tickIndex)) return 0;
+    this.installRacks(context, hall, hardware, wanted);
+    context.diagnostic('build.racks',
+      `Installed ${wanted} racks of ${hardware.name} in hall ${hall.instanceId}`,
+      { tick: context.state.meta.tickIndex, hardwareId: hardware.id, racks: wanted });
+    return wanted;
+  }
+
+  /** Starts construction of a hall shell. Returns false if it was not affordable. */
+  orderHall(context: SimulationContext, racks: number, cooling: CoolingTechnologyDefinition): boolean {
+    const cost = this.hallCost(context, racks, cooling);
+    if (!this.commit(context, cost, context.state.meta.tickIndex)) return false;
+    this.buildHall(context, context.state.meta.tickIndex, racks, cooling);
+    context.diagnostic('build.hall', `Started construction of a ${racks}-rack hall`, {
+      tick: context.state.meta.tickIndex, racks, cooling: cooling.id, cost: Math.round(cost),
+    });
+    return true;
+  }
+
+  /** Re-plumbs a hall to a different cooling technology. */
+  orderRetrofit(context: SimulationContext, hall: HallState, cooling: CoolingTechnologyDefinition): boolean {
+    const current = context.registry.cooling(hall.coolingId, hall.instanceId);
+    const cost = this.priceRetrofit(context, hall, cooling);
+    if (!this.commit(context, cost, context.state.meta.tickIndex)) return false;
+
+    hall.coolingId = cooling.id;
+    hall.ratedCoolingKw = Math.max(hall.ratedCoolingKw, this.requiredCoolingKw(context, hall));
+    hall.condition01 = Math.min(1, hall.condition01 * 0.5 + 0.5);
+    hall.coolingFailed = false;
+    context.diagnostic('build.retrofit',
+      `Retrofitted hall ${hall.instanceId} from ${current.name} to ${cooling.name}`,
+      {
+        tick: context.state.meta.tickIndex, from: current.id, to: cooling.id,
+        cost: Math.round(cost), ratedCoolingKw: Math.round(hall.ratedCoolingKw),
+      });
+    return true;
+  }
+
+  /** Commissions power capacity. Grid import is available immediately. */
+  orderPower(context: SimulationContext, definitionId: string, mw: number): boolean {
+    const before = context.state.facilities[0]?.powerAssets.length ?? 0;
+    const beforeMw = this.installedPowerMw(context, definitionId);
+    this.buildPower(context, definitionId, mw, definitionId === 'power.grid');
+    const after = context.state.facilities[0]?.powerAssets.length ?? 0;
+    return after > before || this.installedPowerMw(context, definitionId) > beforeMw;
+  }
+
+  private installedPowerMw(context: SimulationContext, definitionId: string): number {
+    let mw = 0;
+    for (const facility of context.state.facilities) {
+      for (const asset of facility.powerAssets) {
+        if (asset.definitionId === definitionId) mw += asset.capacityMw;
+      }
+    }
+    return mw;
+  }
+
+  /** Signs a specific offer from the contract market. */
+  signOffer(context: SimulationContext, offerInstanceId: string): boolean {
+    const state = context.state;
+    const offer = state.contractOffers.find((candidate) => candidate.instanceId === offerInstanceId);
+    if (!offer) return false;
+    const definition = context.registry.contract(offer.definitionId, offer.instanceId);
+
+    state.contracts.push({
+      instanceId: `contract.${offer.instanceId}`,
+      definitionId: offer.definitionId,
+      computeUnits: offer.computeUnits,
+      pricePerComputeUnitHour: offer.pricePerComputeUnitHour,
+      termMonths: offer.termMonths,
+      startTick: state.meta.tickIndex,
+      endTick: state.meta.tickIndex + context.clock.ticksForDays(offer.termMonths * 30.44),
+      demandedUnitHours: 0, servedUnitHours: 0,
+      lifetimeDemandedUnitHours: 0, lifetimeServedUnitHours: 0,
+      revenueThisPeriod: 0, penaltiesThisPeriod: 0, backlogUnitHours: 0,
+    });
+    state.contractOffers = state.contractOffers.filter((c) => c.instanceId !== offerInstanceId);
+    context.diagnostic('contract.signed', `Signed ${definition.name}`, {
+      tick: state.meta.tickIndex, contractId: definition.id, computeUnits: offer.computeUnits,
+      pricePerComputeUnitHour: Number(offer.pricePerComputeUnitHour.toFixed(4)),
+      termMonths: offer.termMonths,
+    });
+    return true;
+  }
+
+  /** Compute units the fleet can deliver for a workload, exposed for the UI. */
+  servableFor(context: SimulationContext, workloadId: string): number {
+    return this.servableUnits(context, workloadId);
+  }
+
+  /** Compute units already committed against a workload. */
+  reservedFor(context: SimulationContext, workloadId: string): number {
+    let units = 0;
+    for (const contract of context.state.contracts) {
+      const definition = context.registry.contract(contract.definitionId, contract.instanceId);
+      if (definition.workloadId === workloadId) units += contract.computeUnits;
+    }
+    return units;
   }
 
   // -------------------------------------------------------------- research
@@ -462,9 +672,10 @@ export class OperatorSystem implements ISimulationSystem {
    * consume a profitable operator's entire balance and leave nothing to buy the
    * racks that were the reason for building it.
    */
-  private buildHall(context: SimulationContext, tick: number, racks: number): void {
+  private buildHall(context: SimulationContext, tick: number, racks: number,
+                    coolingChoice?: CoolingTechnologyDefinition): void {
     const state = context.state;
-    const cooling = this.chooseCooling(context);
+    const cooling = coolingChoice ?? this.chooseCooling(context);
     let facility = state.facilities[0];
     if (!facility) {
       facility = {

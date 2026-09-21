@@ -70,6 +70,7 @@
     -webkit-font-smoothing: antialiased;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   h1, h2, h3 { margin: 0; text-wrap: balance; }
   .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
@@ -250,98 +251,209 @@
     * { animation: none !important; transition: none !important; }
   }
 </style>
+<style>
+  /* ---------- game shell ---------- */
+  .turnbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+  .clock { display: flex; flex-direction: column; gap: 1px; margin-right: auto; }
+  .clock .date { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+  .clock .sub { font-size: 11px; color: var(--ink-3); }
+  button.step {
+    font-family: var(--sans); font-size: 13px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 1px solid transparent; border-radius: 6px;
+    padding: 9px 18px; min-height: 38px; cursor: pointer;
+  }
+  button.step.ghost { background: transparent; color: var(--ink-2); border-color: var(--rule-strong); font-weight: 500; }
+  button.step:hover:not(:disabled) { filter: brightness(1.08); }
+  button.step.ghost:hover:not(:disabled) { background: var(--panel-sunk); filter: none; }
+  button.step:disabled { opacity: .45; cursor: not-allowed; }
+
+  .hud { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+  .hud .cell { background: var(--panel); padding: 10px 13px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .hud .cell .k { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .hud .cell .v { font-family: var(--mono); font-size: 17px; font-weight: 500; letter-spacing: -.01em; }
+  .hud .cell .s { font-size: 10.5px; color: var(--ink-3); font-family: var(--mono); }
+  .hud .cell.alarm .v { color: var(--critical); }
+
+  .alerts { display: flex; flex-direction: column; gap: 8px; }
+  .alert { display: flex; gap: 11px; padding: 11px 14px; border-radius: 9px; border: 1px solid var(--rule); background: var(--panel); border-left-width: 3px; }
+  .alert.critical { border-left-color: var(--critical); }
+  .alert.serious { border-left-color: var(--serious); }
+  .alert.warning { border-left-color: var(--warning); }
+  .alert.good { border-left-color: var(--good); }
+  .alert .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .alert .ti { font-size: 13px; font-weight: 600; }
+  .alert .de { font-size: 12px; color: var(--ink-2); }
+
+  /* ---------- decisions ---------- */
+  .deck { display: flex; flex-direction: column; gap: 14px; }
+  .cat-block { display: flex; flex-direction: column; gap: 9px; }
+  .cat-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .cat-bar h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+  .cat-bar .count { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .auto {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--ink-3); cursor: pointer; user-select: none;
+  }
+  .auto input { accent-color: var(--accent); width: 14px; height: 14px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 10px; }
+  .act {
+    display: flex; flex-direction: column; gap: 7px; padding: 12px 14px; text-align: left;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 9px;
+    font: inherit; color: inherit; cursor: pointer; min-width: 0;
+  }
+  .act:hover:not(:disabled) { border-color: var(--accent); }
+  .act:disabled { cursor: not-allowed; opacity: .62; }
+  .act .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .act .nm { font-size: 13px; font-weight: 600; min-width: 0; }
+  .act .px { font-family: var(--mono); font-size: 12px; flex: none; color: var(--ink-2); }
+  .act .px.free { color: var(--good); }
+  .act .de { font-size: 11.5px; color: var(--ink-2); }
+  .act .tr { font-size: 11px; color: var(--heat); display: flex; gap: 5px; }
+  .act .tr::before { content: "\2298"; flex: none; }
+  .act .bl { font-size: 11px; color: var(--critical); }
+  .qty { display: flex; gap: 5px; margin-top: 1px; }
+  .qty span { font-size: 10px; color: var(--ink-3); align-self: center; margin-right: 2px; }
+  .qty button {
+    font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 5px; cursor: pointer;
+    background: var(--panel-sunk); border: 1px solid var(--rule-strong); color: var(--ink);
+  }
+  .qty button:hover:not(:disabled) { border-color: var(--accent); }
+  .qty button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 60;
+    background: var(--ink); color: var(--ground); font-size: 13px; font-weight: 500;
+    padding: 10px 18px; border-radius: 999px; box-shadow: var(--shadow); max-width: min(92vw, 520px);
+  }
+  .toast.bad { background: var(--critical); color: #fff; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tab {
+    font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 6px 13px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2); cursor: pointer;
+  }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .gameover { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .gameover h3 { font-size: 18px; font-weight: 600; }
+  .gameover .verdict { font-size: 13px; color: var(--ink-2); max-width: 64ch; }
+
+  @media (max-width: 560px) {
+    .clock .date { font-size: 17px; }
+    .cards { grid-template-columns: 1fr; }
+  }
+</style>
 
 <header>
   <div class="head-in">
-    <div class="brand">
-      <h1>Cold Aisle</h1>
-      <p>DatacenterTycoon simulation console &mdash; deterministic, headless, in your browser</p>
+    <div class="clock">
+      <span class="date" id="clock-date">&mdash;</span>
+      <span class="sub" id="clock-sub">Choose a site to begin</span>
     </div>
-    <div class="controls">
-      <div class="field">
-        <label for="scenario">Site</label>
-        <select id="scenario"></select>
-      </div>
-      <div class="field">
-        <label for="strategy">Strategy</label>
-        <select id="strategy"></select>
-      </div>
-      <div class="field">
-        <label for="seed">Seed</label>
-        <input type="text" id="seed" value="golden" spellcheck="false" autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="years">Years</label>
-        <input type="number" id="years" value="8" min="1" max="25" step="1">
-      </div>
-      <button class="run" id="run" type="button">Run campaign</button>
+    <div class="turnbar" id="turnbar">
+      <button class="step" id="next-month" type="button">Advance month</button>
+      <button class="step ghost" id="next-year" type="button">Advance year</button>
+      <button class="step ghost" id="restart" type="button">New campaign</button>
     </div>
   </div>
   <div class="progress"><i id="bar"></i></div>
 </header>
 
 <div class="wrap">
-  <section id="brief-sec">
-    <div class="brief">
-      <div class="card brief-main">
-        <h3 id="brief-title">Loading site&hellip;</h3>
-        <p id="brief-desc"></p>
-        <div class="tags" id="brief-tags"></div>
+  <section id="setup-sec" hidden>
+    <div class="card brief-main">
+      <h3>Start a campaign</h3>
+      <p>You run the site. Every month the simulation stops and hands you the decisions: what to
+        research, which contracts to take, what hardware to buy, when to build or re-plumb a hall,
+        and where the power comes from. Hand any of it back to the autopilot whenever you like.</p>
+      <div class="setup">
+        <div class="field">
+          <label for="scenario">Site</label>
+          <select id="scenario"></select>
+        </div>
+        <div class="field">
+          <label for="years">Campaign length</label>
+          <select id="years">
+            <option value="5">5 years</option>
+            <option value="8" selected>8 years</option>
+            <option value="12">12 years</option>
+            <option value="15">15 years</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="seed">Seed</label>
+          <input type="text" id="seed" value="first-site" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="assist">Autopilot</label>
+          <select id="assist">
+            <option value="manual" selected>You decide everything</option>
+            <option value="auto">Autopilot decides everything</option>
+          </select>
+        </div>
+        <button class="step" id="begin" type="button">Begin</button>
       </div>
-      <dl class="card site-facts" id="site-facts"></dl>
+      <div class="tags" id="setup-tags"></div>
     </div>
   </section>
 
-  <section>
-    <div class="sec-head">
-      <h2>Final year</h2>
-      <span class="hint" id="strip-hint"></span>
-    </div>
-    <div class="strip" id="strip"></div>
-  </section>
+  <section id="game-sec" hidden>
+    <div class="hud" id="hud"></div>
 
-  <section>
-    <div class="sec-head">
-      <h2>Campaign trend</h2>
-      <span class="hint" id="chart-hint">Hover a panel to read every metric for that year</span>
+    <div style="margin-top:18px" id="alerts-wrap">
+      <div class="sec-head"><h2>Since last month</h2><span class="hint" id="alerts-hint"></span></div>
+      <div class="alerts" id="alerts"></div>
     </div>
-    <div class="panels" id="panels"></div>
-  </section>
 
-  <section>
-    <div class="sec-head">
-      <h2>Annual report</h2>
-      <span class="hint">Select a year to decompose its score</span>
-    </div>
-    <div class="two-col">
-      <div class="card scroll-x">
-        <table id="report-table">
-          <thead id="report-head"></thead>
-          <tbody id="report-body"></tbody>
-        </table>
+    <div style="margin-top:26px">
+      <div class="sec-head">
+        <h2>Your move</h2>
+        <span class="hint" id="deck-hint"></span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
-        <div class="card drawer" id="drawer"></div>
-        <div class="card list" id="objectives"></div>
+      <div class="deck" id="deck"></div>
+    </div>
+
+    <div style="margin-top:30px">
+      <div class="tabs" id="tabs">
+        <button class="tab" type="button" data-tab="site" aria-selected="true">Site</button>
+        <button class="tab" type="button" data-tab="trend" aria-selected="false">Trend</button>
+        <button class="tab" type="button" data-tab="report" aria-selected="false">Annual report</button>
+        <button class="tab" type="button" data-tab="log" aria-selected="false">Log</button>
+      </div>
+
+      <div id="tab-site">
+        <div class="two-col">
+          <div class="fleet" id="fleet" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"></div>
+          <div class="card list" id="objectives"></div>
+        </div>
+      </div>
+
+      <div id="tab-trend" hidden>
+        <div class="panels" id="panels"></div>
+      </div>
+
+      <div id="tab-report" hidden>
+        <div class="two-col">
+          <div class="card scroll-x">
+            <table id="report-table">
+              <thead id="report-head"></thead>
+              <tbody id="report-body"></tbody>
+            </table>
+          </div>
+          <div class="card drawer" id="drawer"></div>
+        </div>
+      </div>
+
+      <div id="tab-log" hidden>
+        <div class="diag-head" id="diag-filters"></div>
+        <div class="card log" id="log" style="margin-top:10px"></div>
       </div>
     </div>
-  </section>
 
-  <section>
-    <div class="sec-head">
-      <h2>The operation</h2>
-      <span class="hint" id="fleet-hint"></span>
-    </div>
-    <div class="fleet" id="fleet"></div>
-  </section>
-
-  <section>
-    <div class="sec-head">
-      <h2>Diagnostics</h2>
-      <span class="hint" id="diag-hint"></span>
-    </div>
-    <div class="diag-head" id="diag-filters"></div>
-    <div class="card log" id="log" style="margin-top:10px"></div>
+    <div class="card gameover" id="gameover" hidden></div>
   </section>
 
   <footer id="footer"></footer>
@@ -353,36 +465,39 @@
   'use strict';
 
   var DCT = window.DCT;
+  var run = null;
   var state = {
-    meta: null, scenarios: [], years: [], objectives: [], fleet: null,
-    diagnostics: [], openYear: null, hover: null, filter: 'all', running: false,
+    meta: null, scenarios: [], years: [], alerts: [], actions: [],
+    dashboard: null, fleet: null, objectives: [], diagnostics: [],
+    openYear: null, hover: null, filter: 'all', tab: 'site', finished: false, busy: false,
   };
 
   var $ = function (id) { return document.getElementById(id); };
-  var el = function (tag, cls, text) {
+  function el(tag, cls, text) {
     var node = document.createElement(tag);
     if (cls) node.className = cls;
     if (text !== undefined && text !== null) node.textContent = String(text);
     return node;
-  };
+  }
 
   // ---------- formatting -------------------------------------------------
-  function money(value) {
-    var abs = Math.abs(value);
-    if (abs >= 1e9) return (value / 1e9).toFixed(2) + 'B';
-    if (abs >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-    if (abs >= 1e3) return (value / 1e3).toFixed(0) + 'k';
-    return value.toFixed(0);
+  function money(v) {
+    var abs = Math.abs(v);
+    if (abs >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+    if (abs >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'k';
+    return '$' + v.toFixed(0);
   }
-  function pct(value, digits) { return (value * 100).toFixed(digits === undefined ? 1 : digits) + '%'; }
-  function num(value, digits) {
-    if (value === null || value === undefined || !isFinite(value)) return 'n/a';
-    return value.toFixed(digits === undefined ? 2 : digits);
+  function pct(v, d) { return (v * 100).toFixed(d === undefined ? 1 : d) + '%'; }
+  function num(v, d) {
+    if (v === null || v === undefined || !isFinite(v)) return 'n/a';
+    return v.toFixed(d === undefined ? 2 : d);
   }
-  function ratingTone(rating) {
-    if (rating === 'S+' || rating === 'S' || rating === 'A') return 'good';
-    if (rating === 'B') return 'warning';
-    if (rating === 'C') return 'serious';
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function ratingTone(r) {
+    if (r === 'S+' || r === 'S' || r === 'A') return 'good';
+    if (r === 'B') return 'warning';
+    if (r === 'C') return 'serious';
     return 'critical';
   }
   function pill(tone, label) {
@@ -392,25 +507,28 @@
     return node;
   }
 
-  // ---------- charts -----------------------------------------------------
+  var toastTimer = null;
+  function toast(message, bad) {
+    var existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    var node = el('div', 'toast' + (bad ? ' bad' : ''), message);
+    document.body.appendChild(node);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { node.remove(); }, 3200);
+  }
+
+  // ---------- charts (single series per panel, own scale) ----------------
   var SVG_NS = 'http://www.w3.org/2000/svg';
   function svgEl(tag, attrs) {
     var node = document.createElementNS(SVG_NS, tag);
-    for (var key in attrs) if (attrs[key] !== null) node.setAttribute(key, String(attrs[key]));
+    for (var k in attrs) if (attrs[k] !== null) node.setAttribute(k, String(attrs[k]));
     return node;
   }
 
-  /**
-   * One single-series line panel. Each metric gets its own scale and its own
-   * panel: putting capacity and PUE on one pair of axes would need two y-scales,
-   * and a dual-axis chart invites exactly the false correlation this console
-   * exists to disprove.
-   */
   function panel(spec) {
     var W = 260, H = 104, L = 38, R = 8, T = 10, B = 18;
     var values = spec.values;
     var card = el('div', 'card panel');
-
     var head = el('div', 'panel-head');
     head.appendChild(el('span', 't', spec.title));
     var readout = el('span', 'r');
@@ -419,74 +537,56 @@
 
     var finite = values.filter(function (v) { return v !== null && isFinite(v); });
     if (finite.length === 0) {
-      card.appendChild(el('div', 'empty', 'No data yet'));
+      card.appendChild(el('div', 'empty', 'No closed year yet'));
       return { node: card, update: function () {} };
     }
 
     var lo = Math.min.apply(null, finite);
     var hi = Math.max.apply(null, finite);
     var dataRange = Math.max(hi - lo, Math.abs(hi) * 0.02, 1e-6);
-    // A target far outside the data's own range would squash the series into a
-    // flat line against the axis, so it moves to the footer instead of the plot.
     var target = spec.target;
     var targetInReach = target !== undefined && target !== null
       && target >= lo - dataRange * 2 && target <= hi + dataRange * 2;
     if (targetInReach) { lo = Math.min(lo, target); hi = Math.max(hi, target); }
     if (spec.zero) lo = Math.min(lo, 0);
-    if (hi - lo < 1e-9) { hi = lo + Math.max(Math.abs(lo) * 0.1, 1); }
-    var padRange = (hi - lo) * 0.14;
-    lo -= padRange; hi += padRange;
+    if (hi - lo < 1e-9) hi = lo + Math.max(Math.abs(lo) * 0.1, 1);
+    var pad = (hi - lo) * 0.14;
+    lo -= pad; hi += pad;
 
     var x = function (i) { return L + (values.length <= 1 ? 0 : (i / (values.length - 1)) * (W - L - R)); };
     var y = function (v) { return T + (1 - (v - lo) / (hi - lo)) * (H - T - B); };
 
-    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img',
-      'aria-label': spec.title + ' by year' });
-
-    // Recessive frame: a baseline and two value ticks, no full grid.
-    [hi - padRange, lo + padRange].forEach(function (v) {
-      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v),
-        stroke: 'var(--rule)', 'stroke-width': 1, fill: 'none' }));
-      var label = svgEl('text', { x: L - 5, y: y(v) + 3, 'text-anchor': 'end',
-        fill: 'var(--ink-3)', 'font-size': 8.5, 'font-family': 'var(--mono)' });
-      label.textContent = spec.fmt(v);
-      svg.appendChild(label);
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': spec.title + ' by year' });
+    [hi - pad, lo + pad].forEach(function (v) {
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--rule)', 'stroke-width': 1, fill: 'none' }));
+      var t = svgEl('text', { x: L - 5, y: y(v) + 3, 'text-anchor': 'end', fill: 'var(--ink-3)', 'font-size': 8.5, 'font-family': 'var(--mono)' });
+      t.textContent = spec.fmt(v);
+      svg.appendChild(t);
     });
-
     if (targetInReach) {
-      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(target), y2: y(target),
-        stroke: 'var(--heat)', 'stroke-width': 1, 'stroke-dasharray': '3 3', fill: 'none', opacity: .75 }));
-      var tl = svgEl('text', { x: W - R, y: y(target) - 3.5, 'text-anchor': 'end',
-        fill: 'var(--heat)', 'font-size': 8, 'font-family': 'var(--mono)' });
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(target), y2: y(target), stroke: 'var(--heat)', 'stroke-width': 1, 'stroke-dasharray': '3 3', fill: 'none', opacity: .75 }));
+      var tl = svgEl('text', { x: W - R, y: y(target) - 3.5, 'text-anchor': 'end', fill: 'var(--heat)', 'font-size': 8, 'font-family': 'var(--mono)' });
       tl.textContent = spec.targetLabel || ('target ' + spec.fmt(target));
       svg.appendChild(tl);
     }
 
-    var path = '';
+    var d = '';
     values.forEach(function (v, i) {
       if (v === null || !isFinite(v)) return;
-      path += (path === '' ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2);
+      d += (d === '' ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2);
     });
-    svg.appendChild(svgEl('path', { d: path, fill: 'none', stroke: 'var(--accent)',
-      'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
 
-    // The endpoint is the value that matters most, so it always carries a mark.
-    var lastIndex = -1;
+    var last = -1;
     for (var i = values.length - 1; i >= 0; i -= 1) {
-      if (values[i] !== null && isFinite(values[i])) { lastIndex = i; break; }
+      if (values[i] !== null && isFinite(values[i])) { last = i; break; }
     }
-    if (lastIndex >= 0) {
-      svg.appendChild(svgEl('circle', { cx: x(lastIndex), cy: y(values[lastIndex]), r: 3.2,
-        fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 1.5 }));
+    if (last >= 0) {
+      svg.appendChild(svgEl('circle', { cx: x(last), cy: y(values[last]), r: 3.2, fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 1.5 }));
     }
-
-    var marker = svgEl('circle', { cx: 0, cy: 0, r: 4.5, fill: 'var(--accent)',
-      stroke: 'var(--panel)', 'stroke-width': 2, opacity: 0 });
-    var rule = svgEl('line', { x1: 0, x2: 0, y1: T, y2: H - B, stroke: 'var(--rule-strong)',
-      'stroke-width': 1, fill: 'none', opacity: 0 });
-    svg.appendChild(rule);
-    svg.appendChild(marker);
-
+    var marker = svgEl('circle', { cx: 0, cy: 0, r: 4.5, fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 2, opacity: 0 });
+    var rule = svgEl('line', { x1: 0, x2: 0, y1: T, y2: H - B, stroke: 'var(--rule-strong)', 'stroke-width': 1, fill: 'none', opacity: 0 });
+    svg.appendChild(rule); svg.appendChild(marker);
     var hit = svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: 'transparent', style: 'cursor:crosshair' });
     svg.appendChild(hit);
     card.appendChild(svg);
@@ -499,13 +599,13 @@
     foot.appendChild(el('span', null, spec.labels[spec.labels.length - 1]));
     card.appendChild(foot);
 
-    function nearest(event) {
+    function nearest(e) {
       var box = svg.getBoundingClientRect();
-      var px = ((event.clientX - box.left) / box.width) * W;
-      var best = 0, bestDist = Infinity;
+      var px = ((e.clientX - box.left) / box.width) * W;
+      var best = 0, dist = Infinity;
       for (var i = 0; i < values.length; i += 1) {
-        var d = Math.abs(x(i) - px);
-        if (d < bestDist) { bestDist = d; best = i; }
+        var dd = Math.abs(x(i) - px);
+        if (dd < dist) { dist = dd; best = i; }
       }
       return best;
     }
@@ -513,12 +613,11 @@
     hit.addEventListener('pointerleave', function () { setHover(null); });
 
     function update(index) {
-      var pick = index === null ? lastIndex : index;
+      var pick = index === null ? last : index;
       var v = values[pick];
       if (v === null || v === undefined || !isFinite(v)) {
         readout.textContent = 'n/a';
-        marker.setAttribute('opacity', 0);
-        rule.setAttribute('opacity', 0);
+        marker.setAttribute('opacity', 0); rule.setAttribute('opacity', 0);
         return;
       }
       readout.textContent = spec.fmt(v);
@@ -536,51 +635,8 @@
   function setHover(index) {
     state.hover = index;
     panelUpdaters.forEach(function (fn) { fn(index); });
-    var hint = $('chart-hint');
-    if (index === null) {
-      hint.textContent = 'Hover a panel to read every metric for that year';
-    } else {
-      var entry = state.years[index];
-      hint.textContent = entry ? 'Showing ' + entry.report.year : '';
-    }
   }
 
-  function renderPanels() {
-    var host = $('panels');
-    host.textContent = '';
-    panelUpdaters = [];
-    if (state.years.length === 0) return;
-
-    var labels = state.years.map(function (y) { return String(y.report.year); });
-    var scenario = currentScenario();
-    var specs = [
-      { title: 'IT capacity', values: state.years.map(function (y) { return y.report.capacity.itCapacityMw; }),
-        fmt: function (v) { return v.toFixed(1) + ' MW'; }, zero: true,
-        target: scenario ? scenario.targetCapacityMw : null,
-        targetLabel: scenario ? 'target ' + scenario.targetCapacityMw + ' MW' : null },
-      { title: 'PUE', values: state.years.map(function (y) { return y.report.environment.pue; }),
-        fmt: function (v) { return v.toFixed(3); }, target: 1.15, targetLabel: 'best in class 1.15' },
-      { title: 'Availability', values: state.years.map(function (y) { return y.report.reliability.availability01; }),
-        fmt: function (v) { return (v * 100).toFixed(2) + '%'; },
-        target: scenario ? scenario.minimumAvailability01 : null,
-        targetLabel: scenario ? 'floor ' + (scenario.minimumAvailability01 * 100).toFixed(1) + '%' : null },
-      { title: 'Carbon intensity', values: state.years.map(function (y) { return y.report.environment.cue; }),
-        fmt: function (v) { return v.toFixed(0) + ' kg'; }, zero: true },
-      { title: 'Operating margin', values: state.years.map(function (y) { return y.report.financial.operatingMargin01; }),
-        fmt: function (v) { return (v * 100).toFixed(0) + '%'; }, zero: true, target: 0, targetLabel: 'break-even' },
-      { title: 'Overall score', values: state.years.map(function (y) { return y.score.overall; }),
-        fmt: function (v) { return v.toFixed(1); }, target: 75, targetLabel: 'A grade 75' },
-    ];
-
-    specs.forEach(function (spec) {
-      spec.labels = labels;
-      var built = panel(spec);
-      host.appendChild(built.node);
-      panelUpdaters.push(built.update);
-    });
-  }
-
-  // ---------- briefing ---------------------------------------------------
   function currentScenario() {
     var id = $('scenario').value;
     for (var i = 0; i < state.scenarios.length; i += 1) {
@@ -589,85 +645,280 @@
     return state.scenarios[0] || null;
   }
 
-  function renderBrief() {
+  function renderPanels() {
+    var host = $('panels');
+    host.textContent = '';
+    panelUpdaters = [];
+    if (state.years.length === 0) {
+      host.appendChild(el('div', 'empty', 'Charts appear once the first year closes.'));
+      return;
+    }
+    var labels = state.years.map(function (y) { return String(y.report.year); });
     var s = currentScenario();
-    if (!s) return;
-    $('brief-title').textContent = s.name;
-    $('brief-desc').textContent = s.description;
-
-    var tags = $('brief-tags');
-    tags.textContent = '';
-    [s.regionName, s.archetype + ' climate', s.difficulty + ' difficulty',
-     s.targetCapacityMw + ' MW objective', '$' + money(s.startingCash) + ' opening cash',
-     '$' + money(s.startingDebt) + ' debt'].forEach(function (text) {
-      tags.appendChild(el('span', 'tag', text));
-    });
-
-    var facts = $('site-facts');
-    facts.textContent = '';
     [
-      ['Summer peak', num(s.region.summerPeakC, 0) + ' \u00b0C'],
-      ['Winter low', num(s.region.winterLowC, 0) + ' \u00b0C'],
-      ['Grid carbon', num(s.region.gridCarbonKgPerMwh, 0) + ' kg/MWh'],
-      ['Grid price', '$' + num(s.region.gridPricePerMwh, 0) + '/MWh'],
-      ['Interconnection', num(s.region.gridCapacityMw, 0) + ' MW'],
-      ['Water stress', num(s.region.waterStress01 * 100, 0) + ' / 100'],
-      ['Latency to demand', num(s.region.latencyMs, 0) + ' ms'],
-      ['Carbon price', '$' + num(s.region.carbonPricePerTonne, 0) + '/t'],
-      ['Permit lead time', num(s.region.permitDays, 0) + ' days'],
-      ['Opening trust', (s.region.startingTrust > 0 ? '+' : '') + num(s.region.startingTrust, 0)],
-    ].forEach(function (pair) {
-      var f = el('div', 'fact');
-      f.appendChild(el('dt', null, pair[0]));
-      f.appendChild(el('dd', null, pair[1]));
-      facts.appendChild(f);
+      { title: 'IT capacity', values: state.years.map(function (y) { return y.report.capacity.itCapacityMw; }),
+        fmt: function (v) { return v.toFixed(1) + ' MW'; }, zero: true,
+        target: s ? s.targetCapacityMw : null, targetLabel: s ? 'target ' + s.targetCapacityMw + ' MW' : null },
+      { title: 'PUE', values: state.years.map(function (y) { return y.report.environment.pue; }),
+        fmt: function (v) { return v.toFixed(3); }, target: 1.15, targetLabel: 'best in class 1.15' },
+      { title: 'Availability', values: state.years.map(function (y) { return y.report.reliability.availability01; }),
+        fmt: function (v) { return (v * 100).toFixed(2) + '%'; },
+        target: s ? s.minimumAvailability01 : null,
+        targetLabel: s ? 'floor ' + (s.minimumAvailability01 * 100).toFixed(1) + '%' : null },
+      { title: 'Carbon intensity', values: state.years.map(function (y) { return y.report.environment.cue; }),
+        fmt: function (v) { return v.toFixed(0) + ' kg'; }, zero: true },
+      { title: 'Operating margin', values: state.years.map(function (y) { return y.report.financial.operatingMargin01; }),
+        fmt: function (v) { return (v * 100).toFixed(0) + '%'; }, zero: true, target: 0, targetLabel: 'break-even' },
+      { title: 'Overall score', values: state.years.map(function (y) { return y.score.overall; }),
+        fmt: function (v) { return v.toFixed(1); }, target: 75, targetLabel: 'A grade 75' },
+    ].forEach(function (spec) {
+      spec.labels = labels;
+      var built = panel(spec);
+      host.appendChild(built.node);
+      panelUpdaters.push(built.update);
     });
   }
 
-  // ---------- headline strip --------------------------------------------
-  function renderStrip() {
-    var host = $('strip');
+  // ---------- HUD --------------------------------------------------------
+  function renderHud() {
+    var host = $('hud');
     host.textContent = '';
-    var latest = state.years[state.years.length - 1];
-    if (!latest) {
-      host.appendChild(el('div', 'stat', 'Running\u2026'));
-      return;
-    }
-    var r = latest.report, sc = latest.score;
-    $('strip-hint').textContent = 'Year ' + r.year + ' of ' + state.years.length + ' simulated';
+    var d = state.dashboard;
+    if (!d) return;
 
-    function stat(key, value, unit, detail, tone) {
-      var node = el('div', 'stat');
+    function cell(key, value, sub, alarm) {
+      var node = el('div', 'cell' + (alarm ? ' alarm' : ''));
       node.appendChild(el('div', 'k', key));
-      var v = el('div', 'v', value);
-      if (unit) { var u = el('small', null, unit); v.appendChild(u); }
-      node.appendChild(v);
-      if (tone) {
-        var wrap = el('div', 'd');
-        wrap.appendChild(pill(tone, detail));
-        node.appendChild(wrap);
-      } else if (detail) {
-        node.appendChild(el('div', 'd', detail));
-      }
+      node.appendChild(el('div', 'v', value));
+      node.appendChild(el('div', 's', sub || ''));
       host.appendChild(node);
     }
 
-    stat('Overall', sc.overall.toFixed(1), null, sc.rating + ' \u00b7 ' + sc.label, ratingTone(sc.rating));
-    stat('IT capacity', r.capacity.itCapacityMw.toFixed(2), ' MW', r.capacity.rackCount + ' racks \u00b7 ' + r.capacity.hallCount + ' halls');
-    stat('PUE', r.environment.pue === null ? 'n/a' : r.environment.pue.toFixed(3), null,
-      'CUE ' + num(r.environment.cue, 0) + ' kg/MWh');
-    stat('WUE', r.environment.wue === null ? 'n/a' : r.environment.wue.toFixed(3), ' L/kWh',
-      num(r.environment.waterWithdrawnM3, 0) + ' m\u00b3 drawn');
-    stat('Availability', pct(r.reliability.availability01, 3), null,
-      r.reliability.incidents + ' incidents',
-      r.reliability.availability01 >= 0.999 ? 'good' : r.reliability.availability01 >= 0.99 ? 'warning' : 'critical');
-    stat('Revenue', '$' + money(r.financial.revenue), null, pct(r.financial.operatingMargin01, 0) + ' margin');
-    stat('Cash', '$' + money(r.financial.cash), null, '$' + money(r.financial.debt) + ' debt');
-    stat('Trust', (r.social.trust > 0 ? '+' : '') + r.social.trust.toFixed(0), null,
-      r.social.jobs + ' jobs', r.social.trust > 10 ? 'good' : r.social.trust > -30 ? 'warning' : 'critical');
+    cell('Cash', money(d.cash), money(d.budget) + ' free', d.cash <= 0);
+    cell('Debt', money(d.debt), '');
+    cell('IT capacity', d.itCapacityMw.toFixed(2) + ' MW', d.rackCount + ' racks');
+    cell('Contracts', String(d.contractCount), Math.round(d.committedUnits).toLocaleString() + ' CU sold');
+    cell('Reputation', Math.round(d.reputation) + '', 'trust ' + (d.trust > 0 ? '+' : '') + Math.round(d.trust));
+    cell('Research', d.researching ? Math.round(d.researchProgress01 * 100) + '%' : 'idle',
+      d.researching || Math.round(d.researchPoints).toLocaleString() + ' RP banked', !d.researching);
+    cell('Hall inlet', d.worstInletC > 0 ? d.worstInletC.toFixed(0) + '\u00b0C' : '\u2014',
+      d.throttling ? 'throttling' : 'ambient ' + d.ambientC.toFixed(0) + '\u00b0C', d.throttling);
+    cell('Grid', d.gridAvailable ? 'up' : 'down',
+      d.activeEvents.length ? d.activeEvents.length + ' events' : 'no events', !d.gridAvailable);
   }
 
-  // ---------- annual table ----------------------------------------------
+  function renderAlerts() {
+    var host = $('alerts');
+    host.textContent = '';
+    if (state.alerts.length === 0) {
+      $('alerts-hint').textContent = 'A quiet month';
+      var quiet = el('div', 'alert good');
+      var t = el('div', 'txt');
+      t.appendChild(el('div', 'ti', 'Nothing needed your attention'));
+      t.appendChild(el('div', 'de', 'The site ran inside its envelope. The log has the detail.'));
+      quiet.appendChild(t);
+      host.appendChild(quiet);
+      return;
+    }
+    $('alerts-hint').textContent = state.alerts.length + ' item' + (state.alerts.length > 1 ? 's' : '');
+    state.alerts.forEach(function (alert) {
+      var node = el('div', 'alert ' + alert.severity);
+      var txt = el('div', 'txt');
+      var title = el('div', 'ti');
+      title.appendChild(pill(alert.severity, alert.severity));
+      title.appendChild(document.createTextNode(' ' + alert.title));
+      txt.appendChild(title);
+      txt.appendChild(el('div', 'de', alert.detail));
+      node.appendChild(txt);
+      host.appendChild(node);
+    });
+  }
+
+  // ---------- decisions --------------------------------------------------
+  var CATEGORY_LABELS = {
+    research: 'Research', contracts: 'Contract market', capacity: 'Capacity',
+    cooling: 'Cooling', power: 'Power',
+  };
+  var CATEGORY_BLURB = {
+    research: 'One project at a time. Every technology improves something and costs something else.',
+    contracts: 'Offers leave the table after about three months. Sell only what the fleet can serve.',
+    capacity: 'Racks earn; halls hold them. A rack needs a hall whose cooling can carry its density.',
+    cooling: 'Re-plumbing a live hall is expensive and is the only way off a technology the heat has beaten.',
+    power: 'Everything downstream of the meter depends on this. Clean supply costs more up front.',
+  };
+
+  function renderDeck() {
+    var host = $('deck');
+    host.textContent = '';
+    if (!run) return;
+
+    var auto = run.autopilot();
+    var byCategory = {};
+    state.actions.forEach(function (action) {
+      (byCategory[action.category] = byCategory[action.category] || []).push(action);
+    });
+
+    var takeable = state.actions.filter(function (a) { return !a.blocked && a.affordable; }).length;
+    $('deck-hint').textContent = state.finished ? 'Campaign complete'
+      : takeable + ' of ' + state.actions.length + ' available now';
+
+    DCT.decisionCategories.forEach(function (category) {
+      var actions = byCategory[category] || [];
+      var block = el('div', 'cat-block');
+
+      var bar = el('div', 'cat-bar');
+      bar.appendChild(el('h3', null, CATEGORY_LABELS[category]));
+      bar.appendChild(el('span', 'count', auto[category] ? 'on autopilot' : actions.length + ' option' + (actions.length === 1 ? '' : 's')));
+      var toggle = el('label', 'auto');
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.id = 'auto-' + category;
+      box.checked = auto[category];
+      box.addEventListener('change', function () {
+        run.setAutopilot(category, box.checked);
+        refresh();
+        toast(box.checked ? CATEGORY_LABELS[category] + ' handed to autopilot'
+          : CATEGORY_LABELS[category] + ' is yours now');
+      });
+      toggle.appendChild(box);
+      toggle.appendChild(el('span', null, 'autopilot'));
+      bar.appendChild(toggle);
+      block.appendChild(bar);
+
+      if (auto[category]) {
+        block.appendChild(el('div', 'empty', 'The heuristic is handling ' + CATEGORY_LABELS[category].toLowerCase()
+          + '. Untick autopilot to take it over.'));
+        host.appendChild(block);
+        return;
+      }
+      if (actions.length === 0) {
+        block.appendChild(el('div', 'empty', CATEGORY_BLURB[category]));
+        host.appendChild(block);
+        return;
+      }
+
+      var cards = el('div', 'cards');
+      actions.slice(0, 24).forEach(function (action) { cards.appendChild(actionCard(action)); });
+      block.appendChild(cards);
+      host.appendChild(block);
+    });
+  }
+
+  function actionCard(action) {
+    var disabled = state.finished || !!action.blocked || !action.affordable;
+    var card = el(action.kind === 'hardware.buy' ? 'div' : 'button', 'act');
+    if (action.kind !== 'hardware.buy') {
+      card.type = 'button';
+      card.disabled = disabled;
+      card.addEventListener('click', function () { take(action.id, 1); });
+    } else if (disabled) {
+      card.style.opacity = '.62';
+    }
+
+    var top = el('div', 'top');
+    top.appendChild(el('span', 'nm', action.label));
+    var price = el('span', 'px' + (action.cost === 0 ? ' free' : ''),
+      action.kind === 'research.start' ? action.costRP.toLocaleString() + ' RP'
+        : action.cost === 0 ? 'no cost' : money(action.cost));
+    top.appendChild(price);
+    card.appendChild(top);
+
+    card.appendChild(el('div', 'de', action.detail));
+    if (action.tradeOff) card.appendChild(el('div', 'tr', action.tradeOff));
+    if (action.blocked) card.appendChild(el('div', 'bl', action.blocked));
+    else if (!action.affordable) card.appendChild(el('div', 'bl', 'Beyond the free capital you hold.'));
+
+    if (action.kind === 'hardware.buy' && !action.blocked) {
+      var qty = el('div', 'qty');
+      qty.appendChild(el('span', null, 'order'));
+      DCT.rackOrderSizes.forEach(function (size) {
+        var b = el('button', null, size + '');
+        b.type = 'button';
+        var can = size <= action.spaceAvailable && size <= action.maxAffordable && !state.finished;
+        b.disabled = !can;
+        b.title = can ? money(size * action.costPerRack)
+          : (size > action.spaceAvailable ? 'Only ' + action.spaceAvailable + ' rack slots free'
+            : 'Beyond the free capital you hold');
+        b.addEventListener('click', function () { take(action.id, size); });
+        qty.appendChild(b);
+      });
+      card.appendChild(qty);
+    }
+    return card;
+  }
+
+  function take(actionId, quantity) {
+    if (!run || state.finished) return;
+    var result = run.act(actionId, quantity);
+    toast(result.message, !result.ok);
+    refresh();
+  }
+
+  // ---------- site / report / log ---------------------------------------
+  function renderFleet() {
+    var host = $('fleet');
+    host.textContent = '';
+    var fleet = state.fleet;
+    if (!fleet) return;
+
+    function column(title, rows, emptyText) {
+      var col = el('div', 'card fleet-col');
+      col.appendChild(el('h3', null, title));
+      if (rows.length === 0) col.appendChild(el('div', 'empty', emptyText));
+      else rows.forEach(function (pair) {
+        var row = el('div', 'row');
+        var label = el('span', 'l', pair[0]);
+        if (pair[2]) label.classList.add('wrap');
+        row.appendChild(label);
+        row.appendChild(el('span', 'r', pair[1]));
+        col.appendChild(row);
+      });
+      host.appendChild(col);
+    }
+
+    column('Halls', fleet.halls.map(function (h) {
+      var note = h.underConstruction ? 'building'
+        : h.throttle01 > 0.02 ? 'throttling ' + pct(h.throttle01, 0)
+        : h.inletTempC.toFixed(0) + '\u00b0C';
+      return [h.id + ' \u00b7 ' + h.cooling, h.racks + '/' + h.capacity + ' \u00b7 ' + note, true];
+    }), 'No halls.');
+    column('Fleet', fleet.hardware.map(function (h) { return [h.name, h.racks + ' racks']; }), 'No racks installed.');
+    column('Power', fleet.power.map(function (p) {
+      return [p.name + (p.clean ? ' \u00b7' : ''), p.capacityMw.toFixed(1) + ' MW'];
+    }), 'No power assets.');
+    column('Contract book', fleet.contracts.map(function (c) {
+      return [c.name, c.computeUnits.toLocaleString() + ' CU'];
+    }), 'Nothing sold yet.');
+    var byBranch = {};
+    fleet.research.forEach(function (t) { byBranch[t.branch] = (byBranch[t.branch] || 0) + 1; });
+    column('Research', Object.keys(byBranch).sort().map(function (b) {
+      return [b, String(byBranch[b])];
+    }), 'Nothing researched.');
+  }
+
+  function renderObjectives() {
+    var host = $('objectives');
+    host.textContent = '';
+    host.appendChild(el('h3', null, 'Scenario objectives'));
+    if (state.objectives.length === 0) {
+      host.appendChild(el('div', 'empty', 'Objectives are measured against closed years.'));
+      return;
+    }
+    state.objectives.forEach(function (o) {
+      var row = el('div', 'obj');
+      var mark = el('span', 'mark');
+      mark.appendChild(pill(o.met ? 'good' : 'neutral', o.met ? 'met' : 'open'));
+      row.appendChild(mark);
+      var body = el('div', 'body');
+      body.appendChild(el('div', 'desc', o.description));
+      var shown = o.value === null ? 'n/a'
+        : (Math.abs(o.value) >= 100 ? o.value.toFixed(0) : o.value.toFixed(3));
+      body.appendChild(el('div', 'val', o.metric + ' = ' + shown + '  (need ' + o.comparison + ' ' + o.target + ')'));
+      row.appendChild(body);
+      host.appendChild(row);
+    });
+  }
+
   var COLUMNS = [
     ['Year', function (y) { return y.report.year; }, false],
     ['IT MW', function (y) { return y.report.capacity.itCapacityMw.toFixed(2); }, false],
@@ -675,10 +926,9 @@
     ['CUE', function (y) { return num(y.report.environment.cue, 0); }, true],
     ['WUE', function (y) { return y.report.environment.wue === null ? 'n/a' : y.report.environment.wue.toFixed(3); }, true],
     ['Avail', function (y) { return pct(y.report.reliability.availability01, 3); }, false],
-    ['Revenue', function (y) { return '$' + money(y.report.financial.revenue); }, false],
+    ['Revenue', function (y) { return money(y.report.financial.revenue); }, false],
     ['Margin', function (y) { return pct(y.report.financial.operatingMargin01, 0); }, true],
-    ['Cash', function (y) { return '$' + money(y.report.financial.cash); }, true],
-    ['Tech', function (y) { return y.report.research.completed; }, true],
+    ['Cash', function (y) { return money(y.report.financial.cash); }, true],
     ['Score', function (y) { return y.score.overall.toFixed(1); }, false],
   ];
 
@@ -686,33 +936,33 @@
     var head = $('report-head');
     head.textContent = '';
     var hr = el('tr');
-    COLUMNS.forEach(function (col) { hr.appendChild(el('th', null, col[0])); });
+    COLUMNS.forEach(function (c) { hr.appendChild(el('th', null, c[0])); });
     hr.appendChild(el('th', null, 'Rating'));
     head.appendChild(hr);
 
     var body = $('report-body');
     body.textContent = '';
+    if (state.years.length === 0) {
+      var tr = el('tr');
+      var td = el('td', 'dim', 'The first year has not closed yet.');
+      td.colSpan = COLUMNS.length + 1;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
     state.years.forEach(function (entry, index) {
       var tr = el('tr');
       if (state.openYear === index) tr.className = 'open';
-      COLUMNS.forEach(function (col) {
-        tr.appendChild(el('td', col[2] ? 'dim' : null, col[1](entry)));
-      });
-      var last = el('td');
-      last.appendChild(pill(ratingTone(entry.score.rating), entry.score.rating));
-      tr.appendChild(last);
-      tr.addEventListener('click', function () {
-        state.openYear = index;
-        renderTable();
-        renderDrawer();
-      });
+      COLUMNS.forEach(function (c) { tr.appendChild(el('td', c[2] ? 'dim' : null, c[1](entry))); });
+      var lastCell = el('td');
+      lastCell.appendChild(pill(ratingTone(entry.score.rating), entry.score.rating));
+      tr.appendChild(lastCell);
+      tr.addEventListener('click', function () { state.openYear = index; renderTable(); renderDrawer(); });
       tr.addEventListener('pointerenter', function () { setHover(index); });
       body.appendChild(tr);
     });
-    body.addEventListener('pointerleave', function () { setHover(null); });
   }
 
-  // ---------- score drawer ----------------------------------------------
   var WEIGHTS = { financial: 0.20, reliability: 0.25, environmental: 0.25, customer: 0.15, social: 0.15 };
   var CATEGORY_ORDER = ['reliability', 'environmental', 'financial', 'customer', 'social'];
   var CATEGORY_NAMES = {
@@ -736,10 +986,9 @@
     var index = state.openYear === null ? state.years.length - 1 : state.openYear;
     var entry = state.years[index];
     if (!entry) {
-      host.appendChild(el('div', 'empty', 'Run a campaign to decompose a year.'));
+      host.appendChild(el('div', 'empty', 'Close a year to decompose its score.'));
       return;
     }
-
     var head = el('div', 'drawer-head');
     head.appendChild(el('span', 'y', entry.report.year + ' score ' + entry.score.overall.toFixed(1)));
     head.appendChild(pill(ratingTone(entry.score.rating), entry.score.rating + ' \u00b7 ' + entry.score.label));
@@ -757,13 +1006,11 @@
       top.appendChild(left);
       top.appendChild(el('span', 's', detail.score.toFixed(1)));
       cat.appendChild(top);
-
       var bar = el('div', 'bar');
       var fill = el('i');
       fill.style.width = Math.max(0, Math.min(100, detail.score)) + '%';
       bar.appendChild(fill);
       cat.appendChild(bar);
-
       var comps = el('div', 'comps');
       Object.keys(detail.components).forEach(function (name) {
         var row = el('div', 'comp');
@@ -778,107 +1025,17 @@
     if (entry.score.gatesTripped && entry.score.gatesTripped.length > 0) {
       var gates = el('div', 'gate');
       gates.appendChild(el('span', 'w', 'Gates tripped:'));
-      entry.score.gatesTripped.forEach(function (gate) {
-        gates.appendChild(pill('critical', gate.replace('gate.', '').replace(/_/g, ' ')));
+      entry.score.gatesTripped.forEach(function (g) {
+        gates.appendChild(pill('critical', g.replace('gate.', '').replace(/_/g, ' ')));
       });
       host.appendChild(gates);
     }
   }
 
-  function renderObjectives() {
-    var host = $('objectives');
-    host.textContent = '';
-    host.appendChild(el('h3', null, 'Scenario objectives'));
-    if (state.objectives.length === 0) {
-      host.appendChild(el('div', 'empty', 'No objectives reported yet.'));
-      return;
-    }
-    state.objectives.forEach(function (objective) {
-      var row = el('div', 'obj');
-      var mark = el('span', 'mark');
-      mark.appendChild(pill(objective.met ? 'good' : 'neutral', objective.met ? 'met' : 'open'));
-      row.appendChild(mark);
-      var body = el('div', 'body');
-      body.appendChild(el('div', 'desc', objective.description));
-      var shown = objective.value === null ? 'n/a'
-        : (Math.abs(objective.value) >= 100 ? objective.value.toFixed(0) : objective.value.toFixed(3));
-      body.appendChild(el('div', 'val', objective.metric + ' = ' + shown
-        + '  (need ' + objective.comparison + ' ' + objective.target + ')'));
-      row.appendChild(body);
-      host.appendChild(row);
-    });
-  }
-
-  // ---------- fleet ------------------------------------------------------
-  function renderFleet() {
-    var host = $('fleet');
-    host.textContent = '';
-    var fleet = state.fleet;
-    if (!fleet) return;
-
-    function column(title, rows, emptyText) {
-      var col = el('div', 'card fleet-col');
-      col.appendChild(el('h3', null, title));
-      if (rows.length === 0) {
-        col.appendChild(el('div', 'empty', emptyText));
-      } else {
-        rows.forEach(function (pair) {
-          var row = el('div', 'row');
-          var label = el('span', 'l', pair[0]);
-          if (pair[2]) label.classList.add('wrap');
-          row.appendChild(label);
-          row.appendChild(el('span', 'r', pair[1]));
-          col.appendChild(row);
-        });
-      }
-      host.appendChild(col);
-    }
-
-    column('Halls', fleet.halls.map(function (hall) {
-      var note = hall.underConstruction ? 'building'
-        : hall.throttle01 > 0.02 ? 'throttling ' + pct(hall.throttle01, 0)
-        : hall.inletTempC.toFixed(0) + ' \u00b0C inlet';
-      return [hall.cooling, hall.racks + '/' + hall.capacity + ' \u00b7 ' + note];
-    }), 'No halls built.');
-
-    column('Fleet', fleet.hardware.map(function (h) {
-      return [h.name, h.racks + ' racks'];
-    }), 'No racks installed.');
-
-    column('Power', fleet.power.map(function (p) {
-      return [p.name + (p.clean ? ' \u00b7' : ''), p.capacityMw.toFixed(1) + ' MW'];
-    }), 'No power assets.');
-
-    column('Contract book', fleet.contracts.map(function (c) {
-      return [c.name, c.computeUnits.toLocaleString() + ' CU'];
-    }), 'No contracts signed.');
-
-    var byBranch = {};
-    fleet.research.forEach(function (tech) {
-      byBranch[tech.branch] = (byBranch[tech.branch] || 0) + 1;
-    });
-    column('Research', Object.keys(byBranch).sort().map(function (branch) {
-      return [branch, String(byBranch[branch])];
-    }), 'Nothing researched.');
-
-    $('fleet-hint').textContent = fleet.researching
-      ? 'Currently researching ' + fleet.researching
-      : fleet.research.length + ' technologies complete';
-  }
-
-  // ---------- diagnostics ------------------------------------------------
   var FILTERS = [
-    ['all', 'Everything'],
-    ['failure.', 'Failures'],
-    ['thermal.', 'Thermal'],
-    ['event.', 'Events'],
-    ['build.', 'Build'],
-    ['research.', 'Research'],
-    ['contract.', 'Contracts'],
-    ['sla.', 'SLA'],
-    ['grid.', 'Grid'],
+    ['all', 'Everything'], ['failure.', 'Failures'], ['thermal.', 'Thermal'], ['event.', 'Events'],
+    ['build.', 'Build'], ['research.', 'Research'], ['contract.', 'Contracts'], ['sla.', 'SLA'], ['grid.', 'Grid'],
   ];
-
   function renderFilters() {
     var host = $('diag-filters');
     host.textContent = '';
@@ -886,39 +1043,29 @@
       var chip = el('button', 'chip', pair[1]);
       chip.type = 'button';
       chip.setAttribute('aria-pressed', state.filter === pair[0] ? 'true' : 'false');
-      chip.addEventListener('click', function () {
-        state.filter = pair[0];
-        renderFilters();
-        renderLog();
-      });
+      chip.addEventListener('click', function () { state.filter = pair[0]; renderFilters(); renderLog(); });
       host.appendChild(chip);
     });
   }
-
   function renderLog() {
     var host = $('log');
     host.textContent = '';
-    var rows = state.diagnostics.filter(function (entry) {
-      return state.filter === 'all' || entry.kind.indexOf(state.filter) === 0;
+    var rows = state.diagnostics.filter(function (e) {
+      return state.filter === 'all' || e.kind.indexOf(state.filter) === 0;
     });
-    $('diag-hint').textContent = rows.length.toLocaleString() + ' of '
-      + state.diagnostics.length.toLocaleString() + ' entries \u00b7 newest first';
-
     if (rows.length === 0) {
       var none = el('div', 'log-row');
       none.appendChild(el('span', 'msg empty', 'Nothing logged under this filter.'));
       host.appendChild(none);
       return;
     }
-    rows.slice(-400).reverse().forEach(function (entry) {
+    rows.slice(-400).reverse().forEach(function (e) {
       var row = el('div', 'log-row');
-      row.appendChild(el('span', 'when', entry.timeIso.slice(0, 10)));
-      var kind = el('span', 'kind', entry.kind);
-      if (entry.kind.indexOf('thermal.') === 0 || entry.kind.indexOf('failure.') === 0) {
-        kind.className = 'kind heat';
-      }
+      row.appendChild(el('span', 'when', e.timeIso.slice(0, 10)));
+      var kind = el('span', 'kind', e.kind);
+      if (e.kind.indexOf('thermal.') === 0 || e.kind.indexOf('failure.') === 0) kind.className = 'kind heat';
       row.appendChild(kind);
-      row.appendChild(el('span', 'msg', entry.message));
+      row.appendChild(el('span', 'msg', e.message));
       host.appendChild(row);
     });
   }
@@ -927,10 +1074,9 @@
     var host = $('footer');
     host.textContent = '';
     if (!state.meta) return;
-    var counts = state.meta.counts;
     [
       ['Definitions', state.meta.definitionCount],
-      ['Technologies', counts.technologies],
+      ['Technologies', state.meta.counts.technologies],
       ['Content hash', state.meta.contentHash],
       ['Validation', state.meta.errors + ' errors \u00b7 ' + state.meta.warnings + ' warnings'],
       ['Tick', '15 simulated minutes'],
@@ -942,119 +1088,191 @@
     });
   }
 
-  // ---------- run loop ---------------------------------------------------
-  /**
-   * The engine is stepped in slices rather than run in one call: a decade is a
-   * few hundred thousand ticks, and yielding to the browser between slices keeps
-   * the page responsive and lets each year appear as it closes.
-   */
-  var SLICE_TICKS = 3000;
-
-  function startRun() {
-    if (state.running) return;
-    state.running = true;
-    $('run').disabled = true;
-    $('run').textContent = 'Running\u2026';
-
-    var scenarioId = $('scenario').value;
-    var strategy = $('strategy').value;
-    var seed = $('seed').value || 'default';
-    var years = Math.max(1, Math.min(25, parseInt($('years').value, 10) || 8));
-
-    state.years = [];
-    state.objectives = [];
-    state.diagnostics = [];
-    state.fleet = null;
-    state.openYear = null;
-    state.hover = null;
-    renderBrief();
-    renderStrip();
-    renderPanels();
-    renderTable();
-    renderDrawer();
-    renderObjectives();
-
-    var run;
-    try {
-      run = DCT.createRun(scenarioId, seed, strategy, years);
-    } catch (error) {
-      state.running = false;
-      $('run').disabled = false;
-      $('run').textContent = 'Run campaign';
-      $('strip-hint').textContent = 'Could not start: ' + error.message;
-      return;
+  function renderGameOver() {
+    var host = $('gameover');
+    if (!state.finished) { host.hidden = true; return; }
+    host.hidden = false;
+    host.textContent = '';
+    var last = state.years[state.years.length - 1];
+    var met = state.objectives.filter(function (o) { return o.met; }).length;
+    host.appendChild(el('h3', null, 'Campaign complete'));
+    if (last) {
+      var line = el('div', 'drawer-head');
+      line.appendChild(el('span', 'y', 'Final score ' + last.score.overall.toFixed(1)));
+      line.appendChild(pill(ratingTone(last.score.rating), last.score.rating + ' \u00b7 ' + last.score.label));
+      host.appendChild(line);
+      host.appendChild(el('div', 'verdict',
+        'You finished at ' + last.report.capacity.itCapacityMw.toFixed(2) + ' MW with a PUE of '
+        + (last.report.environment.pue === null ? 'n/a' : last.report.environment.pue.toFixed(3))
+        + ', availability of ' + pct(last.report.reliability.availability01, 3)
+        + ' and ' + money(last.report.financial.cash) + ' in the bank. '
+        + met + ' of ' + state.objectives.length + ' objectives met.'));
     }
-
-    function slice() {
-      var closed = run.advance(SLICE_TICKS);
-      if (closed.length > 0) {
-        closed.forEach(function (entry) { state.years.push(entry); });
-        renderStrip();
-        renderPanels();
-        renderTable();
-        renderDrawer();
-      }
-      var remaining = run.remainingTicks();
-      $('bar').style.width = ((1 - remaining / run.totalTicks) * 100).toFixed(1) + '%';
-
-      if (remaining > 0) {
-        setTimeout(slice, 0);
-        return;
-      }
-
-      state.objectives = run.objectives();
-      state.fleet = run.fleet();
-      state.diagnostics = run.diagnostics();
-      renderObjectives();
-      renderFleet();
-      renderFilters();
-      renderLog();
-      state.running = false;
-      $('run').disabled = false;
-      $('run').textContent = 'Run campaign';
-      setTimeout(function () { $('bar').style.width = '0%'; }, 500);
-    }
-    setTimeout(slice, 0);
+    var again = el('button', 'step', 'New campaign');
+    again.type = 'button';
+    again.addEventListener('click', showSetup);
+    host.appendChild(again);
   }
 
-  // ---------- boot -------------------------------------------------------
+  // ---------- turn loop --------------------------------------------------
+  function refresh() {
+    if (!run) return;
+    state.actions = run.actions();
+    state.dashboard = run.dashboard();
+    state.fleet = run.fleet();
+    state.objectives = run.objectives();
+    state.years = run.years();
+    state.diagnostics = run.diagnostics();
+    renderHud();
+    renderDeck();
+    renderFleet();
+    renderObjectives();
+    renderTable();
+    renderDrawer();
+    renderPanels();
+    renderLog();
+    renderGameOver();
+    var remaining = run.remainingTicks();
+    $('bar').style.width = ((1 - remaining / run.totalTicks) * 100).toFixed(1) + '%';
+    $('next-month').disabled = state.finished || state.busy;
+    $('next-year').disabled = state.finished || state.busy;
+  }
+
+  function advance(kind) {
+    if (!run || state.busy || state.finished) return;
+    state.busy = true;
+    $('next-month').disabled = true;
+    $('next-year').disabled = true;
+    $('next-month').textContent = 'Simulating\u2026';
+
+    // Yield first so the button state paints before the engine blocks the thread.
+    setTimeout(function () {
+      var summary = kind === 'year' ? run.advanceYear() : run.advanceMonth();
+      state.alerts = summary.alerts;
+      state.finished = summary.finished;
+      state.openYear = null;
+      var date = new Date(summary.dateIso);
+      $('clock-date').textContent = MONTHS[date.getUTCMonth()] + ' ' + date.getUTCFullYear();
+      var totalMonths = run.totalYears * 12;
+      var elapsed = Math.round((1 - run.remainingTicks() / run.totalTicks) * totalMonths);
+      $('clock-sub').textContent = state.finished ? 'Campaign complete'
+        : 'Month ' + Math.min(totalMonths, elapsed + 1) + ' of ' + totalMonths;
+      state.busy = false;
+      $('next-month').textContent = 'Advance month';
+      renderAlerts();
+      refresh();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 16);
+  }
+
+  function showSetup() {
+    run = null;
+    state.finished = false;
+    state.years = [];
+    state.alerts = [];
+    $('setup-sec').hidden = false;
+    $('game-sec').hidden = true;
+    $('turnbar').hidden = true;
+    $('clock-date').textContent = '\u2014';
+    $('clock-sub').textContent = 'Choose a site to begin';
+    $('bar').style.width = '0%';
+    renderSetupTags();
+  }
+
+  function renderSetupTags() {
+    var s = currentScenario();
+    var host = $('setup-tags');
+    host.textContent = '';
+    if (!s) return;
+    [s.description].forEach(function () {});
+    var desc = el('p', null, s.description);
+    desc.style.margin = '0';
+    desc.style.color = 'var(--ink-2)';
+    host.appendChild(desc);
+    var tags = el('div', 'tags');
+    [
+      s.regionName,
+      'summer peak ' + num(s.region.summerPeakC, 0) + '\u00b0C',
+      'grid ' + num(s.region.gridCarbonKgPerMwh, 0) + ' kg/MWh',
+      'power $' + num(s.region.gridPricePerMwh, 0) + '/MWh',
+      'water stress ' + num(s.region.waterStress01 * 100, 0) + '/100',
+      'latency ' + num(s.region.latencyMs, 0) + ' ms',
+      s.targetCapacityMw + ' MW objective',
+      money(s.startingCash) + ' cash',
+    ].forEach(function (text) { tags.appendChild(el('span', 'tag', text)); });
+    host.appendChild(tags);
+  }
+
+  function begin() {
+    var scenarioId = $('scenario').value;
+    var years = parseInt($('years').value, 10) || 8;
+    var seed = $('seed').value || 'default';
+    var manual = $('assist').value === 'manual';
+
+    try {
+      run = DCT.createRun(scenarioId, seed, 'balanced', years, manual);
+    } catch (error) {
+      toast('Could not start: ' + error.message, true);
+      return;
+    }
+    state.finished = false;
+    state.alerts = [];
+    state.openYear = null;
+    $('setup-sec').hidden = true;
+    $('game-sec').hidden = false;
+    $('turnbar').hidden = false;
+
+    var start = new Date(run.dashboard() ? Date.UTC(2025, 0, 1) : Date.now());
+    $('clock-date').textContent = MONTHS[start.getUTCMonth()] + ' ' + start.getUTCFullYear();
+    $('clock-sub').textContent = 'Month 1 of ' + (years * 12) + ' \u00b7 ' + (manual ? 'you decide' : 'autopilot');
+    renderAlerts();
+    refresh();
+    window.scrollTo({ top: 0 });
+  }
+
+  function setTab(name) {
+    state.tab = name;
+    ['site', 'trend', 'report', 'log'].forEach(function (key) {
+      $('tab-' + key).hidden = key !== name;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
+      tab.setAttribute('aria-selected', tab.getAttribute('data-tab') === name ? 'true' : 'false');
+    });
+  }
+
   function boot() {
     if (!DCT) {
-      $('brief-title').textContent = 'Engine failed to load';
-      $('brief-desc').textContent = 'The simulation bundle did not initialise, so no campaign can run.';
+      $('setup-sec').hidden = false;
+      $('setup-tags').textContent = 'The simulation bundle did not load, so no campaign can start.';
       return;
     }
     state.meta = DCT.describe();
     state.scenarios = state.meta.scenarios;
 
     var scenarioSelect = $('scenario');
-    state.scenarios.forEach(function (scenario) {
-      var option = el('option', null, scenario.name);
-      option.value = scenario.id;
+    state.scenarios.forEach(function (s) {
+      var option = el('option', null, s.name);
+      option.value = s.id;
       scenarioSelect.appendChild(option);
     });
     scenarioSelect.value = 'scenario.dry_grid';
     if (!scenarioSelect.value) scenarioSelect.selectedIndex = 0;
+    scenarioSelect.addEventListener('change', renderSetupTags);
 
-    var strategySelect = $('strategy');
-    var strategyLabels = {
-      balanced: 'Balanced', green: 'Green pioneer',
-      hyperscaler: 'Hyperscaler', lean: 'Lean operator',
-    };
-    state.meta.strategies.forEach(function (name) {
-      var option = el('option', null, strategyLabels[name] || name);
-      option.value = name;
-      strategySelect.appendChild(option);
+    $('begin').addEventListener('click', begin);
+    $('restart').addEventListener('click', showSetup);
+    $('next-month').addEventListener('click', function () { advance('month'); });
+    $('next-year').addEventListener('click', function () { advance('year'); });
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
+      tab.addEventListener('click', function () { setTab(tab.getAttribute('data-tab')); });
     });
 
-    scenarioSelect.addEventListener('change', renderBrief);
-    $('run').addEventListener('click', startRun);
-
-    renderBrief();
     renderFilters();
     renderFooter();
-    // Open in a working state rather than an empty shell.
-    startRun();
+    setTab('site');
+    showSetup();
+    // Open on a real site rather than an empty form, then start it for them.
+    begin();
   }
 
   boot();
