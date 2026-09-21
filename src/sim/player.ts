@@ -51,6 +51,12 @@ export interface ContractAction extends PlayerActionBase {
   /** Compute units the fleet can actually deliver for this workload. */
   readonly servableUnits: number;
   readonly reservedUnits: number;
+  /** Units still safely sellable for this workload BEFORE taking this offer. */
+  readonly freeUnits: number;
+  /** True when the fleet can serve this offer on top of what it already sold. */
+  readonly fits: boolean;
+  /** Units short if it does not fit. */
+  readonly shortBy: number;
 }
 
 export interface HardwareAction extends PlayerActionBase {
@@ -174,7 +180,10 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       blocked = `Requires ${missing.join(', ')}.`;
     }
 
-    const overcommit = offer.computeUnits > headroom;
+    const free = Math.max(0, headroom);
+    const fits = offer.computeUnits <= free;
+    const shortBy = Math.max(0, offer.computeUnits - free);
+
     actions.push({
       kind: 'contract.sign',
       id: `contract:${offer.instanceId}`,
@@ -183,12 +192,17 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       detail: `${offer.computeUnits.toLocaleString()} compute units of ${workload.name} for `
         + `${offer.termMonths} months at $${offer.pricePerComputeUnitHour.toFixed(4)}/unit-hour `
         + `(${money(annualRevenue)}/year). SLA ${(definition.slaUptime01 * 100).toFixed(2)}%.`,
-      tradeOff: overcommit
-        ? `Your fleet can serve about ${Math.max(0, Math.round(headroom)).toLocaleString()} more units of `
-          + `${workload.name}. Signing this oversells capacity, and unserved units are SLA breaches.`
-        : `${workload.penaltyClass === 'extreme' ? 'Extreme' : 'Standard'} penalties: missing the SLA `
-          + `costs revenue and reputation. Utilisation runs about `
-          + `${(workload.meanUtilization01 * 100).toFixed(0)}%, but you hold the full reservation.`,
+      // The fit is stated either way. Warning only on an oversell leaves the
+      // player guessing on every offer that does fit, which is the same
+      // arithmetic by hand.
+      tradeOff: fits
+        ? `Fits: you have room for ${Math.round(free).toLocaleString()} units of ${workload.name} and `
+          + `this takes ${offer.computeUnits.toLocaleString()}, leaving `
+          + `${Math.round(free - offer.computeUnits).toLocaleString()}. `
+          + `${workload.penaltyClass === 'extreme' ? 'Extreme' : 'Standard'} penalties if you miss the SLA.`
+        : `Oversells by ${Math.round(shortBy).toLocaleString()} units: you have room for `
+          + `${Math.round(free).toLocaleString()} of ${workload.name} and this wants `
+          + `${offer.computeUnits.toLocaleString()}. Unserved units are SLA breaches.`,
       cost: 0,
       affordable: true,
       blocked,
@@ -199,6 +213,9 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       annualRevenue,
       servableUnits: servable,
       reservedUnits: reserved,
+      freeUnits: free,
+      fits,
+      shortBy,
     });
   }
 

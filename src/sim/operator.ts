@@ -72,6 +72,8 @@ const OPENING_HALL_RACKS = 120;
 const CAPACITY_HEADROOM = 1.15;
 /** Racks ordered in any one month. Procurement is not instantaneous. */
 const RACK_ORDER_LIMIT = 60;
+/** Share of an over-age rack group retired each month. */
+export const RETIREMENT_SHARE_PER_MONTH = 0.25;
 /** Premium for replacing cooling plant in a hall that is carrying live load. */
 const RETROFIT_PREMIUM = 1.25;
 /** Cooling capacity installed above the hall's design IT load. */
@@ -819,7 +821,7 @@ export class OperatorSystem implements ISimulationSystem {
           const ageYears = (tick.index - group.installedTick) * tick.minutes / (60 * 8766);
           if (ageYears < hardware.lifeYears || group.count <= 0) continue;
 
-          const retiring = Math.max(1, Math.ceil(group.count * 0.25));
+          const retiring = Math.max(1, Math.ceil(group.count * RETIREMENT_SHARE_PER_MONTH));
           group.count -= retiring;
           group.failedCount = Math.min(group.failedCount, group.count);
 

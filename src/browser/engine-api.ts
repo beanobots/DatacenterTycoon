@@ -16,6 +16,10 @@ import {
   RACK_ORDER_SIZES, applyAction, enumerateActions, hallName,
   type ActionResult, type PlayerAction,
 } from '../sim/player.js';
+import {
+  commissioningSchedule, projectCapacity, workloadHeadroom,
+  type ProjectedMonth, type ScheduleEntry, type WorkloadHeadroom,
+} from '../sim/planning.js';
 import type { AnnualReport } from '../sim/report.js';
 import type { AnnualScore, DiagnosticEntry } from '../state/types.js';
 import { buildBrowserRegistry, type BundledContent } from './registry.js';
@@ -167,6 +171,13 @@ export interface Dashboard {
   readonly rackCount: number;
   readonly contractCount: number;
   readonly committedUnits: number;
+  /**
+   * Units still sellable for the workload with the most room. NOT a total:
+   * the same racks serve several workloads, so summing headroom would promise
+   * capacity that does not exist.
+   */
+  readonly freeUnits: number;
+  readonly bestFitWorkload: string | null;
   readonly staff: number;
   /** Live plant readings, so the player can see a hall in trouble now. */
   readonly ambientC: number;
@@ -189,6 +200,12 @@ export interface CampaignRun {
   autopilot(): AutopilotState;
   setAutopilot(category: DecisionCategory, enabled: boolean): void;
   dashboard(): Dashboard;
+  /** How much more work the fleet can take on, workload by workload. */
+  headroom(): WorkloadHeadroom[];
+  /** Capacity month by month if nothing further is ordered. */
+  projection(horizonMonths: number): ProjectedMonth[];
+  /** Everything already committed that lands, lapses or ages out. */
+  schedule(): ScheduleEntry[];
   objectives(): ObjectiveResult[];
   diagnostics(): DiagnosticEntry[];
   fleet(): FleetSummary;
@@ -377,6 +394,9 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
     autopilot: () => operator.autopilotState(),
     setAutopilot: (category, enabled) => operator.setAutopilot(category, enabled),
     years: () => collected.slice(),
+    headroom: () => workloadHeadroom(context),
+    projection: (horizonMonths) => projectCapacity(context, horizonMonths),
+    schedule: () => commissioningSchedule(context),
     dashboard(): Dashboard {
       const state = engine.state;
       const halls = state.facilities.flatMap((f) => f.halls);
@@ -384,6 +404,10 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
       const activeTech = state.research.activeId
         ? registry.technology(state.research.activeId, 'console')
         : null;
+      // Sorted by room, so the first row is the honest answer to "what can I
+      // sell next?".
+      const headroomRows = [...workloadHeadroom(context)]
+        .sort((a, b) => b.freeUnits - a.freeUnits);
       return {
         cash: state.company.cash,
         debt: state.company.debt,
@@ -405,6 +429,8 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
           total + hall.rackGroups.reduce((n, group) => n + group.count, 0), 0),
         contractCount: state.contracts.length,
         committedUnits: state.contracts.reduce((total, c) => total + c.computeUnits, 0),
+        freeUnits: headroomRows[0]?.freeUnits ?? 0,
+        bestFitWorkload: headroomRows[0]?.name ?? null,
         staff: Math.round(state.company.staffCount),
         ambientC: state.world.weather.dryBulbC,
         worstInletC: worstInlet,

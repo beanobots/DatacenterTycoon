@@ -96,6 +96,14 @@ branches, 17 events, 10 contract archetypes, 4 regions, 4 scenarios.
 bands, the anti-exploit gates, and a per-component decomposition for every
 number.
 
+**Forward planning.** `src/sim/planning.ts` answers the two questions an
+operator asks constantly: how much more work can this fleet take on, and what
+will it look like in six months. Both are computed from committed state -
+construction progress, lead times, hardware ages, contract terms - using the
+same constants the systems advance by, so the forecast and the outcome cannot
+drift. Headroom is reported per workload and never summed: the same rack serves
+several workloads, so a total would promise capacity that does not exist.
+
 **A playable turn loop.** `src/sim/player.ts` enumerates what the operator could
 do this month and applies the choice; `src/sim/operator.ts` is now an operations
 layer with an optional heuristic on top, switchable per decision category. A

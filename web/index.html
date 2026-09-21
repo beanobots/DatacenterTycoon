@@ -337,6 +337,35 @@
   .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 
   .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+
+  /* ---------- plan ---------- */
+  .plan { display: flex; flex-direction: column; gap: 22px; }
+  .plan-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .plan-head h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+  .plan-head .note { font-size: 12px; color: var(--ink-3); }
+  .horizon { margin-left: auto; display: flex; gap: 5px; }
+  .horizon button {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2);
+  }
+  .horizon button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .meter { display: block; height: 7px; border-radius: 4px; background: var(--panel-sunk); overflow: hidden; min-width: 72px; }
+  .meter i { display: block; height: 100%; background: var(--heat); }
+  .fit { font-family: var(--mono); font-size: 11px; }
+  .fit.yes { color: var(--good); }
+  .fit.no { color: var(--critical); }
+  td .hint-sm { font-family: var(--sans); font-size: 11px; color: var(--ink-3); }
+  .sched { display: flex; flex-direction: column; }
+  .sched-row { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--rule); }
+  .sched-row:last-child { border-bottom: 0; }
+  .sched-row .when { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .sched-row .when.far { color: var(--ink-3); }
+  .sched-row .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .sched-row .what .l { font-size: 12.5px; font-weight: 600; }
+  .sched-row .what .d { font-size: 11.5px; color: var(--ink-2); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 14px; height: 2px; border-radius: 2px; display: inline-block; }
   .gameover { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
   .gameover h3 { font-size: 18px; font-weight: 600; }
   .gameover .verdict { font-size: 13px; color: var(--ink-2); max-width: 64ch; }
@@ -419,6 +448,7 @@
     <div style="margin-top:30px">
       <div class="tabs" id="tabs">
         <button class="tab" type="button" data-tab="site" aria-selected="true">Site</button>
+        <button class="tab" type="button" data-tab="plan" aria-selected="false">Plan</button>
         <button class="tab" type="button" data-tab="trend" aria-selected="false">Trend</button>
         <button class="tab" type="button" data-tab="report" aria-selected="false">Annual report</button>
         <button class="tab" type="button" data-tab="log" aria-selected="false">Log</button>
@@ -428,6 +458,43 @@
         <div class="two-col">
           <div class="fleet" id="fleet" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"></div>
           <div class="card list" id="objectives"></div>
+        </div>
+      </div>
+
+      <div id="tab-plan" hidden>
+        <div class="plan">
+          <div>
+            <div class="plan-head">
+              <h3>What you can sell now</h3>
+              <span class="note">Capacity is not fungible: an accelerator rack cannot serve archive.</span>
+            </div>
+            <div class="card scroll-x" style="margin-top:10px">
+              <table id="headroom-table"><thead id="headroom-head"></thead><tbody id="headroom-body"></tbody></table>
+            </div>
+          </div>
+
+          <div>
+            <div class="plan-head">
+              <h3>If you order nothing more</h3>
+              <span class="note" id="plan-note"></span>
+              <div class="horizon" id="horizon"></div>
+            </div>
+            <div class="card panel" style="margin-top:10px;padding:14px 16px">
+              <div class="legend" id="plan-legend"></div>
+              <div id="plan-chart"></div>
+            </div>
+            <div class="card scroll-x" style="margin-top:10px">
+              <table id="projection-table"><thead id="projection-head"></thead><tbody id="projection-body"></tbody></table>
+            </div>
+          </div>
+
+          <div>
+            <div class="plan-head">
+              <h3>Already committed</h3>
+              <span class="note">Construction, contract terms and hardware reaching end of life.</span>
+            </div>
+            <div class="card sched" id="schedule" style="margin-top:10px"></div>
+          </div>
         </div>
       </div>
 
@@ -470,6 +537,8 @@
     meta: null, scenarios: [], years: [], alerts: [], actions: [],
     dashboard: null, fleet: null, objectives: [], diagnostics: [],
     openYear: null, hover: null, filter: 'all', tab: 'site', finished: false, busy: false,
+    headroom: [], projection: [], schedule: [], horizon: 12,
+    chartWorkload: null, projectionByWorkload: {}, chartGap: null,
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -698,6 +767,8 @@
     cell('Debt', money(d.debt), '');
     cell('IT capacity', d.itCapacityMw.toFixed(2) + ' MW', d.rackCount + ' racks');
     cell('Contracts', String(d.contractCount), Math.round(d.committedUnits).toLocaleString() + ' CU sold');
+    cell('Free to sell', Math.round(d.freeUnits).toLocaleString() + ' CU',
+      d.bestFitWorkload ? 'most room: ' + d.bestFitWorkload : 'no capacity', d.freeUnits <= 0);
     cell('Reputation', Math.round(d.reputation) + '', 'trust ' + (d.trust > 0 ? '+' : '') + Math.round(d.trust));
     cell('Research', d.researching ? Math.round(d.researchProgress01 * 100) + '%' : 'idle',
       d.researching || Math.round(d.researchPoints).toLocaleString() + ' RP banked', !d.researching);
@@ -852,6 +923,328 @@
     var result = run.act(actionId, quantity);
     toast(result.message, !result.ok);
     refresh();
+  }
+
+
+  // ---------- plan -------------------------------------------------------
+  var HORIZONS = [3, 6, 12, 24];
+
+  function renderHorizon() {
+    var host = $('horizon');
+    host.textContent = '';
+    HORIZONS.forEach(function (months) {
+      var b = el('button', null, months + ' mo');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', state.horizon === months ? 'true' : 'false');
+      b.addEventListener('click', function () { state.horizon = months; renderPlan(); });
+      host.appendChild(b);
+    });
+  }
+
+  function renderHeadroom() {
+    var head = $('headroom-head');
+    head.textContent = '';
+    var hr = el('tr');
+    ['Workload', 'Racks', 'Capacity', 'Sold', 'Free now', 'Free in ' + state.horizon + ' mo', 'Committed', 'One more rack adds']
+      .forEach(function (label) { hr.appendChild(el('th', null, label)); });
+    head.appendChild(hr);
+
+    var body = $('headroom-body');
+    body.textContent = '';
+    state.headroom.forEach(function (row) {
+      var tr = el('tr');
+      tr.style.cursor = 'default';
+      tr.appendChild(el('td', null, row.name));
+      tr.appendChild(el('td', 'dim', row.capableRacks.toLocaleString()));
+      tr.appendChild(el('td', null, Math.round(row.servableUnits).toLocaleString()));
+      tr.appendChild(el('td', 'dim', Math.round(row.reservedUnits).toLocaleString()));
+
+      tr.appendChild(el('td', null, Math.round(row.freeUnits).toLocaleString()));
+
+      // The same row at the horizon, which is the answer to "can I still take
+      // this on once the current contracts and cohorts have moved".
+      var future = el('td');
+      var projected = state.projectionByWorkload[row.workloadId];
+      if (projected === undefined) {
+        future.appendChild(el('span', 'hint-sm', '\u2014'));
+      } else {
+        var delta = projected - row.freeUnits;
+        future.appendChild(document.createTextNode(Math.round(projected).toLocaleString()));
+        if (Math.abs(delta) >= 1) {
+          future.appendChild(el('span', 'fit ' + (delta >= 0 ? 'yes' : 'no'),
+            ' ' + (delta >= 0 ? '+' : '') + Math.round(delta).toLocaleString()));
+        }
+      }
+      tr.appendChild(future);
+
+      var meterCell = el('td');
+      var meter = el('span', 'meter');
+      var fill = el('i');
+      fill.style.width = Math.max(0, Math.min(100, row.utilisation01 * 100)).toFixed(0) + '%';
+      meter.appendChild(fill);
+      meterCell.appendChild(meter);
+      tr.appendChild(meterCell);
+
+      var add = el('td', 'dim');
+      if (row.unitsPerAddedRack > 0) {
+        add.textContent = '+' + Math.round(row.unitsPerAddedRack) + ' CU';
+        var who = el('span', 'hint-sm', ' ' + row.bestHardware);
+        add.appendChild(who);
+      } else if (row.unlockedBy) {
+        add.appendChild(el('span', 'hint-sm', 'research ' + row.unlockedBy));
+      } else {
+        add.textContent = '\u2014';
+      }
+      tr.appendChild(add);
+      body.appendChild(tr);
+    });
+  }
+
+  /**
+   * One workload's sellable capacity against what is sold, over the horizon.
+   *
+   * A single workload, because capacity is not fungible: charting a sum would
+   * count the same rack once per workload it can serve. Both series are compute
+   * units of that workload, so they share one scale, and the gap between them
+   * IS the headroom - the month the lines meet is the month it runs out.
+   */
+  function renderPlanChart() {
+    var host = $('plan-chart');
+    host.textContent = '';
+    var months = state.projection;
+    if (months.length < 2 || !state.chartWorkload) {
+      host.appendChild(el('div', 'empty', 'Sell something, or install racks, and the headroom curve appears here.'));
+      $('plan-legend').textContent = '';
+      return;
+    }
+
+    var pick = function (m) {
+      for (var i = 0; i < m.perWorkload.length; i += 1) {
+        if (m.perWorkload[i].workloadId === state.chartWorkload) return m.perWorkload[i];
+      }
+      return { servableUnits: 0, reservedUnits: 0, freeUnits: 0 };
+    };
+
+    var W = 640, H = 168, L = 52, R = 62, T = 12, B = 26;
+    var capacity = months.map(function (m) { return pick(m).servableUnits * 0.85; });
+    var sold = months.map(function (m) { return pick(m).reservedUnits; });
+    var hi = Math.max.apply(null, capacity.concat(sold));
+    if (hi <= 0) hi = 1;
+    hi *= 1.12;
+
+    var x = function (i) { return L + (i / (months.length - 1)) * (W - L - R); };
+    var y = function (v) { return T + (1 - v / hi) * (H - T - B); };
+
+    var svg = svgEl('svg', {
+      viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+      'aria-label': 'Sellable capacity against committed capacity over the next ' + state.horizon + ' months',
+      style: 'width:100%;height:auto;overflow:visible',
+    });
+
+    [hi / 1.12, hi / 2.24, 0].forEach(function (v) {
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--rule)', 'stroke-width': 1, fill: 'none' }));
+      var t = svgEl('text', { x: L - 6, y: y(v) + 3, 'text-anchor': 'end', fill: 'var(--ink-3)', 'font-size': 9, 'font-family': 'var(--mono)' });
+      t.textContent = Math.round(v).toLocaleString();
+      svg.appendChild(t);
+    });
+
+    // The band between the lines is the headroom. When the two run close
+    // together - the usual case for a fleet sold near its limit - the lines
+    // alone are indistinguishable, and the gap is the whole question.
+    var lastIndex = months.length - 1;
+    var oversold = sold[lastIndex] > capacity[lastIndex];
+    var band = '';
+    capacity.forEach(function (v, i) { band += (i === 0 ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2); });
+    for (var i = lastIndex; i >= 0; i -= 1) band += 'L' + x(i).toFixed(2) + ' ' + y(sold[i]).toFixed(2);
+    band += 'Z';
+    svg.appendChild(svgEl('path', {
+      d: band, fill: oversold ? 'var(--heat)' : 'var(--accent)', opacity: 0.16, stroke: 'none',
+    }));
+
+    function line(values, stroke) {
+      var d = '';
+      values.forEach(function (v, i) { d += (d === '' ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2); });
+      svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: stroke, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    }
+    line(capacity, 'var(--accent)');
+    line(sold, 'var(--heat)');
+
+    // Direct labels at the endpoints, so identity never rests on colour alone.
+    // Two near-identical series would stack their labels on top of each other,
+    // so they are pushed apart when they collide.
+    var capY = y(capacity[lastIndex]);
+    var soldY = y(sold[lastIndex]);
+    if (Math.abs(capY - soldY) < 11) {
+      var mid = (capY + soldY) / 2;
+      capY = mid - 5.5;
+      soldY = mid + 5.5;
+    }
+    [[capacity, 'var(--accent)', 'sellable', capY], [sold, 'var(--heat)', 'sold', soldY]]
+      .forEach(function (series) {
+        var values = series[0], colour = series[1], name = series[2], labelY = series[3];
+        svg.appendChild(svgEl('circle', {
+          cx: x(lastIndex), cy: y(values[lastIndex]), r: 3.2,
+          fill: colour, stroke: 'var(--panel)', 'stroke-width': 1.5,
+        }));
+        var label = svgEl('text', {
+          x: x(lastIndex) + 7, y: labelY + 3, fill: 'var(--ink-2)',
+          'font-size': 9.5, 'font-family': 'var(--mono)',
+        });
+        label.textContent = name;
+        svg.appendChild(label);
+      });
+
+    // The gap is the answer, but a band only a few pixels tall cannot hold a
+    // label without covering the very lines it describes. The number goes in
+    // the legend, where it has room; the band carries the shape.
+    state.chartGap = {
+      units: Math.round(Math.abs(capacity[lastIndex] - sold[lastIndex])),
+      oversold: oversold,
+    };
+
+    months.forEach(function (m, i) {
+      if (m.monthsAhead % Math.max(1, Math.round(months.length / 6)) !== 0) return;
+      var t = svgEl('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', fill: 'var(--ink-3)', 'font-size': 9, 'font-family': 'var(--mono)' });
+      t.textContent = m.monthsAhead === 0 ? 'now' : '+' + m.monthsAhead;
+      svg.appendChild(t);
+    });
+
+    host.appendChild(svg);
+
+    var legend = $('plan-legend');
+    legend.textContent = '';
+    var name = 'this workload';
+    for (var i = 0; i < state.headroom.length; i += 1) {
+      if (state.headroom[i].workloadId === state.chartWorkload) name = state.headroom[i].name;
+    }
+    var title = el('span');
+    title.appendChild(el('strong', null, name));
+    legend.appendChild(title);
+    if (state.chartGap) {
+      var gap = el('span', 'fit ' + (state.chartGap.oversold ? 'no' : 'yes'),
+        state.chartGap.units.toLocaleString()
+        + (state.chartGap.oversold ? ' oversold in ' : ' still sellable in ')
+        + state.horizon + ' months');
+      legend.appendChild(gap);
+    }
+    [['var(--accent)', 'Sellable capacity'], ['var(--heat)', 'Already sold']].forEach(function (pair) {
+      var item = el('span');
+      var swatch = el('i');
+      swatch.style.background = pair[0];
+      item.appendChild(swatch);
+      item.appendChild(el('span', null, pair[1]));
+      legend.appendChild(item);
+    });
+  }
+
+  function renderProjection() {
+    var head = $('projection-head');
+    head.textContent = '';
+    var hr = el('tr');
+    ['When', 'IT capacity', 'Racks', 'Rack slots', 'Free slots', 'What happens']
+      .forEach(function (label) { hr.appendChild(el('th', null, label)); });
+    head.appendChild(hr);
+
+    var body = $('projection-body');
+    body.textContent = '';
+    var months = state.projection;
+    // A row for every month is unreadable at 24; show the ones that change and
+    // a regular sample of the rest.
+    var stride = months.length > 14 ? 3 : 1;
+    months.forEach(function (m) {
+      if (m.monthsAhead % stride !== 0 && m.events.length === 0) return;
+      var tr = el('tr');
+      tr.style.cursor = 'default';
+      var when = el('td', null, m.monthsAhead === 0 ? 'now' : '+' + m.monthsAhead + ' mo');
+      tr.appendChild(when);
+      tr.appendChild(el('td', null, m.itCapacityMw.toFixed(2) + ' MW'));
+      tr.appendChild(el('td', 'dim', m.rackCount.toLocaleString()));
+      tr.appendChild(el('td', 'dim', m.rackSlots.toLocaleString()));
+      tr.appendChild(el('td', null, Math.max(0, m.rackSlots - m.rackCount).toLocaleString()));
+      var what = el('td');
+      what.style.textAlign = 'left';
+      what.style.whiteSpace = 'normal';
+      if (m.events.length === 0) what.appendChild(el('span', 'hint-sm', m.monthsAhead === 0 ? m.label : ''));
+      else what.appendChild(el('span', 'hint-sm', m.events.join(' \u00b7 ')));
+      tr.appendChild(what);
+      body.appendChild(tr);
+    });
+
+    var last = months[months.length - 1];
+    var now = months[0];
+    if (last && now) {
+      var deltaMw = last.itCapacityMw - now.itCapacityMw;
+      $('plan-note').textContent = 'In ' + state.horizon + ' months: '
+        + last.itCapacityMw.toFixed(2) + ' MW'
+        + (Math.abs(deltaMw) >= 0.005
+          ? ' (' + (deltaMw > 0 ? '+' : '') + deltaMw.toFixed(2) + ')' : ' (unchanged)')
+        + ', ' + Math.max(0, last.rackSlots - last.rackCount).toLocaleString() + ' rack slots free.';
+    }
+  }
+
+  function renderSchedule() {
+    var host = $('schedule');
+    host.textContent = '';
+    if (state.schedule.length === 0) {
+      var none = el('div', 'sched-row');
+      none.appendChild(el('span', 'when', '\u2014'));
+      var what = el('div', 'what');
+      what.appendChild(el('div', 'l', 'Nothing committed in this window'));
+      what.appendChild(el('div', 'd', 'No construction under way, no contract reaching term, no hardware aging out.'));
+      none.appendChild(what);
+      host.appendChild(none);
+      return;
+    }
+    state.schedule.forEach(function (entry) {
+      var row = el('div', 'sched-row');
+      var when = el('span', 'when' + (entry.monthsAhead > 12 ? ' far' : ''),
+        entry.monthsAhead === 0 ? 'now' : '+' + entry.monthsAhead + ' mo');
+      row.appendChild(when);
+      var what = el('div', 'what');
+      what.appendChild(el('div', 'l', entry.label));
+      what.appendChild(el('div', 'd', entry.detail));
+      row.appendChild(what);
+      host.appendChild(row);
+    });
+  }
+
+  function renderPlan() {
+    if (!run) return;
+    state.headroom = run.headroom();
+    state.projection = run.projection(state.horizon);
+    state.schedule = run.schedule();
+
+    // Chart the workload carrying the most committed capacity - the one whose
+    // headroom the player is actually spending. With nothing sold, chart the
+    // one with the most capacity, which is what they would sell first.
+    var chosen = null;
+    var bestSold = -1;
+    var bestCapacity = -1;
+    state.headroom.forEach(function (row) {
+      if (row.reservedUnits > bestSold) { bestSold = row.reservedUnits; }
+      if (row.servableUnits > bestCapacity) { bestCapacity = row.servableUnits; }
+    });
+    state.headroom.forEach(function (row) {
+      if (chosen) return;
+      if (bestSold > 0 ? row.reservedUnits === bestSold : row.servableUnits === bestCapacity) {
+        chosen = row.workloadId;
+      }
+    });
+    state.chartWorkload = chosen;
+
+    // Headroom at the horizon, indexed for the table's forward column.
+    state.projectionByWorkload = {};
+    var last = state.projection[state.projection.length - 1];
+    if (last) {
+      last.perWorkload.forEach(function (row) {
+        state.projectionByWorkload[row.workloadId] = row.freeUnits;
+      });
+    }
+    renderHorizon();
+    renderHeadroom();
+    renderPlanChart();
+    renderProjection();
+    renderSchedule();
   }
 
   // ---------- site / report / log ---------------------------------------
@@ -1130,6 +1523,7 @@
     renderTable();
     renderDrawer();
     renderPanels();
+    renderPlan();
     renderLog();
     renderGameOver();
     var remaining = run.remainingTicks();
@@ -1232,7 +1626,7 @@
 
   function setTab(name) {
     state.tab = name;
-    ['site', 'trend', 'report', 'log'].forEach(function (key) {
+    ['site', 'plan', 'trend', 'report', 'log'].forEach(function (key) {
       $('tab-' + key).hidden = key !== name;
     });
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {

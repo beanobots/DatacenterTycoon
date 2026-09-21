@@ -11,7 +11,7 @@ import { clamp01 } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
 
 /** Weeks to build a hall shell at speed factor 1.0. */
-const HALL_BUILD_WEEKS = 26;
+export const HALL_BUILD_WEEKS = 26;
 
 export class ConstructionSystem implements ISimulationSystem {
   readonly name = 'construction';
