@@ -126,6 +126,12 @@ schema versions.
   reserving compute occupies it whether or not their jobs run; utilisation
   decides the power those units draw. That is what makes a disaster-recovery
   tenant cheap to host and an AI training cluster expensive.
+- **Research is paid for in cash, not a parallel currency.** A project commits a
+  budget that is drawn down daily over its duration, so R&D competes with racks,
+  plant and debt service for the same money. Several projects run at once; what
+  limits them is specialists — staff who cannot be in two places — and the cash
+  to keep them all funded. A project that runs out of funding stalls and holds
+  its bench rather than failing.
 - **The operator is an autopilot, not a rule.** `src/sim/operator.ts` holds the
   mechanics of running the business plus a heuristic that decides when to use
   them. Hand any category to the player and the heuristic stops acting on it;

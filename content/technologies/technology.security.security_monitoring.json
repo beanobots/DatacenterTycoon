@@ -1,15 +1,15 @@
 {
   "id": "technology.security.security_monitoring",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Security Monitoring",
   "description": "Continuous monitoring of physical and network intrusion signals.",
   "branch": "security",
   "tier": 1,
   "research": {
-    "costRP": 2400,
+    "costUsd": 2400000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.security.physical_security"

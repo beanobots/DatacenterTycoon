@@ -1,15 +1,15 @@
 {
   "id": "technology.power.gas",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "On-Site Gas Generation",
   "description": "Combined-cycle generation behind the meter.",
   "branch": "power",
   "tier": 2,
   "research": {
-    "costRP": 5500,
+    "costUsd": 5500000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.power.renewable_energy"

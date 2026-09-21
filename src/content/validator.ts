@@ -208,7 +208,7 @@ export function validateContent(registry: ContentRegistry, existing: {
     for (const [otherId, other] of technologies) {
       if (id === otherId) continue;
       if (other.branch !== tech.branch || other.tier !== tech.tier) continue;
-      if (other.research.costRP > tech.research.costRP) continue;
+      if (other.research.costUsd > tech.research.costUsd) continue;
       if (tech.effects.length === 0 || other.effects.length === 0) continue;
       // A technology whose value is the content it unlocks cannot be judged
       // dominated by comparing modifiers: two-phase immersion carries only cost

@@ -1,15 +1,15 @@
 {
   "id": "technology.grid.carbon_aware_scheduling",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Carbon-Aware Scheduling",
   "description": "Shifts flexible load toward low-carbon hours. Chapter 8: -25% operational carbon potential.",
   "branch": "grid",
   "tier": 3,
   "research": {
-    "costRP": 9000,
+    "costUsd": 9000000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.operations.workload_scheduling",

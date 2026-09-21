@@ -1,6 +1,6 @@
 {
   "id": "balance.default",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Default Balance Profile",
   "description": "Base units that the chapter 12 factors multiply. Prototype gameplay values per the chapter 12 preamble; tune through the golden scenarios rather than in code. baseRackPurchaseCost is the most sensitive single value here: it sets IT capital per MW (about $27M/MW at 6 kW per rack) and therefore the refresh burden a campaign has to carry every hardware generation.",
   "baseRackPowerKw": 6.0,
@@ -19,7 +19,6 @@
   "baseMaintenance01": 0.035,
   "baseAnnualSalary": 118000,
   "racksPerStaff": 22,
-  "researchPointsPerStaffYear": 320,
   "thermalThrottleStartC": 32,
   "thermalShutdownC": 42,
   "referenceInletTempC": 24,
@@ -29,5 +28,6 @@
   "wasteRecyclingCostPerTonne": 95,
   "rackMassTonnes": 0.85,
   "heatSaleRevenuePerMwh": 22,
-  "annualInsurance01": 0.006
+  "annualInsurance01": 0.006,
+  "researchStaffShare01": 0.6
 }

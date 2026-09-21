@@ -79,7 +79,8 @@ export interface AnnualReport {
   };
   readonly research: {
     readonly completed: number;
-    readonly points: number;
+    /** Projects under way at the close of the year. */
+    readonly active: number;
   };
 }
 
@@ -171,7 +172,7 @@ export function buildAnnualReport(context: SimulationContext, year: number, peri
     },
     research: {
       completed: state.research.completed.length,
-      points: round(state.company.researchPoints, 1),
+      active: state.research.active.length,
     },
   };
 }

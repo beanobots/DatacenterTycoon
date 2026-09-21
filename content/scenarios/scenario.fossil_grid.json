@@ -1,6 +1,6 @@
 {
   "id": "scenario.fossil_grid",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Fossil-Heavy Grid",
   "description": "Chapter 14 golden scenario. The cheapest power in the game at 640 kg/MWh. Every megawatt-hour imported is a carbon line, and the carbon price is only going one way.",
   "regionId": "region.coal_belt",
@@ -9,7 +9,6 @@
   "startingCash": 150000000,
   "startingDebt": 50000000,
   "startingReputation": 30,
-  "startingResearchPoints": 800,
   "startingTechnologies": [
     "technology.cooling.air",
     "technology.hardware.cpu_servers",

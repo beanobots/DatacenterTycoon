@@ -1,15 +1,15 @@
 {
   "id": "technology.operations.advanced_construction",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Advanced Construction",
   "description": "Prefabricated modular halls and plant skids.",
   "branch": "operations",
   "tier": 3,
   "research": {
-    "costRP": 9500,
+    "costUsd": 9500000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.operations.advanced_monitoring"

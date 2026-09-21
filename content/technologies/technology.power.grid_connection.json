@@ -1,15 +1,15 @@
 {
   "id": "technology.power.grid_connection",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Grid Connection",
   "description": "An interconnection agreement and diesel standby plant.",
   "branch": "power",
   "tier": 0,
   "research": {
-    "costRP": 0,
+    "costUsd": 0,
     "durationDays": 0,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 0
+    "requiredSpecialists": 1,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [],
   "effects": [],

@@ -1,15 +1,15 @@
 {
   "id": "technology.operations.workload_scheduling",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Workload Scheduling",
   "description": "A deadline-aware scheduler over the flexible share of the fleet.",
   "branch": "operations",
   "tier": 2,
   "research": {
-    "costRP": 3400,
+    "costUsd": 3400000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.efficiency.virtualization"

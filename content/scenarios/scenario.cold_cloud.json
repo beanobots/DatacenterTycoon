@@ -1,6 +1,6 @@
 {
   "id": "scenario.cold_cloud",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Cold Cloud Facility",
   "description": "Chapter 14 golden scenario. Free cooling and a near-zero-carbon grid, paid for with 42 ms of latency, winter storms and a build cost the climate inflates.",
   "regionId": "region.nordic_cold",
@@ -9,7 +9,6 @@
   "startingCash": 200000000,
   "startingDebt": 70000000,
   "startingReputation": 35,
-  "startingResearchPoints": 1000,
   "startingTechnologies": [
     "technology.cooling.air",
     "technology.hardware.cpu_servers",

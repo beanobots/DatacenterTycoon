@@ -1,15 +1,15 @@
 {
   "id": "technology.environment.biodiversity_survey",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Biodiversity Survey",
   "description": "Ecological baseline survey of the site and its surroundings.",
   "branch": "environment",
   "tier": 1,
   "research": {
-    "costRP": 2000,
+    "costUsd": 2000000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.environment.environmental_monitoring"

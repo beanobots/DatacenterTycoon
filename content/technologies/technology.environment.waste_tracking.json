@@ -1,15 +1,15 @@
 {
   "id": "technology.environment.waste_tracking",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Waste Tracking",
   "description": "Mass-balance tracking of every waste stream.",
   "branch": "environment",
   "tier": 2,
   "research": {
-    "costRP": 3200,
+    "costUsd": 3200000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.environment.environmental_monitoring"

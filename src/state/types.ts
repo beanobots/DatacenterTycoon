@@ -71,7 +71,6 @@ export interface CompanyState {
   /** -100..100, local permits, incentives and expansion rights. */
   communityTrust: number;
   influence: number;
-  researchPoints: number;
   /** Rises with capacity; gates high-tier research. */
   companyLevel: number;
   staffCount: number;
@@ -189,13 +188,24 @@ export interface ActiveContractState {
   backlogUnitHours: number;
 }
 
+/** One research project under way. */
+export interface ActiveResearchState {
+  readonly technologyId: string;
+  /** Dollars already spent on it. */
+  fundedUsd: number;
+  /** Specialists it occupies while it runs. */
+  readonly specialists: number;
+  readonly startedTick: number;
+}
+
 export interface ResearchState {
   /** Completed technology IDs. */
   completed: string[];
-  /** Technology currently being researched, if any. */
-  activeId: string | null;
-  /** Research points already committed to the active technology. */
-  activeProgressRP: number;
+  /**
+   * Projects under way. Several may run at once; what limits them is
+   * specialists and cash, not a single slot.
+   */
+  active: ActiveResearchState[];
   /** Unlocked content IDs, accumulated from completed technologies. */
   unlockedCooling: string[];
   unlockedPower: string[];

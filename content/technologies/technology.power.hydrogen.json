@@ -1,15 +1,15 @@
 {
   "id": "technology.power.hydrogen",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Hydrogen-Ready Generation",
   "description": "Firm backup generation running on hydrogen or a blend.",
   "branch": "power",
   "tier": 4,
   "research": {
-    "costRP": 18000,
+    "costUsd": 18000000,
     "durationDays": 420,
-    "minimumCompanyLevel": 3,
-    "requiredSpecialists": 8
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
   },
   "prerequisites": [
     "technology.power.gas",

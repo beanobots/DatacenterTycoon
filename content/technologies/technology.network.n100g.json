@@ -1,15 +1,15 @@
 {
   "id": "technology.network.n100g",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "100G Networking",
   "description": "100 gigabit spine and transit capacity.",
   "branch": "network",
   "tier": 1,
   "research": {
-    "costRP": 1600,
+    "costUsd": 1600000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.hardware.cpu_servers"

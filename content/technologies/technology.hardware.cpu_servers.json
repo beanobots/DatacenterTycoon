@@ -1,15 +1,15 @@
 {
   "id": "technology.hardware.cpu_servers",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "CPU Servers",
   "description": "Standard two-socket server racks, disk arrays and a tape library: the baseline fleet.",
   "branch": "hardware",
   "tier": 0,
   "research": {
-    "costRP": 0,
+    "costUsd": 0,
     "durationDays": 0,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 0
+    "requiredSpecialists": 1,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [],
   "effects": [],

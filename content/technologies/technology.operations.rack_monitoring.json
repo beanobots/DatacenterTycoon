@@ -1,15 +1,15 @@
 {
   "id": "technology.operations.rack_monitoring",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Rack Monitoring",
   "description": "Per-rack power and inlet-temperature telemetry.",
   "branch": "operations",
   "tier": 1,
   "research": {
-    "costRP": 1200,
+    "costUsd": 1200000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.hardware.cpu_servers"

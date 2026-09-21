@@ -1,15 +1,15 @@
 {
   "id": "technology.grid.virtual_power_plant",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Virtual Power Plant",
   "description": "Aggregated storage and flexible load bid as a grid resource. Chapter 8: grid-service revenue, trust bonus.",
   "branch": "grid",
   "tier": 4,
   "research": {
-    "costRP": 20000,
+    "costUsd": 20000000,
     "durationDays": 420,
-    "minimumCompanyLevel": 3,
-    "requiredSpecialists": 8
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
   },
   "prerequisites": [
     "technology.grid.battery_storage",

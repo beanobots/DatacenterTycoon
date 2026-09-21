@@ -180,14 +180,15 @@ describe('save and load', () => {
     expect(contentMismatch).toBe(true);
   });
 
-  it('migrates saves from at least two prior versions', () => {
+  it('migrates a save from the oldest supported version through every step', () => {
     expect(SAVE_VERSION).toBeGreaterThanOrEqual(3);
 
     const engine = engineFor('migration');
     engine.runYears(1);
     const current = createSave(engine, registry);
 
-    // Version 1: no contract market, no hall install tick.
+    // Rebuild a version-1 save: no contract market, no hall install tick, and
+    // research as a points balance driving a single project.
     const legacy = JSON.parse(JSON.stringify(current)) as Record<string, unknown>;
     legacy.saveVersion = 1;
     const state = legacy.state as Record<string, unknown>;
@@ -195,12 +196,39 @@ describe('save and load', () => {
     for (const facility of state.facilities as Array<Record<string, unknown>>) {
       for (const hall of facility.halls as Array<Record<string, unknown>>) delete hall.installedTick;
     }
+    const research = state.research as Record<string, unknown>;
+    delete research.active;
+    research.activeId = 'technology.cooling.containment';
+    research.activeProgressRP = 750;
+    (state.company as Record<string, unknown>).researchPoints = 4000;
 
     const migrated = migrate(legacy as { saveVersion: number });
-    expect(migrated.applied).toEqual(['001-contract-market', '002-hall-install-tick']);
+    expect(migrated.applied).toEqual([
+      '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
+    ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
+
     const migratedState = (migrated.save as unknown as { state: Record<string, unknown> }).state;
     expect(Array.isArray(migratedState.contractOffers)).toBe(true);
+
+    // The single in-flight project became a one-element list, its progress
+    // re-expressed in dollars at the rate the content migration used.
+    const migratedResearch = migratedState.research as Record<string, unknown>;
+    const active = migratedResearch.active as Array<Record<string, unknown>>;
+    expect(active).toHaveLength(1);
+    expect(active[0]!.technologyId).toBe('technology.cooling.containment');
+    expect(active[0]!.fundedUsd).toBe(750_000);
+    expect(migratedResearch.activeId).toBeUndefined();
+    expect((migratedState.company as Record<string, unknown>).researchPoints).toBeUndefined();
+  });
+
+  it('restores a migrated save into a runnable campaign', () => {
+    const engine = engineFor('migration-load');
+    engine.runYears(1);
+    const save = createSave(engine, registry);
+    const { engine: restored } = loadSave(serializeSave(save), registry);
+    expect(() => restored.runYears(1)).not.toThrow();
+    expect(restored.annualReports.length).toBeGreaterThan(0);
   });
 
   it('refuses a save from a newer build rather than guessing', () => {
@@ -330,7 +358,7 @@ describe('scoring', () => {
     customer: { contractsActive: 6, completion01: 0.999, latencyMs: 10, latencySatisfaction01: 0.95, reputation: 80 },
     social: { trust: 40, jobs: 90, heatExportedMwh: 3000, gridServiceRevenue: 500000, transparent: true },
     capacity: { itCapacityMw: 8, rackCount: 900, hallCount: 4, powerCapacityMw: 12 },
-    research: { completed: 20, points: 500 },
+    research: { completed: 20, active: 2 },
     ...overrides,
   });
 

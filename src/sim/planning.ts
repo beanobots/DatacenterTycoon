@@ -187,7 +187,7 @@ export function workloadHeadroom(context: SimulationContext): WorkloadHeadroom[]
  */
 function unlockingTechnology(context: SimulationContext, workloadId: string): string | null {
   const workload = context.registry.workload(workloadId, 'planning');
-  let best: { name: string; costRP: number } | null = null;
+  let best: { name: string; costUsd: number } | null = null;
 
   for (const technology of context.registry.all('technologies').values()) {
     if (context.state.research.completed.includes(technology.id)) continue;
@@ -196,8 +196,8 @@ function unlockingTechnology(context: SimulationContext, workloadId: string): st
       if (!hardware) continue;
       if (!workload.compatibleFamilies.includes(hardware.family)) continue;
       if ((hardware.workloadAffinity[workloadId] ?? 0) <= 0) continue;
-      if (!best || technology.research.costRP < best.costRP) {
-        best = { name: technology.name, costRP: technology.research.costRP };
+      if (!best || technology.research.costUsd < best.costUsd) {
+        best = { name: technology.name, costUsd: technology.research.costUsd };
       }
     }
   }

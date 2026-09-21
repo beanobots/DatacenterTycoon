@@ -1,15 +1,15 @@
 {
   "id": "technology.megaproject.smr",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Small Modular Reactor",
   "description": "A dedicated 100MW-class firm low-carbon asset. Chapter 8: dedicated firm supply.",
   "branch": "megaproject",
   "tier": 5,
   "research": {
-    "costRP": 30000,
+    "costUsd": 30000000,
     "durationDays": 540,
-    "minimumCompanyLevel": 4,
-    "requiredSpecialists": 10
+    "requiredSpecialists": 10,
+    "minimumCompanyLevel": 4
   },
   "prerequisites": [
     "technology.power.nuclear_contract",

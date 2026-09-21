@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -64,7 +64,40 @@ const MIGRATIONS: readonly Migration[] = [
       }
     },
   },
+  {
+    from: 3, to: 4, id: '003-research-in-dollars',
+    apply: (save) => {
+      // Version 3 funded research from a points balance and ran one project at
+      // a time. Points are gone and projects are concurrent, so a single
+      // in-flight project becomes a one-element list, and its progress is
+      // re-expressed as dollars funded. The conversion the content migration
+      // used was 1 RP = $1,000, so the same rate reconstructs the spend.
+      const state = save.state;
+      const research = state.research as Record<string, unknown> | undefined;
+      if (research) {
+        const activeId = research.activeId;
+        const progressRP = typeof research.activeProgressRP === 'number' ? research.activeProgressRP : 0;
+        if (!Array.isArray(research.active)) {
+          research.active = typeof activeId === 'string' && activeId.length > 0
+            ? [{
+                technologyId: activeId,
+                fundedUsd: progressRP * RP_TO_USD,
+                specialists: 2,
+                startedTick: 0,
+              }]
+            : [];
+        }
+        delete research.activeId;
+        delete research.activeProgressRP;
+      }
+      const company = state.company as Record<string, unknown> | undefined;
+      if (company) delete company.researchPoints;
+    },
+  },
 ];
+
+/** The rate the content migration used when research moved to dollars. */
+const RP_TO_USD = 1000;
 
 export interface MigrationResult<T> {
   readonly save: T;

@@ -73,7 +73,7 @@ when it is an additive share.
 | `grid.demandResponseRevenue` | 0 | accounting | Payment rate for contracted flexibility |
 | `network.transitCost` | 1 | finance | Multiplies network transit cost |
 | `network.latency` | 1 | report | Multiplies latency to the demand centre |
-| `research.pointsPerYear` | 1 | research | Multiplies research point generation |
+| `research.speed` | 1 | research, player | Divides project duration, so the same budget is spent faster |
 | `company.reputationGain` | 1 | SLA | Multiplies reputation earned for delivered months |
 | `community.trustGain` | 0 | community | Adds to daily trust movement |
 | `security.incidentRate` | 1 | — | Reserved: security incident hazard |

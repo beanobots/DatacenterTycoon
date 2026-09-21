@@ -1,6 +1,6 @@
 {
   "id": "scenario.dry_grid",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "The Dry Grid",
   "description": "Spec chapter 13 walkthrough. A 12 MW objective outside a desert city: excellent solar, extreme heat, severe water stress, gas-heavy evenings, and a community that is already watching industrial water use.",
   "regionId": "region.desert_southwest",
@@ -9,7 +9,6 @@
   "startingCash": 180000000,
   "startingDebt": 60000000,
   "startingReputation": 35,
-  "startingResearchPoints": 1000,
   "startingTechnologies": [
     "technology.cooling.air",
     "technology.hardware.cpu_servers",

@@ -1,15 +1,15 @@
 {
   "id": "technology.environment.habitat_restoration",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Habitat Restoration",
   "description": "Native planting, wetlands and wildlife corridors on owned land.",
   "branch": "environment",
   "tier": 3,
   "research": {
-    "costRP": 7000,
+    "costUsd": 7000000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.environment.biodiversity_survey"

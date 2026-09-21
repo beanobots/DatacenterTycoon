@@ -1,15 +1,15 @@
 {
   "id": "technology.hardware.gpu_gen2",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Second-Generation GPUs",
   "description": "Denser accelerator nodes that assume liquid cooling.",
   "branch": "hardware",
   "tier": 3,
   "research": {
-    "costRP": 8000,
+    "costUsd": 8000000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.hardware.ai_computing",

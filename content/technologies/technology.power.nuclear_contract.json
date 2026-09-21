@@ -1,15 +1,15 @@
 {
   "id": "technology.power.nuclear_contract",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Utility Nuclear Contract",
   "description": "Firm low-carbon supply from a utility reactor. Chapter 8: firm low-carbon supply.",
   "branch": "power",
   "tier": 3,
   "research": {
-    "costRP": 10000,
+    "costUsd": 10000000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.power.advanced_power_markets"

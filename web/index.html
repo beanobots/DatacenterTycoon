@@ -312,6 +312,16 @@
   .act .tr { font-size: 11px; color: var(--heat); display: flex; gap: 5px; }
   .act .tr::before { content: "\2298"; flex: none; }
   .act .bl { font-size: 11px; color: var(--critical); }
+  .running { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .project {
+    display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px; border-radius: 999px;
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .project .pn { font-size: 12px; font-weight: 600; }
+  .project .pbar { width: 46px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 22%, transparent); overflow: hidden; }
+  .project .pbar i { display: block; height: 100%; background: var(--accent); }
+  .project .pp { font-family: var(--mono); font-size: 10.5px; color: var(--ink-2); }
+
   .qty { display: flex; gap: 5px; margin-top: 1px; }
   .qty span { font-size: 10px; color: var(--ink-3); align-self: center; margin-right: 2px; }
   .qty button {
@@ -770,8 +780,13 @@
     cell('Free to sell', Math.round(d.freeUnits).toLocaleString() + ' CU',
       d.bestFitWorkload ? 'most room: ' + d.bestFitWorkload : 'no capacity', d.freeUnits <= 0);
     cell('Reputation', Math.round(d.reputation) + '', 'trust ' + (d.trust > 0 ? '+' : '') + Math.round(d.trust));
-    cell('Research', d.researching ? Math.round(d.researchProgress01 * 100) + '%' : 'idle',
-      d.researching || Math.round(d.researchPoints).toLocaleString() + ' RP banked', !d.researching);
+    var rd = d.projects.length === 0 ? 'idle'
+      : d.projects.length + ' running';
+    var rdSub = d.projects.length === 0
+      ? d.freeSpecialists + ' specialists free'
+      : d.projects.map(function (p) { return Math.round(p.progress01 * 100) + '%'; }).join(' \u00b7 ');
+    cell('R&D', rd, rdSub, d.projects.length === 0 && d.freeSpecialists > 0);
+    cell('Specialists', d.freeSpecialists + '/' + d.totalSpecialists, 'free to assign');
     cell('Hall inlet', d.worstInletC > 0 ? d.worstInletC.toFixed(0) + '\u00b0C' : '\u2014',
       d.throttling ? 'throttling' : 'ambient ' + d.ambientC.toFixed(0) + '\u00b0C', d.throttling);
     cell('Grid', d.gridAvailable ? 'up' : 'down',
@@ -811,7 +826,7 @@
     cooling: 'Cooling', power: 'Power',
   };
   var CATEGORY_BLURB = {
-    research: 'One project at a time. Every technology improves something and costs something else.',
+    research: 'Run as many projects as you have specialists for. Each is funded from cash, day by day.',
     contracts: 'Offers leave the table after about three months. Sell only what the fleet can serve.',
     capacity: 'Racks earn; halls hold them. A rack needs a hall whose cooling can carry its density.',
     cooling: 'Re-plumbing a live hall is expensive and is the only way off a technology the heat has beaten.',
@@ -856,6 +871,33 @@
       bar.appendChild(toggle);
       block.appendChild(bar);
 
+      // Show what is already running before what could be started: research is
+      // concurrent now, and the bench is the constraint the player plans against.
+      if (category === 'research' && state.dashboard) {
+        var d = state.dashboard;
+        var running = el('div', 'running');
+        if (d.projects.length === 0) {
+          running.appendChild(el('span', 'empty', 'Nothing under way. '
+            + d.freeSpecialists + ' of ' + d.totalSpecialists + ' specialists free.'));
+        } else {
+          d.projects.forEach(function (project) {
+            var chip = el('span', 'project');
+            chip.appendChild(el('span', 'pn', project.name));
+            var bar = el('span', 'pbar');
+            var fill = el('i');
+            fill.style.width = Math.round(project.progress01 * 100) + '%';
+            bar.appendChild(fill);
+            chip.appendChild(bar);
+            chip.appendChild(el('span', 'pp', Math.round(project.progress01 * 100) + '% \u00b7 '
+              + money(project.costPerDay) + '/day'));
+            running.appendChild(chip);
+          });
+          running.appendChild(el('span', 'empty', d.freeSpecialists + ' of '
+            + d.totalSpecialists + ' specialists free'));
+        }
+        block.appendChild(running);
+      }
+
       if (auto[category]) {
         block.appendChild(el('div', 'empty', 'The heuristic is handling ' + CATEGORY_LABELS[category].toLowerCase()
           + '. Untick autopilot to take it over.'));
@@ -889,8 +931,7 @@
     var top = el('div', 'top');
     top.appendChild(el('span', 'nm', action.label));
     var price = el('span', 'px' + (action.cost === 0 ? ' free' : ''),
-      action.kind === 'research.start' ? action.costRP.toLocaleString() + ' RP'
-        : action.cost === 0 ? 'no cost' : money(action.cost));
+      action.cost === 0 ? 'no cost' : money(action.cost));
     top.appendChild(price);
     card.appendChild(top);
 
@@ -1322,6 +1363,7 @@
     ['Revenue', function (y) { return money(y.report.financial.revenue); }, false],
     ['Margin', function (y) { return pct(y.report.financial.operatingMargin01, 0); }, true],
     ['Cash', function (y) { return money(y.report.financial.cash); }, true],
+    ['Tech', function (y) { return y.report.research.completed; }, true],
     ['Score', function (y) { return y.score.overall.toFixed(1); }, false],
   ];
 

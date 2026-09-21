@@ -1,15 +1,15 @@
 {
   "id": "technology.cooling.direct_chip",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Direct-to-Chip Liquid Cooling",
   "description": "Cold plates on CPUs and accelerators. Chapter 8: -35% cooling power, 60-80kW racks.",
   "branch": "cooling",
   "tier": 3,
   "research": {
-    "costRP": 8000,
+    "costUsd": 8000000,
     "durationDays": 270,
-    "minimumCompanyLevel": 3,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 3
   },
   "prerequisites": [
     "technology.cooling.chilled_water",

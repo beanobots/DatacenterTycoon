@@ -14,7 +14,9 @@
 
 import type { SimulationContext } from './context.js';
 import type { DecisionCategory, OperatorSystem } from './operator.js';
-import { canStartResearch } from './systems/research.js';
+import {
+  freeSpecialists, researchBlocker, startResearch, totalSpecialists,
+} from './systems/research.js';
 import { installedItMw } from './report.js';
 import type { HallState } from '../state/types.js';
 
@@ -37,8 +39,14 @@ export interface ResearchAction extends PlayerActionBase {
   readonly technologyId: string;
   readonly branch: string;
   readonly tier: number;
-  readonly costRP: number;
+  /** Total budget, funded over the project's duration rather than up front. */
+  readonly costUsd: number;
+  /** Dollars per day while it runs, which is what the balance actually feels. */
+  readonly costPerDay: number;
   readonly durationDays: number;
+  readonly specialists: number;
+  readonly freeSpecialists: number;
+  readonly totalSpecialists: number;
 }
 
 export interface ContractAction extends PlayerActionBase {
@@ -130,30 +138,50 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
   const budget = operator.budget(context);
 
   // ------------------------------------------------------------- research
-  if (!context.state.research.activeId) {
-    for (const technology of context.registry.all('technologies').values()) {
-      if (!canStartResearch(context, technology.id)) continue;
-      const affordable = context.state.company.researchPoints >= technology.research.costRP * 0.15;
-      actions.push({
-        kind: 'research.start',
-        id: `research:${technology.id}`,
-        category: 'research',
-        label: technology.name,
-        detail: `${technology.description ?? ''} Tier ${technology.tier} ${technology.branch}. `
-          + `${technology.research.costRP.toLocaleString()} RP over ${technology.research.durationDays} days.`,
-        tradeOff: technology.tradeOff,
-        cost: 0,
-        affordable: true,
-        blocked: affordable ? undefined
-          : `Only ${Math.round(context.state.company.researchPoints).toLocaleString()} RP banked; `
-            + 'research will run slowly until more accrues.',
-        technologyId: technology.id,
-        branch: technology.branch,
-        tier: technology.tier,
-        costRP: technology.research.costRP,
-        durationDays: technology.research.durationDays,
-      });
-    }
+  // Several projects run at once, so the list is offered whether or not
+  // something is already under way. What limits it is specialists and cash.
+  const speed = Math.max(0.1, context.modifiers.value('research.speed', 1));
+  const free = freeSpecialists(context);
+  const bench = totalSpecialists(context);
+
+  for (const technology of context.registry.all('technologies').values()) {
+    if (context.state.research.completed.includes(technology.id)) continue;
+    if (context.state.research.active.some((p) => p.technologyId === technology.id)) continue;
+
+    // Prerequisites are a hard gate; everything else is reported so the player
+    // can see what a project would need rather than wondering where it went.
+    const missing = technology.prerequisites
+      .filter((id) => !context.state.research.completed.includes(id));
+    if (missing.length > 0) continue;
+
+    const days = Math.max(1, Math.round(technology.research.durationDays / speed));
+    const costPerDay = technology.research.costUsd / days;
+    const blocker = researchBlocker(context, technology.id);
+
+    actions.push({
+      kind: 'research.start',
+      id: `research:${technology.id}`,
+      category: 'research',
+      label: technology.name,
+      detail: `${technology.description ?? ''} Tier ${technology.tier} ${technology.branch}. `
+        + `${money(technology.research.costUsd)} funded over ${days} days `
+        + `(${money(costPerDay)}/day), ${technology.research.requiredSpecialists} specialists.`,
+      tradeOff: technology.tradeOff,
+      cost: technology.research.costUsd,
+      // Research is funded day by day, so what matters is whether the daily
+      // draw is sustainable, not whether the whole budget is on the balance.
+      affordable: context.state.company.cash > costPerDay * 30,
+      blocked: blocker ?? undefined,
+      technologyId: technology.id,
+      branch: technology.branch,
+      tier: technology.tier,
+      costUsd: technology.research.costUsd,
+      costPerDay,
+      durationDays: days,
+      specialists: technology.research.requiredSpecialists,
+      freeSpecialists: free,
+      totalSpecialists: bench,
+    });
   }
 
   // ------------------------------------------------------------ contracts
@@ -408,15 +436,18 @@ export function applyAction(
 
   if (kind === 'research') {
     const technologyId = rest.join(':');
-    if (context.state.research.activeId) {
-      return { ok: false, message: 'Another project is already in progress.' };
-    }
-    if (!canStartResearch(context, technologyId)) {
-      return { ok: false, message: 'Prerequisites for that technology are not met.' };
-    }
-    context.state.research.activeId = technologyId;
+    const blocker = researchBlocker(context, technologyId);
+    if (blocker) return { ok: false, message: blocker };
     const technology = context.registry.technology(technologyId, 'player');
-    return { ok: true, message: `Started research: ${technology.name}.` };
+    if (!startResearch(context, technologyId)) {
+      return { ok: false, message: 'That project could not be started.' };
+    }
+    return {
+      ok: true,
+      message: `Started ${technology.name}. `
+        + `${context.state.research.active.length} project`
+        + `${context.state.research.active.length === 1 ? '' : 's'} under way.`,
+    };
   }
 
   if (kind === 'contract') {

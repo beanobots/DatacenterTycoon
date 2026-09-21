@@ -1,15 +1,15 @@
 {
   "id": "technology.security.zero_trust",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Zero Trust Architecture",
   "description": "Identity-based segmentation with no implicit internal trust.",
   "branch": "security",
   "tier": 3,
   "research": {
-    "costRP": 8500,
+    "costUsd": 8500000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.security.security_monitoring"

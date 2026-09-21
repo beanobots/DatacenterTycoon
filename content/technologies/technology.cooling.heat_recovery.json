@@ -1,15 +1,15 @@
 {
   "id": "technology.cooling.heat_recovery",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Heat Recovery",
   "description": "Heat exchangers and a district-heat or greenhouse connection. Chapter 8: heat-sale revenue, +community support.",
   "branch": "cooling",
   "tier": 3,
   "research": {
-    "costRP": 5000,
+    "costUsd": 5000000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.cooling.chilled_water"

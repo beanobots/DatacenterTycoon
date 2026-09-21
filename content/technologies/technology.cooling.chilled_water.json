@@ -1,15 +1,15 @@
 {
   "id": "technology.cooling.chilled_water",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Chilled Water Plant",
   "description": "Central chiller plant with cooling towers and a distribution loop.",
   "branch": "cooling",
   "tier": 2,
   "research": {
-    "costRP": 3500,
+    "costUsd": 3500000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.cooling.containment"

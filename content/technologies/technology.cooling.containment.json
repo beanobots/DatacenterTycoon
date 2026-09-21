@@ -1,15 +1,15 @@
 {
   "id": "technology.cooling.containment",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Hot/Cold Aisle Containment",
   "description": "Physical separation of hot and cold aisles. Chapter 8: -8% cooling power, +20% density, -10% cooling failures.",
   "branch": "cooling",
   "tier": 1,
   "research": {
-    "costRP": 1500,
+    "costUsd": 1500000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.cooling.air"

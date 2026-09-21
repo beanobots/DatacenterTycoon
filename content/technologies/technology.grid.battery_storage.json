@@ -1,15 +1,15 @@
 {
   "id": "technology.grid.battery_storage",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Battery Storage",
   "description": "Grid-scale lithium storage. Chapter 8: +25% renewable utilization, fast backup.",
   "branch": "grid",
   "tier": 2,
   "research": {
-    "costRP": 5000,
+    "costUsd": 5000000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.power.renewable_energy"

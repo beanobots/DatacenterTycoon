@@ -1,15 +1,15 @@
 {
   "id": "technology.security.physical_security",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Physical Security",
   "description": "Fencing, access control and a staffed gatehouse.",
   "branch": "security",
   "tier": 0,
   "research": {
-    "costRP": 0,
+    "costUsd": 0,
     "durationDays": 0,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 0
+    "requiredSpecialists": 1,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [],
   "effects": [

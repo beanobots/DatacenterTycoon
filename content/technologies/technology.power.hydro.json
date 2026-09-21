@@ -1,15 +1,15 @@
 {
   "id": "technology.power.hydro",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Hydro Procurement",
   "description": "Long-term hydro offtake where the geography supports it.",
   "branch": "power",
   "tier": 2,
   "research": {
-    "costRP": 7000,
+    "costUsd": 7000000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.power.renewable_contracts"

@@ -1,15 +1,15 @@
 {
   "id": "technology.power.solar",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Solar Deployment",
   "description": "Rooftop and ground-mount photovoltaics. Chapter 8: renewable reputation.",
   "branch": "power",
   "tier": 2,
   "research": {
-    "costRP": 3000,
+    "costUsd": 3000000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.power.renewable_energy"

@@ -14,7 +14,7 @@
 import type { SimulationTick } from '../core/clock.js';
 import { clamp01 } from '../core/math.js';
 import type { ISimulationSystem, SimulationContext } from './context.js';
-import { canStartResearch } from './systems/research.js';
+import { canStartResearch, startResearch } from './systems/research.js';
 import { CRITICAL_TRUST } from './systems/community.js';
 import { installedItMw } from './report.js';
 import type { CoolingTechnologyDefinition, HardwareDefinition } from '../definitions/types.js';
@@ -78,6 +78,8 @@ export const RETIREMENT_SHARE_PER_MONTH = 0.25;
 const RETROFIT_PREMIUM = 1.25;
 /** Cooling capacity installed above the hall's design IT load. */
 const COOLING_DESIGN_MARGIN = 1.25;
+/** Share of a month's free capital the heuristic will commit to R&D. */
+const RESEARCH_BUDGET_SHARE = 0.25;
 /** Share of a workload's servable capacity the operator will commit. */
 const WORKLOAD_CAPACITY_MARGIN = 0.85;
 /** Debt an operator can carry, as a multiple of annual revenue at full standing. */
@@ -338,18 +340,30 @@ export class OperatorSystem implements ISimulationSystem {
   }
 
   // -------------------------------------------------------------- research
+  /**
+   * Starts research, in branch priority order, until the specialists run out.
+   *
+   * Projects run concurrently, so the heuristic fills its bench rather than
+   * queueing one at a time - but only with what the discretionary budget can
+   * keep funded, since a stalled project holds specialists without producing
+   * anything.
+   */
   private chooseResearch(context: SimulationContext): void {
-    if (context.state.research.activeId) return;
-    const available = [...context.registry.all('technologies').values()]
-      .filter((tech) => canStartResearch(context, tech.id))
-      .sort((a, b) => {
-        const priorityA = this.strategy.researchPriority.indexOf(a.branch);
-        const priorityB = this.strategy.researchPriority.indexOf(b.branch);
-        return priorityA - priorityB || a.tier - b.tier
-          || a.research.costRP - b.research.costRP || a.id.localeCompare(b.id);
-      });
-    const chosen = available[0];
-    if (chosen) context.state.research.activeId = chosen.id;
+    for (;;) {
+      const budget = this.discretionaryBudget(context);
+      const available = [...context.registry.all('technologies').values()]
+        .filter((tech) => canStartResearch(context, tech.id))
+        // Only take on what a year of free capital could actually fund.
+        .filter((tech) => tech.research.costUsd <= budget * RESEARCH_BUDGET_SHARE * 12)
+        .sort((a, b) => {
+          const priorityA = this.strategy.researchPriority.indexOf(a.branch);
+          const priorityB = this.strategy.researchPriority.indexOf(b.branch);
+          return priorityA - priorityB || a.tier - b.tier
+            || a.research.costUsd - b.research.costUsd || a.id.localeCompare(b.id);
+        });
+      const chosen = available[0];
+      if (!chosen || !startResearch(context, chosen.id)) return;
+    }
   }
 
   // -------------------------------------------------------------- contracts

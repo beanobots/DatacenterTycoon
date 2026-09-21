@@ -27,8 +27,7 @@ export function createInitialState(
   // be applied here rather than by the research system.
   const research = {
     completed: [...scenario.startingTechnologies],
-    activeId: null as string | null,
-    activeProgressRP: 0,
+    active: [] as GameState['research']['active'],
     unlockedCooling: [] as string[],
     unlockedPower: [] as string[],
     unlockedHardware: [] as string[],
@@ -84,7 +83,6 @@ export function createInitialState(
       reputation: scenario.startingReputation,
       communityTrust: region.people.startingTrust,
       influence: 0,
-      researchPoints: scenario.startingResearchPoints,
       companyLevel: 0,
       staffCount: 8,
       lifetimeRevenue: 0,

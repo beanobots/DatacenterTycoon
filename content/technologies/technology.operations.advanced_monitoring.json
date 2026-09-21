@@ -1,15 +1,15 @@
 {
   "id": "technology.operations.advanced_monitoring",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Advanced Monitoring",
   "description": "Hall-level analytics tying thermal, power and workload telemetry together.",
   "branch": "operations",
   "tier": 2,
   "research": {
-    "costRP": 5000,
+    "costUsd": 5000000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.operations.predictive_monitoring"

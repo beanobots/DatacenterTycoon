@@ -1,15 +1,15 @@
 {
   "id": "technology.operations.predictive_monitoring",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Predictive Monitoring",
   "description": "Failure prediction from vibration, thermal and power signatures. Chapter 8: -20% failure rate, -10% maintenance cost.",
   "branch": "operations",
   "tier": 2,
   "research": {
-    "costRP": 4000,
+    "costUsd": 4000000,
     "durationDays": 210,
-    "minimumCompanyLevel": 1,
-    "requiredSpecialists": 4
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
   },
   "prerequisites": [
     "technology.operations.rack_monitoring"

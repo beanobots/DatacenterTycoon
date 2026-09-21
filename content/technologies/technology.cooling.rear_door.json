@@ -1,15 +1,15 @@
 {
   "id": "technology.cooling.rear_door",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Rear-Door Heat Exchangers",
   "description": "Water-cooled heat exchangers mounted on the rack door.",
   "branch": "cooling",
   "tier": 3,
   "research": {
-    "costRP": 5500,
+    "costUsd": 5500000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.cooling.chilled_water"

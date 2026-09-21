@@ -110,7 +110,7 @@ describe('cross-reference validation', () => {
       'technologies/technology.test.dangling.json': {
         id: 'technology.test.dangling', schemaVersion: 1, name: 'Dangling',
         branch: 'efficiency', tier: 1,
-        research: { costRP: 100, durationDays: 10, minimumCompanyLevel: 0, requiredSpecialists: 0 },
+        research: { costUsd: 100000, durationDays: 10, minimumCompanyLevel: 0, requiredSpecialists: 1 },
         prerequisites: ['technology.does.not_exist'],
         effects: [], unlocks: {}, tradeOff: 'none',
       },
@@ -129,7 +129,7 @@ describe('cross-reference validation', () => {
   it('rejects a technology dependency cycle', () => {
     const base = {
       schemaVersion: 1, branch: 'efficiency', tier: 1,
-      research: { costRP: 100, durationDays: 10, minimumCompanyLevel: 0, requiredSpecialists: 0 },
+      research: { costUsd: 100000, durationDays: 10, minimumCompanyLevel: 0, requiredSpecialists: 1 },
       effects: [], unlocks: {}, tradeOff: 'none',
     };
     const dir = contentCopyWith({

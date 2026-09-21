@@ -1,15 +1,15 @@
 {
   "id": "technology.hardware.flash_storage",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Flash Storage",
   "description": "All-flash arrays for latency-sensitive tenants.",
   "branch": "hardware",
   "tier": 1,
   "research": {
-    "costRP": 2200,
+    "costUsd": 2200000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.hardware.cpu_servers"

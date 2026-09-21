@@ -3,42 +3,136 @@
   "$id": "https://datacentertycoon.dev/schemas/scenario.schema.json",
   "title": "Scenario definition",
   "type": "object",
-  "required": ["id", "schemaVersion", "name", "regionId", "startDate", "durationYears", "startingCash", "startingDebt", "startingReputation", "startingResearchPoints", "startingTechnologies", "scoreProfileId", "balanceProfileId", "eventIds", "objectives", "minimumAvailability01", "targetCapacityMw", "difficulty"],
+  "required": [
+    "id",
+    "schemaVersion",
+    "name",
+    "regionId",
+    "startDate",
+    "durationYears",
+    "startingCash",
+    "startingDebt",
+    "startingReputation",
+    "startingTechnologies",
+    "scoreProfileId",
+    "balanceProfileId",
+    "eventIds",
+    "objectives",
+    "minimumAvailability01",
+    "targetCapacityMw",
+    "difficulty"
+  ],
   "properties": {
-    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
-    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
-    "name": { "type": "string", "minLength": 1 },
-    "description": { "type": "string" },
-    "regionId": { "$ref": "common.schema.json#/$defs/permanentId" },
-    "startDate": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
-    "durationYears": { "type": "integer", "minimum": 1, "maximum": 120 },
-    "startingCash": { "type": "number" },
-    "startingDebt": { "$ref": "common.schema.json#/$defs/nonNegative" },
-    "startingReputation": { "$ref": "common.schema.json#/$defs/reputationValue" },
-    "startingResearchPoints": { "$ref": "common.schema.json#/$defs/nonNegative" },
-    "startingTechnologies": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/permanentId" } },
-    "scoreProfileId": { "$ref": "common.schema.json#/$defs/permanentId" },
-    "balanceProfileId": { "$ref": "common.schema.json#/$defs/permanentId" },
-    "eventIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/permanentId" } },
+    "id": {
+      "$ref": "common.schema.json#/$defs/permanentId"
+    },
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "regionId": {
+      "$ref": "common.schema.json#/$defs/permanentId"
+    },
+    "startDate": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "durationYears": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120
+    },
+    "startingCash": {
+      "type": "number"
+    },
+    "startingDebt": {
+      "$ref": "common.schema.json#/$defs/nonNegative"
+    },
+    "startingReputation": {
+      "$ref": "common.schema.json#/$defs/reputationValue"
+    },
+    "startingTechnologies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/permanentId"
+      }
+    },
+    "scoreProfileId": {
+      "$ref": "common.schema.json#/$defs/permanentId"
+    },
+    "balanceProfileId": {
+      "$ref": "common.schema.json#/$defs/permanentId"
+    },
+    "eventIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/permanentId"
+      }
+    },
     "objectives": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "description", "metric", "comparison", "target", "byYear"],
+        "required": [
+          "id",
+          "description",
+          "metric",
+          "comparison",
+          "target",
+          "byYear"
+        ],
         "properties": {
-          "id": { "$ref": "common.schema.json#/$defs/permanentId" },
-          "description": { "type": "string", "minLength": 1 },
-          "metric": { "type": "string", "minLength": 1 },
-          "comparison": { "enum": ["gt", "lt", "gte", "lte"] },
-          "target": { "type": "number" },
-          "byYear": { "type": "integer", "minimum": 1900 }
+          "id": {
+            "$ref": "common.schema.json#/$defs/permanentId"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "metric": {
+            "type": "string",
+            "minLength": 1
+          },
+          "comparison": {
+            "enum": [
+              "gt",
+              "lt",
+              "gte",
+              "lte"
+            ]
+          },
+          "target": {
+            "type": "number"
+          },
+          "byYear": {
+            "type": "integer",
+            "minimum": 1900
+          }
         },
         "additionalProperties": false
       }
     },
-    "minimumAvailability01": { "$ref": "common.schema.json#/$defs/unitInterval" },
-    "targetCapacityMw": { "$ref": "common.schema.json#/$defs/positive" },
-    "difficulty": { "enum": ["easy", "normal", "hard"] }
+    "minimumAvailability01": {
+      "$ref": "common.schema.json#/$defs/unitInterval"
+    },
+    "targetCapacityMw": {
+      "$ref": "common.schema.json#/$defs/positive"
+    },
+    "difficulty": {
+      "enum": [
+        "easy",
+        "normal",
+        "hard"
+      ]
+    }
   },
   "additionalProperties": false
 }

@@ -1,15 +1,15 @@
 {
   "id": "technology.cooling.immersion_two_phase",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Two-Phase Immersion",
   "description": "Boiling dielectric fluid. Chapter 8: -60% cooling power, up to 220kW racks.",
   "branch": "cooling",
   "tier": 4,
   "research": {
-    "costRP": 25000,
+    "costUsd": 25000000,
     "durationDays": 420,
-    "minimumCompanyLevel": 3,
-    "requiredSpecialists": 8
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
   },
   "prerequisites": [
     "technology.cooling.immersion_single"

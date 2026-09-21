@@ -1,15 +1,15 @@
 {
   "id": "technology.efficiency.virtualization",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Virtualization",
   "description": "Consolidates workloads onto fewer physical servers. Chapter 8: +25% compute per installed fleet.",
   "branch": "efficiency",
   "tier": 1,
   "research": {
-    "costRP": 2000,
+    "costUsd": 2000000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.hardware.cpu_servers"

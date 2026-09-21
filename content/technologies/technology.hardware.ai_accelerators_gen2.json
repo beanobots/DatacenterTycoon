@@ -1,15 +1,15 @@
 {
   "id": "technology.hardware.ai_accelerators_gen2",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Second-Generation Accelerators",
   "description": "The densest commercial accelerator available.",
   "branch": "hardware",
   "tier": 4,
   "research": {
-    "costRP": 16000,
+    "costUsd": 16000000,
     "durationDays": 420,
-    "minimumCompanyLevel": 3,
-    "requiredSpecialists": 8
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
   },
   "prerequisites": [
     "technology.hardware.ai_accelerators",

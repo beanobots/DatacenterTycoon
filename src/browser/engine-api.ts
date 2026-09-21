@@ -16,6 +16,7 @@ import {
   RACK_ORDER_SIZES, applyAction, enumerateActions, hallName,
   type ActionResult, type PlayerAction,
 } from '../sim/player.js';
+import { freeSpecialists, totalSpecialists } from '../sim/systems/research.js';
 import {
   commissioningSchedule, projectCapacity, workloadHeadroom,
   type ProjectedMonth, type ScheduleEntry, type WorkloadHeadroom,
@@ -164,9 +165,15 @@ export interface Dashboard {
   readonly budget: number;
   readonly reputation: number;
   readonly trust: number;
-  readonly researchPoints: number;
-  readonly researching: string | null;
-  readonly researchProgress01: number;
+  /** Projects under way, each with its own funding progress. */
+  readonly projects: ReadonlyArray<{
+    readonly name: string;
+    readonly progress01: number;
+    readonly specialists: number;
+    readonly costPerDay: number;
+  }>;
+  readonly freeSpecialists: number;
+  readonly totalSpecialists: number;
   readonly itCapacityMw: number;
   readonly rackCount: number;
   readonly contractCount: number;
@@ -227,7 +234,8 @@ export interface FleetSummary {
   readonly power: ReadonlyArray<{ readonly name: string; readonly capacityMw: number; readonly clean: boolean }>;
   readonly contracts: ReadonlyArray<{ readonly name: string; readonly computeUnits: number; readonly workload: string }>;
   readonly research: ReadonlyArray<{ readonly name: string; readonly branch: string; readonly tier: number }>;
-  readonly researching: string | null;
+  /** Names of the projects currently under way. */
+  readonly researching: readonly string[];
 }
 
 function createRun(scenarioId: string, seed: string, strategy: StrategyName, years: number,
@@ -401,9 +409,17 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
       const state = engine.state;
       const halls = state.facilities.flatMap((f) => f.halls);
       const worstInlet = halls.reduce((worst, hall) => Math.max(worst, hall.inletTempC), 0);
-      const activeTech = state.research.activeId
-        ? registry.technology(state.research.activeId, 'console')
-        : null;
+      const speed = Math.max(0.1, context.modifiers.value('research.speed', 1));
+      const projects = state.research.active.map((project) => {
+        const technology = registry.technology(project.technologyId, 'console');
+        const days = Math.max(1, technology.research.durationDays / speed);
+        return {
+          name: technology.name,
+          progress01: Math.min(1, project.fundedUsd / Math.max(1, technology.research.costUsd)),
+          specialists: project.specialists,
+          costPerDay: technology.research.costUsd / days,
+        };
+      });
       // Sorted by room, so the first row is the honest answer to "what can I
       // sell next?".
       const headroomRows = [...workloadHeadroom(context)]
@@ -414,11 +430,9 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
         budget: operator.budget(context),
         reputation: state.company.reputation,
         trust: state.company.communityTrust,
-        researchPoints: state.company.researchPoints,
-        researching: activeTech ? activeTech.name : null,
-        researchProgress01: activeTech
-          ? Math.min(1, state.research.activeProgressRP / Math.max(1, activeTech.research.costRP))
-          : 0,
+        projects,
+        freeSpecialists: freeSpecialists(context),
+        totalSpecialists: totalSpecialists(context),
         itCapacityMw: halls.reduce((mw, hall) => {
           if (hall.constructionProgress01 < 1) return mw;
           return mw + hall.rackGroups.reduce((kw, group) => kw + group.count
@@ -499,7 +513,6 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
         const technology = registry.technology(id, 'console');
         return { name: technology.name, branch: technology.branch, tier: technology.tier };
       });
-      const activeId = engine.state.research.activeId;
       return {
         halls,
         hardware: [...hardware].map(([name, racks]) => ({ name, racks }))
@@ -507,7 +520,8 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
         power: power.sort((a, b) => b.capacityMw - a.capacityMw),
         contracts: contracts.sort((a, b) => b.computeUnits - a.computeUnits),
         research,
-        researching: activeId ? registry.technology(activeId, 'console').name : null,
+        researching: engine.state.research.active
+          .map((project) => registry.technology(project.technologyId, 'console').name),
       };
     },
   };

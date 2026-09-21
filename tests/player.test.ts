@@ -43,7 +43,7 @@ describe('the opening position', () => {
 
   it('leaves the first research and the first contract to the player', () => {
     const engine = manualEngine();
-    expect(engine.state.research.activeId).toBeNull();
+    expect(engine.state.research.active).toHaveLength(0);
     expect(engine.state.contracts).toHaveLength(0);
     // And offers the market immediately, so turn one has something to decide.
     expect(engine.state.contractOffers.length).toBeGreaterThan(0);
@@ -53,7 +53,7 @@ describe('the opening position', () => {
     const auto = new SimulationEngine(registry, {
       scenarioId: 'scenario.dry_grid', campaignSeed: 'player-test',
     });
-    expect(auto.state.research.activeId).not.toBeNull();
+    expect(auto.state.research.active.length).toBeGreaterThan(0);
     expect(auto.state.contracts.length).toBeGreaterThan(0);
   });
 });
@@ -108,23 +108,64 @@ describe('the action list', () => {
     }
   });
 
-  it('offers no research while a project is running', () => {
+  it('keeps offering research while projects run, and drops the one taken', () => {
     const engine = manualEngine();
     const first = actionsFor(engine).find((action) => action.kind === 'research.start');
     expect(first).toBeDefined();
     act(engine, first!.id);
-    expect(actionsFor(engine).some((action) => action.kind === 'research.start')).toBe(false);
+
+    const after = actionsFor(engine).filter((action) => action.kind === 'research.start');
+    // Concurrency: the list stays open.
+    expect(after.length).toBeGreaterThan(0);
+    // But the project already under way is not offered twice.
+    expect(after.some((action) => action.id === first!.id)).toBe(false);
+  });
+
+  it('runs several projects at once until the specialists are gone', () => {
+    const engine = manualEngine();
+    let started = 0;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const action = actionsFor(engine)
+        .find((candidate) => candidate.kind === 'research.start' && !candidate.blocked);
+      if (!action) break;
+      if (!act(engine, action.id).ok) break;
+      started += 1;
+    }
+    expect(started).toBeGreaterThan(1);
+    expect(engine.state.research.active.length).toBe(started);
+
+    // The bench is what stops it, and the next action says so.
+    const blocked = actionsFor(engine)
+      .filter((action) => action.kind === 'research.start' && action.blocked);
+    expect(blocked.length).toBeGreaterThan(0);
+    expect(blocked.some((action) => /specialist/i.test(action.blocked ?? ''))).toBe(true);
+  });
+
+  it('funds research from cash rather than a separate currency', () => {
+    const engine = manualEngine();
+    const action = actionsFor(engine)
+      .find((candidate) => candidate.kind === 'research.start' && !candidate.blocked);
+    expect(action).toBeDefined();
+    if (action?.kind !== 'research.start') throw new Error('expected a research action');
+    expect(action.costUsd).toBeGreaterThan(0);
+    act(engine, action.id);
+
+    const before = engine.state.company.cash;
+    engine.advanceTicks(engine.clock.ticksForDays(30));
+    expect(engine.state.company.cash).toBeLessThan(before);
+    expect(engine.state.research.active[0]!.fundedUsd).toBeGreaterThan(0);
   });
 });
 
 describe('taking an action', () => {
-  it('starts research and refuses a second project', () => {
+  it('starts research and refuses to start the same project twice', () => {
     const engine = manualEngine();
     const action = actionsFor(engine).find((a) => a.kind === 'research.start');
     expect(act(engine, action!.id).ok).toBe(true);
-    expect(engine.state.research.activeId).toBe(
+    expect(engine.state.research.active[0]!.technologyId).toBe(
       action!.kind === 'research.start' ? action!.technologyId : '',
     );
+    // The same project cannot be started twice.
     expect(act(engine, action!.id).ok).toBe(false);
   });
 
@@ -222,12 +263,12 @@ describe('player and autopilot share one implementation', () => {
   it('lets a category be handed back to the autopilot mid-campaign', () => {
     const engine = manualEngine('handback');
     engine.runYears(1);
-    expect(engine.state.research.activeId).toBeNull();
+    expect(engine.state.research.active).toHaveLength(0);
 
     engine.operator.setAutopilot('research', true);
     engine.runYears(1);
     // The heuristic picked something up once it held the category again.
-    expect(engine.state.research.completed.length + (engine.state.research.activeId ? 1 : 0))
+    expect(engine.state.research.completed.length + engine.state.research.active.length)
       .toBeGreaterThan(5);
   });
 });

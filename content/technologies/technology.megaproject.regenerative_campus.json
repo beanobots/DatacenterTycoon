@@ -1,15 +1,15 @@
 {
   "id": "technology.megaproject.regenerative_campus",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Regenerative Campus",
   "description": "Water-positive, carbon-negative, zero-landfill campus operation.",
   "branch": "megaproject",
   "tier": 5,
   "research": {
-    "costRP": 50000,
+    "costUsd": 50000000,
     "durationDays": 540,
-    "minimumCompanyLevel": 4,
-    "requiredSpecialists": 10
+    "requiredSpecialists": 10,
+    "minimumCompanyLevel": 4
   },
   "prerequisites": [
     "technology.environment.carbon_removal",

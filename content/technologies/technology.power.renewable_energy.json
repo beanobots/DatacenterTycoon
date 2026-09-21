@@ -1,15 +1,15 @@
 {
   "id": "technology.power.renewable_energy",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Renewable Generation",
   "description": "On-site generation, interconnection and export metering.",
   "branch": "power",
   "tier": 1,
   "research": {
-    "costRP": 2000,
+    "costUsd": 2000000,
     "durationDays": 120,
-    "minimumCompanyLevel": 0,
-    "requiredSpecialists": 2
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
   },
   "prerequisites": [
     "technology.power.renewable_contracts"

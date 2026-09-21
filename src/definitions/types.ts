@@ -345,9 +345,15 @@ export type TechnologyBranch =
   | 'megaproject';
 
 export interface ResearchCost {
-  readonly costRP: number;
+  /**
+   * R&D budget for the project, funded over `durationDays` rather than paid up
+   * front. Research is an operating cost that competes with racks and plant for
+   * the same cash, which is the trade-off it exists to create.
+   */
+  readonly costUsd: number;
   readonly durationDays: number;
   readonly minimumCompanyLevel: number;
+  /** Specialists the project occupies for its whole duration. */
   readonly requiredSpecialists: number;
 }
 
@@ -493,8 +499,8 @@ export interface BalanceProfileDefinition extends DefinitionBase {
   readonly baseAnnualSalary: number;
   /** Racks one staff member can operate. */
   readonly racksPerStaff: number;
-  /** Research points generated per staff member per year. */
-  readonly researchPointsPerStaffYear: number;
+  /** Share of staff who can work as research specialists. */
+  readonly researchStaffShare01: number;
   /** Inlet temperature above which hardware throttles, degrees C. */
   readonly thermalThrottleStartC: number;
   /** Inlet temperature at which hardware shuts down, degrees C. */

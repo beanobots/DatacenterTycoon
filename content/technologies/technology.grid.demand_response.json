@@ -1,15 +1,15 @@
 {
   "id": "technology.grid.demand_response",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Demand Response",
   "description": "Contracted load reduction sold into the grid operator.",
   "branch": "grid",
   "tier": 3,
   "research": {
-    "costRP": 8000,
+    "costUsd": 8000000,
     "durationDays": 300,
-    "minimumCompanyLevel": 2,
-    "requiredSpecialists": 6
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
   },
   "prerequisites": [
     "technology.grid.battery_storage",

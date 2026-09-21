@@ -1,6 +1,6 @@
 {
   "id": "scenario.urban_colo",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Urban Colocation",
   "description": "Chapter 14 golden scenario. Three-millisecond latency and a premium contract book, against six hectares of land, a 45 MW interconnection ceiling and neighbours who hear every generator test.",
   "regionId": "region.metro_coastal",
@@ -9,7 +9,6 @@
   "startingCash": 260000000,
   "startingDebt": 110000000,
   "startingReputation": 40,
-  "startingResearchPoints": 1500,
   "startingTechnologies": [
     "technology.cooling.air",
     "technology.hardware.cpu_servers",
