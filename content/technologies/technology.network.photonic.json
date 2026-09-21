@@ -1,0 +1,38 @@
+{
+  "id": "technology.network.photonic",
+  "schemaVersion": 1,
+  "name": "Photonic Interconnect",
+  "description": "Co-packaged optics across the compute fabric.",
+  "branch": "network",
+  "tier": 5,
+  "research": {
+    "costRP": 32000,
+    "durationDays": 540,
+    "minimumCompanyLevel": 4,
+    "requiredSpecialists": 10
+  },
+  "prerequisites": [
+    "technology.network.optical_network",
+    "technology.efficiency.autonomous_optimization"
+  ],
+  "effects": [
+    {
+      "target": "network.transitCost",
+      "operation": "multiply",
+      "value": 0.75,
+      "priority": 10
+    },
+    {
+      "target": "hardware.powerDraw",
+      "operation": "multiply",
+      "value": 0.96,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "photonic_fabric"
+    ]
+  },
+  "tradeOff": "Bleeding-edge supply chain with no second source."
+}

@@ -1,0 +1,70 @@
+{
+  "id": "scenario.fossil_grid",
+  "schemaVersion": 1,
+  "name": "Fossil-Heavy Grid",
+  "description": "Chapter 14 golden scenario. The cheapest power in the game at 640 kg/MWh. Every megawatt-hour imported is a carbon line, and the carbon price is only going one way.",
+  "regionId": "region.coal_belt",
+  "startDate": "2025-01-01",
+  "durationYears": 20,
+  "startingCash": 150000000,
+  "startingDebt": 50000000,
+  "startingReputation": 30,
+  "startingResearchPoints": 800,
+  "startingTechnologies": [
+    "technology.cooling.air",
+    "technology.hardware.cpu_servers",
+    "technology.power.grid_connection",
+    "technology.power.basic_ups",
+    "technology.security.physical_security"
+  ],
+  "scoreProfileId": "score.default",
+  "balanceProfileId": "balance.default",
+  "eventIds": [
+    "event.ai_demand_surge",
+    "event.battery_recall",
+    "event.brownfield_grant",
+    "event.carbon_tax",
+    "event.chip_shortage",
+    "event.customer_bankruptcy",
+    "event.diesel_restriction",
+    "event.drought_restriction",
+    "event.grid_outage",
+    "event.heat_network_offer",
+    "event.heat_wave",
+    "event.price_war",
+    "event.pump_failure",
+    "event.renewable_subsidy",
+    "event.transformer_shortage",
+    "event.university_partnership",
+    "event.water_tariff"
+  ],
+  "objectives": [
+    {
+      "id": "objective.cue",
+      "description": "Bring carbon usage effectiveness below 200 kg/MWh.",
+      "metric": "environment.cue",
+      "comparison": "lt",
+      "target": 200,
+      "byYear": 2040
+    },
+    {
+      "id": "objective.renewable",
+      "description": "Procure or generate at least 60% renewable energy.",
+      "metric": "environment.ref01",
+      "comparison": "gte",
+      "target": 0.6,
+      "byYear": 2042
+    },
+    {
+      "id": "objective.capacity",
+      "description": "Reach 25 MW of commissioned IT capacity.",
+      "metric": "capacity.itCapacityMw",
+      "comparison": "gte",
+      "target": 25,
+      "byYear": 2040
+    }
+  ],
+  "minimumAvailability01": 0.99,
+  "targetCapacityMw": 25,
+  "difficulty": "normal"
+}

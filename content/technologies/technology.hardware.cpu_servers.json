@@ -1,0 +1,24 @@
+{
+  "id": "technology.hardware.cpu_servers",
+  "schemaVersion": 1,
+  "name": "CPU Servers",
+  "description": "Standard two-socket server racks, disk arrays and a tape library: the baseline fleet.",
+  "branch": "hardware",
+  "tier": 0,
+  "research": {
+    "costRP": 0,
+    "durationDays": 0,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 0
+  },
+  "prerequisites": [],
+  "effects": [],
+  "unlocks": {
+    "hardware": [
+      "hardware.cpu.gen1",
+      "hardware.storage.hdd_archive",
+      "hardware.archive.tape"
+    ]
+  },
+  "tradeOff": "None. This is where every operator starts."
+}

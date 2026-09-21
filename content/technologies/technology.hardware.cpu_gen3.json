@@ -1,0 +1,24 @@
+{
+  "id": "technology.hardware.cpu_gen3",
+  "schemaVersion": 1,
+  "name": "High-Core CPUs",
+  "description": "Dense consolidation hosts for virtualized estates.",
+  "branch": "hardware",
+  "tier": 2,
+  "research": {
+    "costRP": 6000,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.hardware.cpu_gen2"
+  ],
+  "effects": [],
+  "unlocks": {
+    "hardware": [
+      "hardware.cpu.gen3"
+    ]
+  },
+  "tradeOff": "Rack power rises past what basic air cooling can hold."
+}

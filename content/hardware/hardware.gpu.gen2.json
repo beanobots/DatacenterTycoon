@@ -1,0 +1,30 @@
+{
+  "id": "hardware.gpu.gen2",
+  "schemaVersion": 1,
+  "name": "GPU Cluster Gen 2",
+  "description": "Denser accelerators that liquid cooling exists to serve. Air alone can no longer keep up.",
+  "researchId": "technology.hardware.gpu_gen2",
+  "family": "gpu",
+  "generation": 2,
+  "purchaseFactor": 3.2,
+  "computeFactor": 5.2,
+  "powerFactor": 3.05,
+  "heatFactor": 3.8,
+  "flexibility01": 0.52,
+  "embodiedFactor": 2.05,
+  "lifeYears": 5,
+  "workloadAffinity": {
+    "workload.ai_training": 1.15,
+    "workload.ai_inference": 1,
+    "workload.batch_science": 1.05,
+    "workload.streaming": 0.6,
+    "workload.finance": 0.5,
+    "workload.government": 0.5,
+    "workload.disaster_recovery": 0.4,
+    "workload.archive": 0.2
+  },
+  "requiredCoolingKwPerRack": 30,
+  "baseAnnualFailureRate": 0.075,
+  "refurbished": false,
+  "resaleValue01": 0.38
+}

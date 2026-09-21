@@ -1,0 +1,24 @@
+{
+  "id": "technology.power.nuclear_contract",
+  "schemaVersion": 1,
+  "name": "Utility Nuclear Contract",
+  "description": "Firm low-carbon supply from a utility reactor. Chapter 8: firm low-carbon supply.",
+  "branch": "power",
+  "tier": 3,
+  "research": {
+    "costRP": 10000,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.power.advanced_power_markets"
+  ],
+  "effects": [],
+  "unlocks": {
+    "power": [
+      "power.nuclear_contract"
+    ]
+  },
+  "tradeOff": "A premium long-term commitment and a public-opinion risk you cannot hedge."
+}

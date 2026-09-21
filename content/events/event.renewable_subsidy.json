@@ -1,0 +1,26 @@
+{
+  "id": "event.renewable_subsidy",
+  "schemaVersion": 1,
+  "name": "Renewable Capital Subsidy",
+  "description": "A capital subsidy programme opens for on-site renewable generation.",
+  "eventClass": "political",
+  "trigger": {
+    "dailyProbability": 0.0009,
+    "minimumYear": 1995,
+    "cooldownDays": 1095
+  },
+  "durationDays": 730,
+  "durationVarianceDays": 180,
+  "effects": [
+    {
+      "target": "power.renewableCapex",
+      "operation": "multiply",
+      "value": 0.7,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 1,
+  "immediateReputation": 1,
+  "mitigation": "Build the clean generation now, while the subsidy holds."
+}

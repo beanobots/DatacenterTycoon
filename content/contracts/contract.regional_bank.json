@@ -1,0 +1,18 @@
+{
+  "id": "contract.regional_bank",
+  "schemaVersion": 1,
+  "name": "Regional Bank Core Banking",
+  "description": "The anchor tenant every operator wants. Five years of stable premium revenue against a 99.9% commitment and punitive penalties.",
+  "workloadId": "workload.finance",
+  "computeUnits": 2600,
+  "termMonths": 60,
+  "pricePerComputeUnitHour": 0.1218,
+  "slaUptime01": 0.999,
+  "penaltyRate": 2.5,
+  "minimumReputation": 20,
+  "requiredTechnologies": [],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 6,
+  "renewalProbability01": 0.8,
+  "availableFromYear": 1995
+}

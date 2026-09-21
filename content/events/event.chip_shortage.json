@@ -1,0 +1,32 @@
+{
+  "id": "event.chip_shortage",
+  "schemaVersion": 1,
+  "name": "Chip Shortage",
+  "description": "Foundry allocation tightens. New hardware costs more and arrives later.",
+  "eventClass": "commercial",
+  "trigger": {
+    "dailyProbability": 0.0012,
+    "minimumYear": 1995,
+    "cooldownDays": 540
+  },
+  "durationDays": 300,
+  "durationVarianceDays": 120,
+  "effects": [
+    {
+      "target": "hardware.purchaseCost",
+      "operation": "multiply",
+      "value": 1.45,
+      "priority": 20
+    },
+    {
+      "target": "hardware.leadTime",
+      "operation": "multiply",
+      "value": 1.8,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 0,
+  "immediateReputation": 0,
+  "mitigation": "Extend the life of the installed fleet, or fill the gap with refurbished stock."
+}

@@ -1,0 +1,20 @@
+{
+  "id": "contract.government_residency",
+  "schemaVersion": 1,
+  "name": "Sovereign Cloud Residency",
+  "description": "A sovereign workload with a hard carbon ceiling written into the contract as well as a residency clause.",
+  "workloadId": "workload.government",
+  "computeUnits": 6400,
+  "termMonths": 60,
+  "pricePerComputeUnitHour": 0.0744,
+  "slaUptime01": 0.998,
+  "penaltyRate": 2.4,
+  "minimumReputation": 60,
+  "requiredTechnologies": [
+    "technology.security.zero_trust"
+  ],
+  "maxCarbonIntensity": 250,
+  "reputationOnCompletion": 12,
+  "renewalProbability01": 0.8,
+  "availableFromYear": 2020
+}

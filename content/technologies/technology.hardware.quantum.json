@@ -1,0 +1,38 @@
+{
+  "id": "technology.hardware.quantum",
+  "schemaVersion": 1,
+  "name": "Experimental Computing",
+  "description": "A quantum research rig operated alongside the production fleet.",
+  "branch": "hardware",
+  "tier": 6,
+  "research": {
+    "costRP": 40000,
+    "durationDays": 720,
+    "minimumCompanyLevel": 5,
+    "requiredSpecialists": 12
+  },
+  "prerequisites": [
+    "technology.hardware.ai_accelerators_gen2",
+    "technology.efficiency.autonomous_optimization"
+  ],
+  "effects": [
+    {
+      "target": "research.pointsPerYear",
+      "operation": "multiply",
+      "value": 1.2,
+      "priority": 10
+    },
+    {
+      "target": "company.reputationGain",
+      "operation": "add",
+      "value": 0.4,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "hardware": [
+      "hardware.experimental.quantum"
+    ]
+  },
+  "tradeOff": "A research asset that will not pay for itself on commercial workloads."
+}

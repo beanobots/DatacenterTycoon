@@ -1,0 +1,30 @@
+{
+  "id": "hardware.archive.tape",
+  "schemaVersion": 1,
+  "name": "Tape Cold Archive",
+  "description": "Almost no operating energy and retrieval measured in hours. The cheapest way to hold a petabyte.",
+  "researchId": null,
+  "family": "archive",
+  "generation": 1,
+  "purchaseFactor": 0.45,
+  "computeFactor": 0.9,
+  "powerFactor": 0.12,
+  "heatFactor": 0.12,
+  "flexibility01": 0.1,
+  "embodiedFactor": 0.4,
+  "lifeYears": 12,
+  "workloadAffinity": {
+    "workload.archive": 2,
+    "workload.disaster_recovery": 0.6,
+    "workload.government": 0.5,
+    "workload.streaming": 0.05,
+    "workload.finance": 0.05,
+    "workload.batch_science": 0.1,
+    "workload.ai_training": 0.02,
+    "workload.ai_inference": 0.02
+  },
+  "requiredCoolingKwPerRack": 2,
+  "baseAnnualFailureRate": 0.05,
+  "refurbished": false,
+  "resaleValue01": 0.05
+}

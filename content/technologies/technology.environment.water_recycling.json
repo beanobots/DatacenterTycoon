@@ -1,0 +1,37 @@
+{
+  "id": "technology.environment.water_recycling",
+  "schemaVersion": 1,
+  "name": "Water Recycling",
+  "description": "On-site treatment and closed-loop reuse. Chapter 8: -30% freshwater demand.",
+  "branch": "environment",
+  "tier": 2,
+  "research": {
+    "costRP": 2500,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.environment.environmental_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "water.freshwaterDemand",
+      "operation": "multiply",
+      "value": 0.7,
+      "priority": 10
+    },
+    {
+      "target": "finance.operatingCost",
+      "operation": "multiply",
+      "value": 1.05,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "water_reuse"
+    ]
+  },
+  "tradeOff": "+5% operating cost for treatment and the plant to run it."
+}

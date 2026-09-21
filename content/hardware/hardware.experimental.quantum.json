@@ -1,0 +1,30 @@
+{
+  "id": "hardware.experimental.quantum",
+  "schemaVersion": 1,
+  "name": "Quantum Experimental Rig",
+  "description": "A research asset, not a product. Enormous on a narrow class of scientific problems, useless elsewhere.",
+  "researchId": "technology.hardware.quantum",
+  "family": "experimental",
+  "generation": 1,
+  "purchaseFactor": 12,
+  "computeFactor": 2.5,
+  "powerFactor": 6,
+  "heatFactor": 5.5,
+  "flexibility01": 0.05,
+  "embodiedFactor": 4,
+  "lifeYears": 4,
+  "workloadAffinity": {
+    "workload.batch_science": 3.5,
+    "workload.ai_training": 0.4,
+    "workload.ai_inference": 0.2,
+    "workload.streaming": 0.05,
+    "workload.finance": 0.3,
+    "workload.government": 0.3,
+    "workload.disaster_recovery": 0.05,
+    "workload.archive": 0.02
+  },
+  "requiredCoolingKwPerRack": 60,
+  "baseAnnualFailureRate": 0.25,
+  "refurbished": false,
+  "resaleValue01": 0.05
+}

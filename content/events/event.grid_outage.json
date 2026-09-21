@@ -1,0 +1,26 @@
+{
+  "id": "event.grid_outage",
+  "schemaVersion": 1,
+  "name": "Grid Outage",
+  "description": "The utility feed drops. Everything now depends on the backup chain working exactly as designed.",
+  "eventClass": "operational",
+  "trigger": {
+    "dailyProbability": 0.0025,
+    "minimumYear": 1995,
+    "cooldownDays": 14
+  },
+  "durationDays": 1,
+  "durationVarianceDays": 1,
+  "effects": [
+    {
+      "target": "grid.available",
+      "operation": "set",
+      "value": 0,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 0,
+  "immediateReputation": 0,
+  "mitigation": "Ride through on UPS, start the generators, and discharge storage before the diesel fuel bill starts."
+}

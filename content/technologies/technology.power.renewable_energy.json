@@ -1,0 +1,24 @@
+{
+  "id": "technology.power.renewable_energy",
+  "schemaVersion": 1,
+  "name": "Renewable Generation",
+  "description": "On-site generation, interconnection and export metering.",
+  "branch": "power",
+  "tier": 1,
+  "research": {
+    "costRP": 2000,
+    "durationDays": 120,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 2
+  },
+  "prerequisites": [
+    "technology.power.renewable_contracts"
+  ],
+  "effects": [],
+  "unlocks": {
+    "capabilities": [
+      "onsite_generation"
+    ]
+  },
+  "tradeOff": "Intermittency becomes an operational problem, not a procurement one."
+}

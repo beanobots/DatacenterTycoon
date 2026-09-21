@@ -1,0 +1,31 @@
+{
+  "id": "technology.operations.forecasting",
+  "schemaVersion": 1,
+  "name": "Demand and Weather Forecasting",
+  "description": "Short-horizon forecasting of price, weather and demand.",
+  "branch": "operations",
+  "tier": 2,
+  "research": {
+    "costRP": 4400,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.operations.advanced_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "scheduling.forecastQuality01",
+      "operation": "add",
+      "value": 0.3,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "forecasting"
+    ]
+  },
+  "tradeOff": "Acting on a forecast means being wrong sometimes."
+}

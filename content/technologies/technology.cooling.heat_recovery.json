@@ -1,0 +1,43 @@
+{
+  "id": "technology.cooling.heat_recovery",
+  "schemaVersion": 1,
+  "name": "Heat Recovery",
+  "description": "Heat exchangers and a district-heat or greenhouse connection. Chapter 8: heat-sale revenue, +community support.",
+  "branch": "cooling",
+  "tier": 3,
+  "research": {
+    "costRP": 5000,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.cooling.chilled_water"
+  ],
+  "effects": [
+    {
+      "target": "heat.reuseRevenue",
+      "operation": "multiply",
+      "value": 1,
+      "priority": 10
+    },
+    {
+      "target": "community.trustGain",
+      "operation": "add",
+      "value": 0.5,
+      "priority": 10
+    },
+    {
+      "target": "cooling.heatReuse",
+      "operation": "multiply",
+      "value": 1.25,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "heat_export"
+    ]
+  },
+  "tradeOff": "Worth nothing without a nearby heat customer and the pipes to reach them."
+}

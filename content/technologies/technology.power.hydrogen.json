@@ -1,0 +1,25 @@
+{
+  "id": "technology.power.hydrogen",
+  "schemaVersion": 1,
+  "name": "Hydrogen-Ready Generation",
+  "description": "Firm backup generation running on hydrogen or a blend.",
+  "branch": "power",
+  "tier": 4,
+  "research": {
+    "costRP": 18000,
+    "durationDays": 420,
+    "minimumCompanyLevel": 3,
+    "requiredSpecialists": 8
+  },
+  "prerequisites": [
+    "technology.power.gas",
+    "technology.power.advanced_power_markets"
+  ],
+  "effects": [],
+  "unlocks": {
+    "power": [
+      "power.hydrogen_generator"
+    ]
+  },
+  "tradeOff": "Fuel sourcing decides whether this is clean at all; storage and conversion lose energy either way."
+}

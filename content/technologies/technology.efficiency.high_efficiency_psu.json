@@ -1,0 +1,39 @@
+{
+  "id": "technology.efficiency.high_efficiency_psu",
+  "schemaVersion": 1,
+  "name": "High-Efficiency PSUs",
+  "description": "Titanium-class power supplies. Chapter 8: -7% server power, -5% heat.",
+  "branch": "efficiency",
+  "tier": 1,
+  "research": {
+    "costRP": 2500,
+    "durationDays": 120,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 2
+  },
+  "prerequisites": [
+    "technology.efficiency.virtualization"
+  ],
+  "effects": [
+    {
+      "target": "hardware.powerDraw",
+      "operation": "multiply",
+      "value": 0.93,
+      "priority": 10
+    },
+    {
+      "target": "hardware.heatOutput",
+      "operation": "multiply",
+      "value": 0.95,
+      "priority": 10
+    },
+    {
+      "target": "hardware.purchaseCost",
+      "operation": "multiply",
+      "value": 1.04,
+      "priority": 10
+    }
+  ],
+  "unlocks": {},
+  "tradeOff": "+4% hardware price on every rack bought from now on."
+}

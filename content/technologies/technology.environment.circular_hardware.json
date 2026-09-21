@@ -1,0 +1,44 @@
+{
+  "id": "technology.environment.circular_hardware",
+  "schemaVersion": 1,
+  "name": "Circular Hardware",
+  "description": "Design-for-repair procurement with resale and recycling routes. Chapter 8: -40% e-waste, improved resale.",
+  "branch": "environment",
+  "tier": 3,
+  "research": {
+    "costRP": 7500,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.environment.waste_tracking",
+    "technology.environment.refurbishment"
+  ],
+  "effects": [
+    {
+      "target": "waste.ewasteGeneration",
+      "operation": "multiply",
+      "value": 0.6,
+      "priority": 10
+    },
+    {
+      "target": "hardware.resaleValue",
+      "operation": "multiply",
+      "value": 1.35,
+      "priority": 10
+    },
+    {
+      "target": "facility.maintenanceComplexity",
+      "operation": "multiply",
+      "value": 1.08,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "circular_supply"
+    ]
+  },
+  "tradeOff": "Sorting and process complexity across every procurement and disposal decision."
+}

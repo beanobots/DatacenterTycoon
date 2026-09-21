@@ -1,0 +1,31 @@
+{
+  "id": "technology.operations.workload_scheduling",
+  "schemaVersion": 1,
+  "name": "Workload Scheduling",
+  "description": "A deadline-aware scheduler over the flexible share of the fleet.",
+  "branch": "operations",
+  "tier": 2,
+  "research": {
+    "costRP": 3400,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.efficiency.virtualization"
+  ],
+  "effects": [
+    {
+      "target": "scheduling.flexibleShift01",
+      "operation": "add",
+      "value": 0.25,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "scheduler"
+    ]
+  },
+  "tradeOff": "Deferred work is work a customer is waiting for."
+}

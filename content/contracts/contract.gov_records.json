@@ -1,0 +1,20 @@
+{
+  "id": "contract.gov_records",
+  "schemaVersion": 1,
+  "name": "Government Records Custody",
+  "description": "Seven years of contracted revenue under residency rules and an audit regime that never relaxes.",
+  "workloadId": "workload.government",
+  "computeUnits": 3100,
+  "termMonths": 84,
+  "pricePerComputeUnitHour": 0.0689,
+  "slaUptime01": 0.997,
+  "penaltyRate": 2,
+  "minimumReputation": 45,
+  "requiredTechnologies": [
+    "technology.security.zero_trust"
+  ],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 10,
+  "renewalProbability01": 0.85,
+  "availableFromYear": 1995
+}

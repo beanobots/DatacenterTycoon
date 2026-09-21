@@ -1,0 +1,40 @@
+{
+  "id": "technology.security.zero_trust",
+  "schemaVersion": 1,
+  "name": "Zero Trust Architecture",
+  "description": "Identity-based segmentation with no implicit internal trust.",
+  "branch": "security",
+  "tier": 3,
+  "research": {
+    "costRP": 8500,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.security.security_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "security.incidentRate",
+      "operation": "multiply",
+      "value": 0.7,
+      "priority": 10
+    },
+    {
+      "target": "facility.maintenanceComplexity",
+      "operation": "multiply",
+      "value": 1.08,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "zero_trust"
+    ],
+    "contracts": [
+      "contract.government_residency"
+    ]
+  },
+  "tradeOff": "Every internal integration gets harder, permanently."
+}

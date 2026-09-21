@@ -1,0 +1,37 @@
+{
+  "id": "technology.operations.advanced_construction",
+  "schemaVersion": 1,
+  "name": "Advanced Construction",
+  "description": "Prefabricated modular halls and plant skids.",
+  "branch": "operations",
+  "tier": 3,
+  "research": {
+    "costRP": 9500,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.operations.advanced_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "facility.hallCapex",
+      "operation": "multiply",
+      "value": 0.92,
+      "priority": 10
+    },
+    {
+      "target": "facility.constructionSpeed",
+      "operation": "multiply",
+      "value": 1.25,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "modular_build"
+    ]
+  },
+  "tradeOff": "Modular standardisation limits how far any one hall can be optimised."
+}

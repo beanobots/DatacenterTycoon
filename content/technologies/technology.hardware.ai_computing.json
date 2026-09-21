@@ -1,0 +1,24 @@
+{
+  "id": "technology.hardware.ai_computing",
+  "schemaVersion": 1,
+  "name": "AI Computing",
+  "description": "The scheduling, networking and storage work that makes accelerators usable.",
+  "branch": "hardware",
+  "tier": 2,
+  "research": {
+    "costRP": 5000,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.hardware.gpu_clusters"
+  ],
+  "effects": [],
+  "unlocks": {
+    "capabilities": [
+      "ai_workloads"
+    ]
+  },
+  "tradeOff": "Commits the fleet strategy to a workload class that obsoletes quickly."
+}

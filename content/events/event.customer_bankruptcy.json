@@ -1,0 +1,19 @@
+{
+  "id": "event.customer_bankruptcy",
+  "schemaVersion": 1,
+  "name": "Customer Bankruptcy",
+  "description": "A major tenant enters administration. The capacity is now empty and the last invoices will not be paid.",
+  "eventClass": "commercial",
+  "trigger": {
+    "dailyProbability": 0.0008,
+    "minimumYear": 1995,
+    "cooldownDays": 365
+  },
+  "durationDays": 1,
+  "durationVarianceDays": 0,
+  "effects": [],
+  "immediateCash": -800000,
+  "immediateTrust": 0,
+  "immediateReputation": -4,
+  "mitigation": "Diversify the contract book so no single tenant can take the quarter with it."
+}

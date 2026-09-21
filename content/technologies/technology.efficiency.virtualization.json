@@ -1,0 +1,37 @@
+{
+  "id": "technology.efficiency.virtualization",
+  "schemaVersion": 1,
+  "name": "Virtualization",
+  "description": "Consolidates workloads onto fewer physical servers. Chapter 8: +25% compute per installed fleet.",
+  "branch": "efficiency",
+  "tier": 1,
+  "research": {
+    "costRP": 2000,
+    "durationDays": 120,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 2
+  },
+  "prerequisites": [
+    "technology.hardware.cpu_servers"
+  ],
+  "effects": [
+    {
+      "target": "hardware.computePerRack",
+      "operation": "multiply",
+      "value": 1.25,
+      "priority": 10
+    },
+    {
+      "target": "facility.maintenanceComplexity",
+      "operation": "multiply",
+      "value": 1.1,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "consolidation"
+    ]
+  },
+  "tradeOff": "+10% software complexity, which shows up as maintenance load."
+}

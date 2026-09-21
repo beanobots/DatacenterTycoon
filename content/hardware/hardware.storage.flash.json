@@ -1,0 +1,30 @@
+{
+  "id": "hardware.storage.flash",
+  "schemaVersion": 1,
+  "name": "Flash Storage Array",
+  "description": "Fast, compact and carrying meaningful embodied impact per terabyte.",
+  "researchId": "technology.hardware.flash_storage",
+  "family": "storage",
+  "generation": 1,
+  "purchaseFactor": 1.8,
+  "computeFactor": 1.6,
+  "powerFactor": 0.65,
+  "heatFactor": 0.6,
+  "flexibility01": 0.4,
+  "embodiedFactor": 1.45,
+  "lifeYears": 7,
+  "workloadAffinity": {
+    "workload.archive": 1.1,
+    "workload.disaster_recovery": 1.35,
+    "workload.streaming": 1.3,
+    "workload.finance": 1.2,
+    "workload.government": 1,
+    "workload.batch_science": 0.6,
+    "workload.ai_training": 0.2,
+    "workload.ai_inference": 0.5
+  },
+  "requiredCoolingKwPerRack": 7,
+  "baseAnnualFailureRate": 0.03,
+  "refurbished": false,
+  "resaleValue01": 0.2
+}

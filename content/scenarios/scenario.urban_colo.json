@@ -1,0 +1,70 @@
+{
+  "id": "scenario.urban_colo",
+  "schemaVersion": 1,
+  "name": "Urban Colocation",
+  "description": "Chapter 14 golden scenario. Three-millisecond latency and a premium contract book, against six hectares of land, a 45 MW interconnection ceiling and neighbours who hear every generator test.",
+  "regionId": "region.metro_coastal",
+  "startDate": "2025-01-01",
+  "durationYears": 12,
+  "startingCash": 260000000,
+  "startingDebt": 110000000,
+  "startingReputation": 40,
+  "startingResearchPoints": 1500,
+  "startingTechnologies": [
+    "technology.cooling.air",
+    "technology.hardware.cpu_servers",
+    "technology.power.grid_connection",
+    "technology.power.basic_ups",
+    "technology.security.physical_security"
+  ],
+  "scoreProfileId": "score.default",
+  "balanceProfileId": "balance.default",
+  "eventIds": [
+    "event.ai_demand_surge",
+    "event.battery_recall",
+    "event.brownfield_grant",
+    "event.carbon_tax",
+    "event.chip_shortage",
+    "event.customer_bankruptcy",
+    "event.diesel_restriction",
+    "event.drought_restriction",
+    "event.grid_outage",
+    "event.heat_network_offer",
+    "event.heat_wave",
+    "event.price_war",
+    "event.pump_failure",
+    "event.renewable_subsidy",
+    "event.transformer_shortage",
+    "event.university_partnership",
+    "event.water_tariff"
+  ],
+  "objectives": [
+    {
+      "id": "objective.trust",
+      "description": "Finish with community trust above +20.",
+      "metric": "social.trust",
+      "comparison": "gt",
+      "target": 20,
+      "byYear": 2036
+    },
+    {
+      "id": "objective.capacity",
+      "description": "Reach 30 MW of commissioned IT capacity within the interconnection limit.",
+      "metric": "capacity.itCapacityMw",
+      "comparison": "gte",
+      "target": 30,
+      "byYear": 2036
+    },
+    {
+      "id": "objective.margin",
+      "description": "Hold operating margin above 20%.",
+      "metric": "financial.operatingMargin01",
+      "comparison": "gt",
+      "target": 0.2,
+      "byYear": 2034
+    }
+  ],
+  "minimumAvailability01": 0.998,
+  "targetCapacityMw": 30,
+  "difficulty": "hard"
+}

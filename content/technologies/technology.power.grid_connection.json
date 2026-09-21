@@ -1,0 +1,23 @@
+{
+  "id": "technology.power.grid_connection",
+  "schemaVersion": 1,
+  "name": "Grid Connection",
+  "description": "An interconnection agreement and diesel standby plant.",
+  "branch": "power",
+  "tier": 0,
+  "research": {
+    "costRP": 0,
+    "durationDays": 0,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 0
+  },
+  "prerequisites": [],
+  "effects": [],
+  "unlocks": {
+    "power": [
+      "power.grid",
+      "power.diesel_backup"
+    ]
+  },
+  "tradeOff": "None. This is where every operator starts."
+}

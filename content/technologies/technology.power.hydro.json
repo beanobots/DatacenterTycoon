@@ -1,0 +1,24 @@
+{
+  "id": "technology.power.hydro",
+  "schemaVersion": 1,
+  "name": "Hydro Procurement",
+  "description": "Long-term hydro offtake where the geography supports it.",
+  "branch": "power",
+  "tier": 2,
+  "research": {
+    "costRP": 7000,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.power.renewable_contracts"
+  ],
+  "effects": [],
+  "unlocks": {
+    "power": [
+      "power.hydro_contract"
+    ]
+  },
+  "tradeOff": "Drought years cut delivery, and the ecological objections are not yours to answer."
+}

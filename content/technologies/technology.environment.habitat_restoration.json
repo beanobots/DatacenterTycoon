@@ -1,0 +1,37 @@
+{
+  "id": "technology.environment.habitat_restoration",
+  "schemaVersion": 1,
+  "name": "Habitat Restoration",
+  "description": "Native planting, wetlands and wildlife corridors on owned land.",
+  "branch": "environment",
+  "tier": 3,
+  "research": {
+    "costRP": 7000,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.environment.biodiversity_survey"
+  ],
+  "effects": [
+    {
+      "target": "environment.biodiversity",
+      "operation": "add",
+      "value": 30,
+      "priority": 10
+    },
+    {
+      "target": "community.trustGain",
+      "operation": "add",
+      "value": 0.5,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "restoration"
+    ]
+  },
+  "tradeOff": "Uses land that would otherwise be expansion. Chapter 8: +30 biodiversity, +15 support."
+}

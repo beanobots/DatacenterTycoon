@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/building.schema.json",
+  "title": "Building definition",
+  "description": "Server halls, plant rooms and support buildings placed on a site.",
+  "type": "object",
+  "required": ["id", "schemaVersion", "name", "zone", "capexPerMw", "constructionDays", "rackCapacity", "footprintHectares", "maxRackKw"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "zone": { "enum": ["hall", "network", "electrical", "cooling", "water", "maintenance", "support", "energy"] },
+    "capexPerMw": { "$ref": "common.schema.json#/$defs/positive" },
+    "constructionDays": { "type": "integer", "minimum": 0 },
+    "rackCapacity": { "type": "integer", "minimum": 0 },
+    "footprintHectares": { "$ref": "common.schema.json#/$defs/nonNegative" },
+    "maxRackKw": { "$ref": "common.schema.json#/$defs/positive" },
+    "requiredTechnology": { "oneOf": [{ "$ref": "common.schema.json#/$defs/permanentId" }, { "type": "null" }] }
+  },
+  "additionalProperties": false
+}

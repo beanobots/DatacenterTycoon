@@ -1,0 +1,24 @@
+{
+  "id": "technology.hardware.ai_accelerators",
+  "schemaVersion": 1,
+  "name": "AI Accelerators",
+  "description": "Purpose-built inference and training silicon. Chapter 8: +75% supported AI performance, +25% efficiency.",
+  "branch": "hardware",
+  "tier": 3,
+  "research": {
+    "costRP": 9000,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.hardware.gpu_clusters"
+  ],
+  "effects": [],
+  "unlocks": {
+    "hardware": [
+      "hardware.asic.gen1"
+    ]
+  },
+  "tradeOff": "+35% CapEx and near-total inflexibility off supported workloads."
+}

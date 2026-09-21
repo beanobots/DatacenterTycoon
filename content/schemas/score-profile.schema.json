@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/score-profile.schema.json",
+  "title": "Score profile definition",
+  "type": "object",
+  "required": ["id", "schemaVersion", "name", "weights", "ratingBands", "gates", "environmentalTargets", "maxOffsetShare01"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "weights": {
+      "type": "object",
+      "required": ["financial", "reliability", "environmental", "customer", "social"],
+      "properties": {
+        "financial": { "$ref": "common.schema.json#/$defs/unitInterval" },
+        "reliability": { "$ref": "common.schema.json#/$defs/unitInterval" },
+        "environmental": { "$ref": "common.schema.json#/$defs/unitInterval" },
+        "customer": { "$ref": "common.schema.json#/$defs/unitInterval" },
+        "social": { "$ref": "common.schema.json#/$defs/unitInterval" }
+      },
+      "additionalProperties": false
+    },
+    "ratingBands": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["rating", "minScore", "label"],
+        "properties": {
+          "rating": { "type": "string", "minLength": 1 },
+          "minScore": { "type": "number", "minimum": 0, "maximum": 100 },
+          "label": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/permanentId" },
+          "description": { "type": "string", "minLength": 1 },
+          "capRating": { "type": "string" },
+          "zeroCategory": { "enum": ["financial", "reliability", "environmental", "customer", "social"] },
+          "blocksExpansion": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "environmentalTargets": {
+      "type": "object",
+      "required": ["targetPue", "worstPue", "targetCue", "worstCue", "targetWue", "worstWue", "targetRenewable01", "targetHourlyMatch01", "targetDiversion01", "targetHeatReuse01"],
+      "properties": {
+        "targetPue": { "type": "number", "minimum": 1 },
+        "worstPue": { "type": "number", "minimum": 1 },
+        "targetCue": { "$ref": "common.schema.json#/$defs/nonNegative" },
+        "worstCue": { "$ref": "common.schema.json#/$defs/nonNegative" },
+        "targetWue": { "$ref": "common.schema.json#/$defs/nonNegative" },
+        "worstWue": { "$ref": "common.schema.json#/$defs/nonNegative" },
+        "targetRenewable01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+        "targetHourlyMatch01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+        "targetDiversion01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+        "targetHeatReuse01": { "$ref": "common.schema.json#/$defs/unitInterval" }
+      },
+      "additionalProperties": false
+    },
+    "maxOffsetShare01": { "$ref": "common.schema.json#/$defs/unitInterval" }
+  },
+  "additionalProperties": false
+}

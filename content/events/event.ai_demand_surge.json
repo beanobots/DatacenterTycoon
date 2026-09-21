@@ -1,0 +1,32 @@
+{
+  "id": "event.ai_demand_surge",
+  "schemaVersion": 1,
+  "name": "AI Demand Surge",
+  "description": "Accelerator demand outruns supply industry-wide. Compute prices rise, and so does the cost of buying more.",
+  "eventClass": "commercial",
+  "trigger": {
+    "dailyProbability": 0.0022,
+    "minimumYear": 1995,
+    "cooldownDays": 365
+  },
+  "durationDays": 270,
+  "durationVarianceDays": 120,
+  "effects": [
+    {
+      "target": "market.contractPrice",
+      "operation": "multiply",
+      "value": 1.35,
+      "priority": 20
+    },
+    {
+      "target": "hardware.purchaseCost",
+      "operation": "multiply",
+      "value": 1.22,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 0,
+  "immediateReputation": 0,
+  "mitigation": "Sell into the surge with the fleet you have; buying at the top of the market rarely pays back."
+}

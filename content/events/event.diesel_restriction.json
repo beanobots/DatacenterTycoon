@@ -1,0 +1,26 @@
+{
+  "id": "event.diesel_restriction",
+  "schemaVersion": 1,
+  "name": "Diesel Runtime Restriction",
+  "description": "Air-quality rules cap generator run hours outside genuine emergencies.",
+  "eventClass": "political",
+  "trigger": {
+    "dailyProbability": 0.0006,
+    "minimumYear": 1995,
+    "cooldownDays": 1095
+  },
+  "durationDays": 1825,
+  "durationVarianceDays": 0,
+  "effects": [
+    {
+      "target": "power.dieselRuntimeLimit",
+      "operation": "multiply",
+      "value": 0.35,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 4,
+  "immediateReputation": 0,
+  "mitigation": "Storage and a firm low-carbon source cover the ride-through that diesel used to."
+}

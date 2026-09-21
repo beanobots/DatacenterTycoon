@@ -1,0 +1,22 @@
+{
+  "id": "technology.cooling.air",
+  "schemaVersion": 1,
+  "name": "Air Cooling",
+  "description": "Computer-room air handling: the assumed starting capability.",
+  "branch": "cooling",
+  "tier": 0,
+  "research": {
+    "costRP": 0,
+    "durationDays": 0,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 0
+  },
+  "prerequisites": [],
+  "effects": [],
+  "unlocks": {
+    "cooling": [
+      "cooling.basic_air"
+    ]
+  },
+  "tradeOff": "None. This is where every operator starts."
+}

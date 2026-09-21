@@ -1,0 +1,55 @@
+{
+  "id": "technology.operations.predictive_monitoring",
+  "schemaVersion": 1,
+  "name": "Predictive Monitoring",
+  "description": "Failure prediction from vibration, thermal and power signatures. Chapter 8: -20% failure rate, -10% maintenance cost.",
+  "branch": "operations",
+  "tier": 2,
+  "research": {
+    "costRP": 4000,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.operations.rack_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "hardware.failureRate",
+      "operation": "multiply",
+      "value": 0.8,
+      "priority": 10
+    },
+    {
+      "target": "cooling.failureRate",
+      "operation": "multiply",
+      "value": 0.8,
+      "priority": 10
+    },
+    {
+      "target": "power.failureRate",
+      "operation": "multiply",
+      "value": 0.8,
+      "priority": 10
+    },
+    {
+      "target": "facility.maintenanceCost",
+      "operation": "multiply",
+      "value": 0.9,
+      "priority": 10
+    },
+    {
+      "target": "security.incidentRate",
+      "operation": "multiply",
+      "value": 1.08,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "predictive_maintenance"
+    ]
+  },
+  "tradeOff": "Sensor and cyber overhead: more estate to patch and defend."
+}

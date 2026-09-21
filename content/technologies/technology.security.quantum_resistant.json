@@ -1,0 +1,37 @@
+{
+  "id": "technology.security.quantum_resistant",
+  "schemaVersion": 1,
+  "name": "Quantum-Resistant Encryption",
+  "description": "Post-quantum cryptography across storage and transport.",
+  "branch": "security",
+  "tier": 5,
+  "research": {
+    "costRP": 28000,
+    "durationDays": 540,
+    "minimumCompanyLevel": 4,
+    "requiredSpecialists": 10
+  },
+  "prerequisites": [
+    "technology.security.ai_response"
+  ],
+  "effects": [
+    {
+      "target": "security.incidentRate",
+      "operation": "multiply",
+      "value": 0.8,
+      "priority": 10
+    },
+    {
+      "target": "company.reputationGain",
+      "operation": "add",
+      "value": 0.3,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "pqc"
+    ]
+  },
+  "tradeOff": "A migration across every stored record and every protocol in use."
+}

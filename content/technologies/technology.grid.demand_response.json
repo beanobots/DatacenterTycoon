@@ -1,0 +1,32 @@
+{
+  "id": "technology.grid.demand_response",
+  "schemaVersion": 1,
+  "name": "Demand Response",
+  "description": "Contracted load reduction sold into the grid operator.",
+  "branch": "grid",
+  "tier": 3,
+  "research": {
+    "costRP": 8000,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.grid.battery_storage",
+    "technology.power.advanced_power_markets"
+  ],
+  "effects": [
+    {
+      "target": "grid.demandResponseRevenue",
+      "operation": "add",
+      "value": 1,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "demand_response"
+    ]
+  },
+  "tradeOff": "Committing to curtail means curtailing when called, not when convenient."
+}

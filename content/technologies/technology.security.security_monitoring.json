@@ -1,0 +1,31 @@
+{
+  "id": "technology.security.security_monitoring",
+  "schemaVersion": 1,
+  "name": "Security Monitoring",
+  "description": "Continuous monitoring of physical and network intrusion signals.",
+  "branch": "security",
+  "tier": 1,
+  "research": {
+    "costRP": 2400,
+    "durationDays": 120,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 2
+  },
+  "prerequisites": [
+    "technology.security.physical_security"
+  ],
+  "effects": [
+    {
+      "target": "security.incidentRate",
+      "operation": "multiply",
+      "value": 0.85,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "soc"
+    ]
+  },
+  "tradeOff": "A security operations centre staffed around the clock."
+}

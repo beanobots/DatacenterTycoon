@@ -1,0 +1,29 @@
+{
+  "id": "technology.security.physical_security",
+  "schemaVersion": 1,
+  "name": "Physical Security",
+  "description": "Fencing, access control and a staffed gatehouse.",
+  "branch": "security",
+  "tier": 0,
+  "research": {
+    "costRP": 0,
+    "durationDays": 0,
+    "minimumCompanyLevel": 0,
+    "requiredSpecialists": 0
+  },
+  "prerequisites": [],
+  "effects": [
+    {
+      "target": "security.incidentRate",
+      "operation": "multiply",
+      "value": 0.85,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "site_security"
+    ]
+  },
+  "tradeOff": "A standing payroll line that produces no revenue."
+}

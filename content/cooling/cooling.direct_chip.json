@@ -1,0 +1,21 @@
+{
+  "id": "cooling.direct_chip",
+  "schemaVersion": 1,
+  "name": "Direct-to-Chip Liquid",
+  "description": "Cold plates on the hot components. High-grade heat for reuse, and leak management becomes a standing duty.",
+  "researchId": "technology.cooling.direct_chip",
+  "capexFactor": 2.45,
+  "maintenanceFactor": 1.5,
+  "energyFactor": 0.48,
+  "energyFactorBest": 0.42,
+  "energyFactorWorst": 0.64,
+  "waterFactor": 0.35,
+  "densityKwPerRack": 80,
+  "heatReuse01": 0.72,
+  "complexity01": 0.7,
+  "deratingStartC": 35,
+  "deratingEndC": 50,
+  "wetBulbSensitivity01": 0.3,
+  "contaminationSensitivity01": 0.05,
+  "baseAnnualFailureRate": 0.09
+}

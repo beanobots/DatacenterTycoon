@@ -1,0 +1,30 @@
+{
+  "id": "hardware.storage.hdd_archive",
+  "schemaVersion": 1,
+  "name": "HDD Archive Array",
+  "description": "Cheap capacity per rack. Mechanical failure is routine and planned for.",
+  "researchId": null,
+  "family": "storage",
+  "generation": 1,
+  "purchaseFactor": 0.7,
+  "computeFactor": 1.45,
+  "powerFactor": 0.55,
+  "heatFactor": 0.55,
+  "flexibility01": 0.3,
+  "embodiedFactor": 0.85,
+  "lifeYears": 8,
+  "workloadAffinity": {
+    "workload.archive": 1.6,
+    "workload.disaster_recovery": 1.2,
+    "workload.streaming": 0.7,
+    "workload.batch_science": 0.3,
+    "workload.finance": 0.2,
+    "workload.government": 0.4,
+    "workload.ai_training": 0.05,
+    "workload.ai_inference": 0.1
+  },
+  "requiredCoolingKwPerRack": 4,
+  "baseAnnualFailureRate": 0.09,
+  "refurbished": false,
+  "resaleValue01": 0.1
+}

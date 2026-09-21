@@ -1,0 +1,32 @@
+{
+  "id": "technology.grid.carbon_aware_scheduling",
+  "schemaVersion": 1,
+  "name": "Carbon-Aware Scheduling",
+  "description": "Shifts flexible load toward low-carbon hours. Chapter 8: -25% operational carbon potential.",
+  "branch": "grid",
+  "tier": 3,
+  "research": {
+    "costRP": 9000,
+    "durationDays": 300,
+    "minimumCompanyLevel": 2,
+    "requiredSpecialists": 6
+  },
+  "prerequisites": [
+    "technology.operations.workload_scheduling",
+    "technology.environment.carbon_reporting"
+  ],
+  "effects": [
+    {
+      "target": "scheduling.carbonAwareShift01",
+      "operation": "add",
+      "value": 0.25,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "carbon_aware"
+    ]
+  },
+  "tradeOff": "Deadline risk and customer satisfaction risk on every job you move."
+}

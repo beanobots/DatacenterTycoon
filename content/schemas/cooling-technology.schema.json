@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/cooling-technology.schema.json",
+  "title": "Cooling technology definition",
+  "type": "object",
+  "required": ["id", "schemaVersion", "name", "researchId", "capexFactor", "maintenanceFactor", "energyFactor", "energyFactorBest", "energyFactorWorst", "waterFactor", "densityKwPerRack", "heatReuse01", "complexity01", "deratingStartC", "deratingEndC", "wetBulbSensitivity01", "contaminationSensitivity01", "baseAnnualFailureRate"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "researchId": { "oneOf": [{ "$ref": "common.schema.json#/$defs/permanentId" }, { "type": "null" }] },
+    "capexFactor": { "$ref": "common.schema.json#/$defs/positive" },
+    "maintenanceFactor": { "$ref": "common.schema.json#/$defs/positive" },
+    "energyFactor": { "$ref": "common.schema.json#/$defs/positive" },
+    "energyFactorBest": { "$ref": "common.schema.json#/$defs/positive" },
+    "energyFactorWorst": { "$ref": "common.schema.json#/$defs/positive" },
+    "waterFactor": { "$ref": "common.schema.json#/$defs/nonNegative" },
+    "densityKwPerRack": { "$ref": "common.schema.json#/$defs/positive" },
+    "heatReuse01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "complexity01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "deratingStartC": { "type": "number" },
+    "deratingEndC": { "type": "number" },
+    "wetBulbSensitivity01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "contaminationSensitivity01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "baseAnnualFailureRate": { "$ref": "common.schema.json#/$defs/unitInterval" }
+  },
+  "additionalProperties": false
+}

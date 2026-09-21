@@ -1,0 +1,24 @@
+{
+  "id": "technology.power.wind",
+  "schemaVersion": 1,
+  "name": "Wind Procurement",
+  "description": "Wind offtake agreements. Chapter 8: low-carbon offtake diversification.",
+  "branch": "power",
+  "tier": 2,
+  "research": {
+    "costRP": 4000,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.power.renewable_contracts"
+  ],
+  "effects": [],
+  "unlocks": {
+    "power": [
+      "power.wind_contract"
+    ]
+  },
+  "tradeOff": "Variability and contract exposure on a resource that is strong only in some regions."
+}

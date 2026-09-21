@@ -1,0 +1,21 @@
+{
+  "id": "cooling.rear_door",
+  "schemaVersion": 1,
+  "name": "Rear-Door Heat Exchanger",
+  "description": "Water-cooled doors on each rack. A medium-density retrofit that puts plumbing in every row.",
+  "researchId": "technology.cooling.rear_door",
+  "capexFactor": 1.95,
+  "maintenanceFactor": 1.35,
+  "energyFactor": 0.58,
+  "energyFactorBest": 0.5,
+  "energyFactorWorst": 0.78,
+  "waterFactor": 0.55,
+  "densityKwPerRack": 45,
+  "heatReuse01": 0.48,
+  "complexity01": 0.56,
+  "deratingStartC": 33,
+  "deratingEndC": 48,
+  "wetBulbSensitivity01": 0.4,
+  "contaminationSensitivity01": 0.05,
+  "baseAnnualFailureRate": 0.08
+}

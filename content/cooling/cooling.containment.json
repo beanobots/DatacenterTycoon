@@ -1,0 +1,21 @@
+{
+  "id": "cooling.containment",
+  "schemaVersion": 1,
+  "name": "Hot/Cold Aisle Containment",
+  "description": "Aisle containment stops recirculation. A cheap retrofit whose benefit depends entirely on layout discipline.",
+  "researchId": "technology.cooling.containment",
+  "capexFactor": 1.12,
+  "maintenanceFactor": 1.05,
+  "energyFactor": 0.88,
+  "energyFactorBest": 0.8,
+  "energyFactorWorst": 1.18,
+  "waterFactor": 0,
+  "densityKwPerRack": 18,
+  "heatReuse01": 0.08,
+  "complexity01": 0.25,
+  "deratingStartC": 29,
+  "deratingEndC": 45,
+  "wetBulbSensitivity01": 0.15,
+  "contaminationSensitivity01": 0.1,
+  "baseAnnualFailureRate": 0.054
+}

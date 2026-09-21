@@ -1,0 +1,24 @@
+{
+  "id": "technology.cooling.air_economizer",
+  "schemaVersion": 1,
+  "name": "Air Economization",
+  "description": "Outside-air free cooling with filtration and humidity control.",
+  "branch": "cooling",
+  "tier": 2,
+  "research": {
+    "costRP": 2800,
+    "durationDays": 210,
+    "minimumCompanyLevel": 1,
+    "requiredSpecialists": 4
+  },
+  "prerequisites": [
+    "technology.cooling.containment"
+  ],
+  "effects": [],
+  "unlocks": {
+    "cooling": [
+      "cooling.air_economizer"
+    ]
+  },
+  "tradeOff": "Weather, smoke, dust and humidity all close the dampers."
+}

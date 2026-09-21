@@ -1,0 +1,30 @@
+{
+  "id": "hardware.cpu.gen1",
+  "schemaVersion": 1,
+  "name": "CPU Servers Gen 1",
+  "description": "The baseline rack. Serves every general workload adequately and nothing exceptionally.",
+  "researchId": null,
+  "family": "cpu",
+  "generation": 1,
+  "purchaseFactor": 1,
+  "computeFactor": 1,
+  "powerFactor": 1,
+  "heatFactor": 1,
+  "flexibility01": 1,
+  "embodiedFactor": 1,
+  "lifeYears": 6,
+  "workloadAffinity": {
+    "workload.streaming": 1,
+    "workload.finance": 1,
+    "workload.government": 1,
+    "workload.batch_science": 0.9,
+    "workload.disaster_recovery": 1,
+    "workload.archive": 0.7,
+    "workload.ai_inference": 0.45,
+    "workload.ai_training": 0.25
+  },
+  "requiredCoolingKwPerRack": 6,
+  "baseAnnualFailureRate": 0.04,
+  "refurbished": false,
+  "resaleValue01": 0.25
+}
