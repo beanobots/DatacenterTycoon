@@ -18,7 +18,10 @@ import { canStartResearch, startResearch } from './systems/research.js';
 import { CRITICAL_TRUST } from './systems/community.js';
 import { installedItMw } from './report.js';
 import type { CoolingTechnologyDefinition, HardwareDefinition } from '../definitions/types.js';
-import type { HallState } from '../state/types.js';
+import { emptyShortfall } from '../state/types.js';
+import type {
+  ActiveContractState, HallState, PowerAssetState, RackGroupState,
+} from '../state/types.js';
 
 export type StrategyName = 'balanced' | 'green' | 'hyperscaler' | 'lean';
 
@@ -74,6 +77,17 @@ const CAPACITY_HEADROOM = 1.15;
 const RACK_ORDER_LIMIT = 60;
 /** Share of an over-age rack group retired each month. */
 export const RETIREMENT_SHARE_PER_MONTH = 0.25;
+
+/**
+ * Standing lost for walking away from a contract, by how hard its penalties
+ * bite. A customer on an extreme-penalty workload talks about being dropped.
+ */
+const EXIT_REPUTATION_CLASS: Record<string, number> = {
+  low: 0.6, medium: 1.0, high: 1.5, extreme: 2.4,
+};
+
+/** Share of a power asset's original capital recovered on decommissioning. */
+const POWER_SALVAGE_SHARE = 0.18;
 /** Premium for replacing cooling plant in a hall that is carrying live load. */
 const RETROFIT_PREMIUM = 1.25;
 /** Cooling capacity installed above the hall's design IT load. */
@@ -313,7 +327,7 @@ export class OperatorSystem implements ISimulationSystem {
       endTick: state.meta.tickIndex + context.clock.ticksForDays(offer.termMonths * 30.44),
       demandedUnitHours: 0, servedUnitHours: 0,
       lifetimeDemandedUnitHours: 0, lifetimeServedUnitHours: 0,
-      revenueThisPeriod: 0, penaltiesThisPeriod: 0, backlogUnitHours: 0,
+      revenueThisPeriod: 0, contractedRevenueThisPeriod: 0, penaltiesThisPeriod: 0, backlogUnitHours: 0, shortfall: emptyShortfall(),
     });
     state.contractOffers = state.contractOffers.filter((c) => c.instanceId !== offerInstanceId);
     context.diagnostic('contract.signed', `Signed ${definition.name}`, {
@@ -416,7 +430,7 @@ export class OperatorSystem implements ISimulationSystem {
         endTick: tick + context.clock.ticksForDays(offer.termMonths * 30.44),
         demandedUnitHours: 0, servedUnitHours: 0,
         lifetimeDemandedUnitHours: 0, lifetimeServedUnitHours: 0,
-        revenueThisPeriod: 0, penaltiesThisPeriod: 0, backlogUnitHours: 0,
+        revenueThisPeriod: 0, contractedRevenueThisPeriod: 0, penaltiesThisPeriod: 0, backlogUnitHours: 0, shortfall: emptyShortfall(),
       });
       unitsLeft -= offer.computeUnits;
       taken.add(offer.instanceId);
@@ -823,12 +837,7 @@ export class OperatorSystem implements ISimulationSystem {
    * researched, and what is not diverted is landfilled and scored as such.
    */
   private retireEndOfLife(context: SimulationContext, tick: SimulationTick): void {
-    const state = context.state;
-    const diversion = clamp01(0.35 + context.modifiers.value('waste.diversionRate', 0));
-    const resaleModifier = context.modifiers.value('hardware.resaleValue', 1);
-    const ewasteModifier = context.modifiers.value('waste.ewasteGeneration', 1);
-
-    for (const facility of state.facilities) {
+    for (const facility of context.state.facilities) {
       for (const hall of facility.halls) {
         for (const group of hall.rackGroups) {
           const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
@@ -836,32 +845,189 @@ export class OperatorSystem implements ISimulationSystem {
           if (ageYears < hardware.lifeYears || group.count <= 0) continue;
 
           const retiring = Math.max(1, Math.ceil(group.count * RETIREMENT_SHARE_PER_MONTH));
-          group.count -= retiring;
-          group.failedCount = Math.min(group.failedCount, group.count);
-
-          const massTonnes = retiring * context.balance.rackMassTonnes * ewasteModifier;
-          const divertedTonnes = massTonnes * diversion;
-          state.hour.wasteGeneratedTonnes += massTonnes;
-          state.hour.wasteDivertedTonnes += divertedTonnes;
-          state.hour.wasteLandfilledTonnes += massTonnes - divertedTonnes;
-          state.hour.otherCost += divertedTonnes * context.balance.wasteRecyclingCostPerTonne
-            + (massTonnes - divertedTonnes) * context.balance.wasteLandfillCostPerTonne;
-
-          const resale = retiring * context.balance.baseRackPurchaseCost * hardware.purchaseFactor
-            * hardware.resaleValue01 * resaleModifier;
-          state.hour.hardwareResaleRevenue += resale;
-          state.hour.hardwareRetiredRacks += retiring;
+          const resale = this.decommissionRacks(context, group, retiring);
 
           context.diagnostic('hardware.retired',
             `Retired ${retiring} racks of ${hardware.name} at ${ageYears.toFixed(1)} years`,
-            {
-              tick: tick.index, hardwareId: hardware.id, racks: retiring,
-              divertedTonnes: Number(divertedTonnes.toFixed(2)), resale: Math.round(resale),
-            });
+            { tick: tick.index, hardwareId: hardware.id, racks: retiring, resale: Math.round(resale) });
         }
         hall.rackGroups = hall.rackGroups.filter((group) => group.count > 0);
       }
     }
+  }
+
+  /**
+   * Takes racks out of service and books the waste, resale and e-waste that go
+   * with it. Shared by end-of-life retirement and a deliberate early
+   * retirement, because the accounting is the same either way: the kit leaves
+   * the floor, some of its mass is diverted and the rest is landfilled.
+   *
+   * Returns the resale proceeds, which the caller reports.
+   */
+  private decommissionRacks(
+    context: SimulationContext, group: RackGroupState, count: number,
+  ): number {
+    const state = context.state;
+    const retiring = Math.min(count, group.count);
+    if (retiring <= 0) return 0;
+
+    const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
+    const diversion = clamp01(0.35 + context.modifiers.value('waste.diversionRate', 0));
+    const resaleModifier = context.modifiers.value('hardware.resaleValue', 1);
+    const ewasteModifier = context.modifiers.value('waste.ewasteGeneration', 1);
+
+    group.count -= retiring;
+    group.failedCount = Math.min(group.failedCount, group.count);
+
+    const massTonnes = retiring * context.balance.rackMassTonnes * ewasteModifier;
+    const divertedTonnes = massTonnes * diversion;
+    state.hour.wasteGeneratedTonnes += massTonnes;
+    state.hour.wasteDivertedTonnes += divertedTonnes;
+    state.hour.wasteLandfilledTonnes += massTonnes - divertedTonnes;
+    state.hour.otherCost += divertedTonnes * context.balance.wasteRecyclingCostPerTonne
+      + (massTonnes - divertedTonnes) * context.balance.wasteLandfillCostPerTonne;
+
+    // Resale falls off with age: kit sold early is worth more than kit sold at
+    // the end of its life, which is most of the reason to switch early at all.
+    const resale = retiring * context.balance.baseRackPurchaseCost * hardware.purchaseFactor
+      * hardware.resaleValue01 * resaleModifier * this.remainingLifeShare(context, group, hardware);
+    state.hour.hardwareResaleRevenue += resale;
+    state.hour.hardwareRetiredRacks += retiring;
+    return resale;
+  }
+
+  /** 0-1 share of a group's design life still ahead of it. */
+  private remainingLifeShare(
+    context: SimulationContext, group: RackGroupState, hardware: HardwareDefinition,
+  ): number {
+    const minutes = context.state.meta.minutesPerTick;
+    const ageYears = (context.state.meta.tickIndex - group.installedTick) * minutes / (60 * 8766);
+    return clamp01(1 - ageYears / Math.max(0.5, hardware.lifeYears));
+  }
+
+  /** What retiring a group now would return, before doing it. */
+  quoteRetireRacks(context: SimulationContext, group: RackGroupState, count: number): number {
+    const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
+    const retiring = Math.min(count, group.count);
+    return retiring * context.balance.baseRackPurchaseCost * hardware.purchaseFactor
+      * hardware.resaleValue01 * context.modifiers.value('hardware.resaleValue', 1)
+      * this.remainingLifeShare(context, group, hardware);
+  }
+
+  /**
+   * Retires a rack group before its design life, on the player's instruction.
+   *
+   * The floor space and the cooling it was using come back immediately, which
+   * is the only way to change what a full hall is running without building
+   * another one.
+   */
+  retireRacks(context: SimulationContext, groupInstanceId: string, count: number): number {
+    for (const facility of context.state.facilities) {
+      for (const hall of facility.halls) {
+        const group = hall.rackGroups.find((candidate) => candidate.instanceId === groupInstanceId);
+        if (!group) continue;
+        const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
+        const retiring = Math.min(count, group.count);
+        if (retiring <= 0) return 0;
+        const resale = this.decommissionRacks(context, group, retiring);
+        hall.rackGroups = hall.rackGroups.filter((candidate) => candidate.count > 0);
+        context.diagnostic('hardware.retired',
+          `Retired ${retiring} racks of ${hardware.name} early, freeing the space`,
+          {
+            tick: context.state.meta.tickIndex, hardwareId: hardware.id,
+            racks: retiring, resale: Math.round(resale),
+          });
+        return resale;
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * What it costs to walk away from a contract, and what standing it costs.
+   *
+   * Three months of the contract's revenue, or the rest of its term if that is
+   * shorter. The point of the number is that it has to be worse than serving
+   * the contract and better than breaching it for years - an operator who sold
+   * capacity it cannot build needs a way out that hurts without being a trap.
+   */
+  quoteContractExit(
+    context: SimulationContext, contract: ActiveContractState,
+  ): { fee: number; reputationLoss: number; monthsLeft: number } {
+    const definition = context.registry.contract(contract.definitionId, contract.instanceId);
+    const workload = context.registry.workload(definition.workloadId, definition.id);
+    const ticksLeft = Math.max(0, contract.endTick - context.state.meta.tickIndex);
+    const monthsLeft = ticksLeft * context.state.meta.minutesPerTick / (60 * 24 * 30.44);
+    const monthlyRevenue = contract.computeUnits * contract.pricePerComputeUnitHour
+      * workload.meanUtilization01 * 730;
+    return {
+      fee: monthlyRevenue * Math.min(3, monthsLeft),
+      reputationLoss: Math.min(8, 3 * (EXIT_REPUTATION_CLASS[workload.penaltyClass] ?? 1)),
+      monthsLeft,
+    };
+  }
+
+  /** Ends a contract early, paying the exit fee. */
+  dropContract(context: SimulationContext, contractInstanceId: string): boolean {
+    const state = context.state;
+    const contract = state.contracts.find((c) => c.instanceId === contractInstanceId);
+    if (!contract) return false;
+    const definition = context.registry.contract(contract.definitionId, contract.instanceId);
+    const quote = this.quoteContractExit(context, contract);
+    if (state.company.cash < quote.fee) return false;
+
+    state.company.cash -= quote.fee;
+    // An exit fee is a cost of doing business, not a capital asset: it belongs
+    // in the month's operating result where the player will see it.
+    state.hour.otherCost += quote.fee;
+    state.company.reputation = Math.max(0, state.company.reputation - quote.reputationLoss);
+    state.contracts = state.contracts.filter((c) => c.instanceId !== contractInstanceId);
+
+    context.diagnostic('contract.dropped',
+      `Ended ${definition.name} ${quote.monthsLeft.toFixed(0)} months early`,
+      {
+        tick: state.meta.tickIndex, contractId: definition.id,
+        fee: Math.round(quote.fee), reputationLoss: Number(quote.reputationLoss.toFixed(1)),
+      });
+    return true;
+  }
+
+  /** Salvage value of a power asset, before deciding to decommission it. */
+  quotePowerExit(context: SimulationContext, asset: PowerAssetState): number {
+    const definition = context.registry.power(asset.definitionId, asset.instanceId);
+    // An import connection is a contract, not a machine: there is nothing to
+    // sell when it is given up.
+    if (definition.kind === 'import') return 0;
+    const minutes = context.state.meta.minutesPerTick;
+    const ageYears = (context.state.meta.tickIndex - asset.installedTick) * minutes / (60 * 8766);
+    const remaining = clamp01(1 - ageYears / Math.max(1, definition.lifeYears));
+    return asset.capacityMw * context.balance.basePowerCapexPerMw * definition.capexFactor
+      * POWER_SALVAGE_SHARE * remaining * clamp01(asset.condition01);
+  }
+
+  /** Decommissions a power asset, returning what it was salvaged for. */
+  retirePower(context: SimulationContext, assetInstanceId: string): number {
+    for (const facility of context.state.facilities) {
+      const asset = facility.powerAssets.find((c) => c.instanceId === assetInstanceId);
+      if (!asset) continue;
+      const definition = context.registry.power(asset.definitionId, asset.instanceId);
+      const salvage = this.quotePowerExit(context, asset);
+      context.state.company.cash += salvage;
+      context.state.hour.hardwareResaleRevenue += salvage;
+      // Generation gives its land back; an import connection never took any.
+      const land = asset.capacityMw * definition.landHectaresPerMw;
+      facility.landUsedHectares = Math.max(0, facility.landUsedHectares - land);
+      facility.powerAssets = facility.powerAssets.filter((c) => c.instanceId !== assetInstanceId);
+
+      context.diagnostic('power.retired',
+        `Decommissioned ${asset.capacityMw.toFixed(1)} MW of ${definition.name}`,
+        {
+          tick: context.state.meta.tickIndex, powerId: definition.id,
+          mw: Number(asset.capacityMw.toFixed(2)), salvage: Math.round(salvage),
+        });
+      return salvage;
+    }
+    return 0;
   }
 
   // ------------------------------------------------------------------ power

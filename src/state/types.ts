@@ -166,6 +166,41 @@ export interface ContractOfferState {
   readonly expiresTick: number;
 }
 
+/**
+ * Why contracted capacity went unserved.
+ *
+ * A breach is only actionable if the operator knows which of these it is: no
+ * amount of buying more of the same hardware fixes `noCompatibleHardware`, and
+ * no amount of cooling fixes `oversold`.
+ */
+export type ShortfallCause =
+  | 'noCompatibleHardware'
+  | 'oversold'
+  | 'throttled'
+  | 'failedRacks'
+  | 'degraded';
+
+/** Unserved compute-unit-hours this SLA period, split by cause. */
+export type ShortfallRecord = Record<ShortfallCause, number>;
+
+export function emptyShortfall(): ShortfallRecord {
+  return { noCompatibleHardware: 0, oversold: 0, throttled: 0, failedRacks: 0, degraded: 0 };
+}
+
+/** The SLA period just closed, kept so the player can be told what happened. */
+export interface ContractPeriodOutcome {
+  readonly endedTick: number;
+  readonly required01: number;
+  readonly availability01: number;
+  readonly penalty: number;
+  /** Absent when the period was delivered in full. */
+  readonly cause?: ShortfallCause;
+  /** Share of the shortfall this cause accounts for, 0-1. */
+  readonly causeShare01?: number;
+  /** Unserved compute-unit-hours over the period. */
+  readonly unservedUnitHours?: number;
+}
+
 export interface ActiveContractState {
   readonly instanceId: string;
   readonly definitionId: string;
@@ -183,9 +218,20 @@ export interface ActiveContractState {
   lifetimeDemandedUnitHours: number;
   lifetimeServedUnitHours: number;
   revenueThisPeriod: number;
+  /**
+   * What the period would have billed at full delivery. SLA credits are
+   * written against the contract's value, not against what was managed - a
+   * contract served at zero must cost more than one served at 90%, and
+   * charging against delivered revenue made it cost nothing at all.
+   */
+  contractedRevenueThisPeriod: number;
   penaltiesThisPeriod: number;
   /** Deferred flexible work waiting for a cheaper or cleaner hour. */
   backlogUnitHours: number;
+  /** Unserved compute-unit-hours this SLA period, by cause. Reset with the period. */
+  shortfall: ShortfallRecord;
+  /** The last SLA period's outcome, breach or not. */
+  lastPeriod?: ContractPeriodOutcome;
 }
 
 /** One research project under way. */

@@ -119,12 +119,32 @@ same constants the systems advance by, so the forecast and the outcome cannot
 drift. Headroom is reported per workload and never summed: the same rack serves
 several workloads, so a total would promise capacity that does not exist.
 
+**Breaches that explain themselves.** The allocation step is the only place
+that can see the difference between the capacity the fleet is rated for and
+what it actually delivered, so that is where an unserved compute-unit-hour is
+attributed to a cause: no compatible hardware, oversold capacity, thermal
+throttling, failed racks or worn racks. The split is counterfactual - the share
+a healthy, cool, fully working fleet would have covered is charged to whichever
+of those took it away, and the remainder is capacity the operator never had.
+The SLA step names the dominant cause with the lever that closes it, the
+contract book carries it, and the monthly alert leads with the one costing most.
+The distinction that matters is the first one: no quantity of the racks already
+on the floor will serve a workload they are not compatible with.
+
 **A playable turn loop.** `src/sim/player.ts` enumerates what the operator could
 do this month and applies the choice; `src/sim/operator.ts` is now an operations
 layer with an optional heuristic on top, switchable per decision category. A
 player and the autopilot call the same operations, so a hall the player builds
 is priced, aged and failed exactly like one the heuristic builds. The browser
 build in `web/` is the game: advance a month, read what happened, decide.
+
+Actions come in two kinds and the deck separates them. Acquiring - research,
+contracts, racks, halls, power - and changing what you already own: ending a
+contract for an exit fee, retiring a rack group early to free its slots for
+different hardware, decommissioning a power asset, re-plumbing a live hall.
+Without the second kind the only answer to a bad position is to buy your way
+out of it, which is exactly the position an operator who has oversold cannot
+afford.
 
 **Determinism and saves** — nine independent counter-based random streams,
 persisted stream state, content hashing, and save migrations across every

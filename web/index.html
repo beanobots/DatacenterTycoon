@@ -212,6 +212,10 @@
   .fleet { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
   .fleet-col { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
   .fleet-col h3 { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .sub-head { display: flex; align-items: center; gap: 8px; margin: 14px 0 -2px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .sub-head::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+  .sub-head .n { order: 3; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+  .fleet-col .why { font-size: 11px; line-height: 1.45; color: var(--ink-2); margin: -4px 0 2px; padding-left: 10px; border-left: 2px solid var(--rule-strong); }
   .row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed var(--rule); }
   .row:last-child { border-bottom: 0; }
   .row .l { color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -851,9 +855,12 @@
   };
   var CATEGORY_BLURB = {
     research: 'Run as many projects as you have specialists for. Each is funded from cash, day by day.',
-    contracts: 'Offers leave the table after about three months. Sell only what the fleet can serve.',
-    capacity: 'Racks earn; halls hold them. A rack needs a hall whose cooling can carry its density.',
-    cooling: 'Re-plumbing a live hall is expensive and is the only way off a technology the heat has beaten.',
+    contracts: 'Offers leave the table after about three months. Sell only what the fleet can serve; '
+      + 'a contract you cannot serve can be ended here, for a fee.',
+    capacity: 'Racks earn; halls hold them. A rack needs a hall whose cooling can carry its density. '
+      + 'Retiring a group early frees its slots for different hardware.',
+    cooling: 'Nothing to retrofit to yet: a hall can only be re-plumbed onto a cooling technology you '
+      + 'have researched. Research one in the Cooling branch and the halls you own appear here.',
     power: 'Everything downstream of the meter depends on this. Clean supply costs more up front.',
   };
 
@@ -934,11 +941,47 @@
         return;
       }
 
-      var cards = el('div', 'cards');
-      actions.slice(0, 24).forEach(function (action) { cards.appendChild(actionCard(action)); });
-      block.appendChild(cards);
+      // Acquiring and changing are different decisions and were previously
+      // interleaved, which buried every way of undoing something under a list
+      // of things to buy. Splitting them is what makes the second kind
+      // findable at all.
+      var acquire = actions.filter(function (a) { return CHANGE_KINDS.indexOf(a.kind) < 0; });
+      var change = actions.filter(function (a) { return CHANGE_KINDS.indexOf(a.kind) >= 0; });
+
+      addCards(block, acquire, null);
+      if (change.length > 0) addCards(block, change, CHANGE_HEADING[category] || 'Change what you own');
       host.appendChild(block);
     });
+  }
+
+  /** Action kinds that alter something already owned rather than acquire more. */
+  var CHANGE_KINDS = ['contract.drop', 'hardware.retire', 'power.retire', 'hall.retrofit'];
+  var CHANGE_HEADING = {
+    contracts: 'End a contract',
+    capacity: 'Take racks off the floor',
+    power: 'Decommission',
+    cooling: 'Re-plumb a live hall',
+  };
+  /** Cards shown per group before the rest are folded away. */
+  var CARD_LIMIT = 18;
+
+  function addCards(block, actions, heading) {
+    if (actions.length === 0) return;
+    if (heading) {
+      var sub = el('div', 'sub-head');
+      sub.appendChild(el('span', null, heading));
+      sub.appendChild(el('span', 'n', actions.length + ''));
+      block.appendChild(sub);
+    }
+    var cards = el('div', 'cards');
+    actions.slice(0, CARD_LIMIT).forEach(function (action) {
+      cards.appendChild(actionCard(action));
+    });
+    block.appendChild(cards);
+    if (actions.length > CARD_LIMIT) {
+      block.appendChild(el('div', 'empty',
+        'Showing ' + CARD_LIMIT + ' of ' + actions.length + '. The rest stay on the table.'));
+    }
   }
 
   function actionCard(action) {
@@ -954,8 +997,14 @@
 
     var top = el('div', 'top');
     top.appendChild(el('span', 'nm', action.label));
-    var price = el('span', 'px' + (action.cost === 0 ? ' free' : ''),
-      action.cost === 0 ? 'no cost' : money(action.cost));
+    // Retiring pays rather than costs; labelling that "no cost" reads as a
+    // trick, and the proceeds are the number the decision turns on.
+    var proceeds = action.kind === 'hardware.retire' ? action.resale
+      : action.kind === 'power.retire' ? action.salvage : 0;
+    var price;
+    if (proceeds > 0) price = el('span', 'px free', '+' + money(proceeds));
+    else if (action.cost === 0) price = el('span', 'px free', 'no cost');
+    else price = el('span', 'px', money(action.cost));
     top.appendChild(price);
     card.appendChild(top);
 
@@ -1344,14 +1393,53 @@
     column('Power', fleet.power.map(function (p) {
       return [p.name + (p.clean ? ' \u00b7' : ''), p.capacityMw.toFixed(1) + ' MW'];
     }), 'No power assets.');
-    column('Contract book', fleet.contracts.map(function (c) {
-      return [c.name, c.computeUnits.toLocaleString() + ' CU'];
-    }), 'Nothing sold yet.');
+    // The book is where a player looks after the alert has scrolled away, so
+    // each row carries how the contract is actually being served and why.
+    contractColumn(fleet.contracts);
     var byBranch = {};
     fleet.research.forEach(function (t) { byBranch[t.branch] = (byBranch[t.branch] || 0) + 1; });
     column('Research', Object.keys(byBranch).sort().map(function (b) {
       return [b, String(byBranch[b])];
     }), 'Nothing researched.');
+  }
+
+  /**
+   * The contract book, with each row's availability against its commitment.
+   *
+   * A breach reported only as a count in a monthly alert is unreadable by the
+   * time the player wonders about it, so the reason lives on the contract it
+   * belongs to and stays there until the next period replaces it.
+   */
+  function contractColumn(contracts) {
+    var col = el('div', 'card fleet-col');
+    col.appendChild(el('h3', null, 'Contract book'));
+    if (contracts.length === 0) {
+      col.appendChild(el('div', 'empty', 'Nothing sold yet.'));
+      $('fleet').appendChild(col);
+      return;
+    }
+    contracts.forEach(function (c) {
+      var row = el('div', 'row');
+      var label = el('span', 'l wrap', c.name);
+      row.appendChild(label);
+      var right = el('span', 'r');
+      if (c.availability01 === null) {
+        right.textContent = c.computeUnits.toLocaleString() + ' CU';
+      } else {
+        var missing = c.availability01 < c.required01;
+        right.appendChild(pill(missing ? 'critical' : 'good', pct(c.availability01, 1)));
+        right.appendChild(document.createTextNode(' ' + c.computeUnits.toLocaleString() + ' CU'));
+      }
+      row.appendChild(right);
+      col.appendChild(row);
+      if (c.cause) {
+        var why = el('div', 'why');
+        why.textContent = c.cause
+          + (c.penalty > 0 ? ' Cost ' + money(c.penalty) + ' last month.' : '');
+        col.appendChild(why);
+      }
+    });
+    $('fleet').appendChild(col);
   }
 
   function renderObjectives() {

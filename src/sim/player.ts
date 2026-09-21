@@ -102,8 +102,43 @@ export interface PowerAction extends PlayerActionBase {
   readonly carbonKgPerMwh: number;
 }
 
+/** Ending a contract early rather than breaching it for the rest of its term. */
+export interface DropContractAction extends PlayerActionBase {
+  readonly kind: 'contract.drop';
+  readonly contractId: string;
+  readonly workload: string;
+  readonly computeUnits: number;
+  readonly monthsLeft: number;
+  readonly reputationLoss: number;
+  /** Availability delivered over the last SLA period, 0-1. */
+  readonly availability01: number;
+  /** Penalties this contract cost last month. */
+  readonly lastPenalty: number;
+}
+
+/** Taking racks off the floor before their design life, to free the space. */
+export interface RetireHardwareAction extends PlayerActionBase {
+  readonly kind: 'hardware.retire';
+  readonly groupId: string;
+  readonly hallId: string;
+  readonly hardwareId: string;
+  readonly racks: number;
+  readonly ageYears: number;
+  readonly resale: number;
+}
+
+/** Decommissioning a power asset. */
+export interface RetirePowerAction extends PlayerActionBase {
+  readonly kind: 'power.retire';
+  readonly assetId: string;
+  readonly definitionId: string;
+  readonly mw: number;
+  readonly salvage: number;
+}
+
 export type PlayerAction =
-  | ResearchAction | ContractAction | HardwareAction | HallAction | RetrofitAction | PowerAction;
+  | ResearchAction | ContractAction | HardwareAction | HallAction | RetrofitAction | PowerAction
+  | DropContractAction | RetireHardwareAction | RetirePowerAction;
 
 export interface ActionResult {
   readonly ok: boolean;
@@ -228,9 +263,18 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
           + `this takes ${offer.computeUnits.toLocaleString()}, leaving `
           + `${Math.round(free - offer.computeUnits).toLocaleString()}. `
           + `${workload.penaltyClass === 'extreme' ? 'Extreme' : 'Standard'} penalties if you miss the SLA.`
-        : `Oversells by ${Math.round(shortBy).toLocaleString()} units: you have room for `
-          + `${Math.round(free).toLocaleString()} of ${workload.name} and this wants `
-          + `${offer.computeUnits.toLocaleString()}. Unserved units are SLA breaches.`,
+        // Zero servable capacity is a different problem from too little of it,
+        // and the fix is different too: no quantity of the racks already on the
+        // floor will serve a workload they are not compatible with. Naming the
+        // families is the difference between a solvable position and a mystery
+        // run of breaches.
+        : servable <= 0
+          ? `Nothing in your fleet can run ${workload.name}. It needs `
+            + `${workload.compatibleFamilies.join(' or ')} racks; buying more of what you have will `
+            + 'not serve a single unit of this, and every unit unserved is an SLA breach.'
+          : `Oversells by ${Math.round(shortBy).toLocaleString()} units: you have room for `
+            + `${Math.round(free).toLocaleString()} of ${workload.name} and this wants `
+            + `${offer.computeUnits.toLocaleString()}. Unserved units are SLA breaches.`,
       cost: 0,
       affordable: true,
       blocked,
@@ -244,6 +288,48 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       freeUnits: free,
       fits,
       shortBy,
+    });
+  }
+
+  // --------------------------------------------------------- live contracts
+  // A signed contract you cannot serve is the most expensive thing an operator
+  // can own, and until now there was no way off one. Exiting costs real money
+  // and real standing, which is the point: it has to be worse than serving the
+  // contract and better than breaching it every month until the term ends.
+  for (const contract of context.state.contracts) {
+    const definition = context.registry.contract(contract.definitionId, contract.instanceId);
+    const workload = context.registry.workload(definition.workloadId, definition.id);
+    const quote = operator.quoteContractExit(context, contract);
+    const last = contract.lastPeriod;
+    const availability = last ? last.availability01 : 1;
+    const missing = last !== undefined && last.availability01 < last.required01;
+
+    actions.push({
+      kind: 'contract.drop',
+      id: `drop:${contract.instanceId}`,
+      category: 'contracts',
+      label: `End ${definition.name}`,
+      detail: `${contract.computeUnits.toLocaleString()} units of ${workload.name}, `
+        + `${quote.monthsLeft.toFixed(0)} months left. `
+        + (last
+          ? `Last month it served ${(availability * 100).toFixed(1)}% against `
+            + `${(last.required01 * 100).toFixed(2)}%`
+            + (last.penalty > 0 ? `, costing ${money(last.penalty)} in penalties.` : '.')
+          : 'It has not been through an SLA period yet.'),
+      tradeOff: `Exit fee ${money(quote.fee)} - three months of its revenue - and `
+        + `${quote.reputationLoss.toFixed(1)} reputation. `
+        + (missing
+          ? 'Keeping it costs penalties and reputation every month it is missed.'
+          : 'This one is being served; ending it gives up the revenue for nothing.'),
+      cost: quote.fee,
+      affordable: context.state.company.cash >= quote.fee,
+      contractId: contract.instanceId,
+      workload: workload.name,
+      computeUnits: contract.computeUnits,
+      monthsLeft: quote.monthsLeft,
+      reputationLoss: quote.reputationLoss,
+      availability01: availability,
+      lastPenalty: last ? last.penalty : 0,
     });
   }
 
@@ -292,6 +378,42 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       maxAffordable: Math.floor(budget / Math.max(1, costPerRack)),
       computePerRack: context.balance.baseRackComputeUnits * hardware.computeFactor,
     });
+  }
+
+  // --------------------------------------------------------- retiring racks
+  // Halls fill up, and a full hall cannot change what it runs. Taking a group
+  // off the floor early returns the space, the cooling and part of the capital
+  // - and it is the only way to switch a running hall onto different hardware
+  // without building another one.
+  for (const hall of halls) {
+    for (const group of hall.rackGroups) {
+      const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
+      const ageYears = (context.state.meta.tickIndex - group.installedTick)
+        * context.state.meta.minutesPerTick / (60 * 8766);
+      const resale = operator.quoteRetireRacks(context, group, group.count);
+
+      actions.push({
+        kind: 'hardware.retire',
+        id: `retire:${group.instanceId}`,
+        category: 'capacity',
+        label: `Retire ${group.count} \u00d7 ${hardware.name}`,
+        detail: `In ${hallName(hall)}, ${ageYears.toFixed(1)} years old, `
+          + `condition ${Math.round(group.condition01 * 100)}%. `
+          + `Returns ${money(resale)} and ${group.count} rack slots.`,
+        tradeOff: `Loses ${Math.round(group.count * context.balance.baseRackComputeUnits
+          * hardware.computeFactor).toLocaleString()} compute units immediately. `
+          + 'Anything sold against them breaches until the replacements are in.',
+        // Retiring pays rather than costs, so nothing gates it on the budget.
+        cost: 0,
+        affordable: true,
+        groupId: group.instanceId,
+        hallId: hall.instanceId,
+        hardwareId: group.hardwareId,
+        racks: group.count,
+        ageYears,
+        resale,
+      });
+    }
   }
 
   // ----------------------------------------------------------------- halls
@@ -372,6 +494,38 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
     for (const mw of POWER_SIZES) {
       const cost = operator.pricePower(context, definitionId, mw);
       actions.push(powerAction(context, operator, definitionId, mw, cost, budget));
+    }
+  }
+
+  // --------------------------------------------------- decommissioning power
+  for (const facility of context.state.facilities) {
+    for (const asset of facility.powerAssets) {
+      const definition = context.registry.power(asset.definitionId, asset.instanceId);
+      const salvage = operator.quotePowerExit(context, asset);
+      const firm = definition.kind === 'import' || definition.dispatchability01 > 0.7;
+
+      actions.push({
+        kind: 'power.retire',
+        id: `decommission:${asset.instanceId}`,
+        category: 'power',
+        label: `Decommission ${asset.capacityMw.toFixed(1)} MW \u00b7 ${definition.name}`,
+        detail: `Condition ${Math.round(asset.condition01 * 100)}%. `
+          + (salvage > 0 ? `Salvages ${money(salvage)}.` : 'An import connection salvages nothing.')
+          + (definition.communityDeltaPerRunHour < 0
+            ? ' Stops the community trust it costs for every hour it runs.'
+            : ''),
+        tradeOff: firm
+          ? `Takes ${asset.capacityMw.toFixed(1)} MW of firm supply off the site. `
+            + 'If what is left cannot carry the load, the halls go unserved.'
+          : `Gives back ${(asset.capacityMw * definition.landHectaresPerMw).toFixed(1)} hectares, `
+            + 'and the clean energy it was matching goes back on the grid\u2019s account.',
+        cost: 0,
+        affordable: true,
+        assetId: asset.instanceId,
+        definitionId: asset.definitionId,
+        mw: asset.capacityMw,
+        salvage,
+      });
     }
   }
 
@@ -506,6 +660,56 @@ export function applyAction(
     return operator.orderPower(context, definitionId, mw)
       ? { ok: true, message: `${mw} MW of ${definition.name} ordered.` }
       : { ok: false, message: 'Not enough available cash for that power order.' };
+  }
+
+  if (kind === 'drop') {
+    const contractInstanceId = rest.join(':');
+    const contract = context.state.contracts
+      .find((candidate) => candidate.instanceId === contractInstanceId);
+    if (!contract) return { ok: false, message: 'That contract has already ended.' };
+    const definition = context.registry.contract(contract.definitionId, contract.instanceId);
+    const quote = operator.quoteContractExit(context, contract);
+    if (!operator.dropContract(context, contractInstanceId)) {
+      return { ok: false, message: `Not enough cash for the ${money(quote.fee)} exit fee.` };
+    }
+    return {
+      ok: true,
+      message: `Ended ${definition.name}. Paid ${money(quote.fee)} and lost `
+        + `${quote.reputationLoss.toFixed(1)} reputation.`,
+    };
+  }
+
+  if (kind === 'retire') {
+    const groupInstanceId = rest.join(':');
+    const group = context.state.facilities
+      .flatMap((facility) => facility.halls)
+      .flatMap((hall) => hall.rackGroups)
+      .find((candidate) => candidate.instanceId === groupInstanceId);
+    if (!group) return { ok: false, message: 'Those racks are already gone.' };
+    const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
+    const racks = group.count;
+    const resale = operator.retireRacks(context, groupInstanceId, racks);
+    return {
+      ok: true,
+      message: `Retired ${racks} racks of ${hardware.name} for ${money(resale)}. `
+        + `${racks} rack slots are free.`,
+    };
+  }
+
+  if (kind === 'decommission') {
+    const assetInstanceId = rest.join(':');
+    const asset = context.state.facilities
+      .flatMap((facility) => facility.powerAssets)
+      .find((candidate) => candidate.instanceId === assetInstanceId);
+    if (!asset) return { ok: false, message: 'That asset is already gone.' };
+    const definition = context.registry.power(asset.definitionId, asset.instanceId);
+    const mw = asset.capacityMw;
+    const salvage = operator.retirePower(context, assetInstanceId);
+    return {
+      ok: true,
+      message: `Decommissioned ${mw.toFixed(1)} MW of ${definition.name}`
+        + (salvage > 0 ? `, salvaging ${money(salvage)}.` : '.'),
+    };
   }
 
   return { ok: false, message: `Unknown action "${actionId}".` };

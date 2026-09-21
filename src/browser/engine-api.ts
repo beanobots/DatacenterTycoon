@@ -17,13 +17,14 @@ import {
   type ActionResult, type PlayerAction,
 } from '../sim/player.js';
 import { freeSpecialists, totalSpecialists } from '../sim/systems/research.js';
+import { SHORTFALL_LABEL, SHORTFALL_REMEDY } from '../sim/systems/sla.js';
 import { createSave, restoreSave, type SaveFile } from '../save/save.js';
 import {
   commissioningSchedule, projectCapacity, workloadHeadroom,
   type ProjectedMonth, type ScheduleEntry, type WorkloadHeadroom,
 } from '../sim/planning.js';
 import type { AnnualReport } from '../sim/report.js';
-import type { AnnualScore, DiagnosticEntry } from '../state/types.js';
+import type { AnnualScore, DiagnosticEntry, ShortfallCause } from '../state/types.js';
 import { buildBrowserRegistry, type BundledContent } from './registry.js';
 import { CONTENT } from './content-data.js';
 
@@ -253,7 +254,19 @@ export interface FleetSummary {
   }>;
   readonly hardware: ReadonlyArray<{ readonly name: string; readonly racks: number }>;
   readonly power: ReadonlyArray<{ readonly name: string; readonly capacityMw: number; readonly clean: boolean }>;
-  readonly contracts: ReadonlyArray<{ readonly name: string; readonly computeUnits: number; readonly workload: string }>;
+  readonly contracts: ReadonlyArray<{
+    readonly name: string;
+    readonly computeUnits: number;
+    readonly workload: string;
+    readonly monthsLeft: number;
+    /** Availability delivered over the last closed SLA period, or null before the first. */
+    readonly availability01: number | null;
+    readonly required01: number;
+    /** Penalties charged for the last period. */
+    readonly penalty: number;
+    /** Why it was missed, ready to read; null when it was met. */
+    readonly cause: string | null;
+  }>;
   readonly research: ReadonlyArray<{ readonly name: string; readonly branch: string; readonly tier: number }>;
   /** Names of the projects currently under way. */
   readonly researching: readonly string[];
@@ -331,11 +344,37 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
 
     const breaches = log.filter((entry) => entry.kind === 'sla.breach');
     if (breaches.length > 0) {
+      // A breach count on its own tells the player nothing they can act on.
+      // Group by the cause the allocation step attributed, lead with the one
+      // costing the most, and say what closes it.
+      const cost = new Map<ShortfallCause, number>();
+      const counts = new Map<ShortfallCause, number>();
+      let penalties = 0;
+      for (const entry of breaches) {
+        penalties += Number(entry.data?.penalty ?? 0);
+        const cause = String(entry.data?.cause ?? '') as ShortfallCause;
+        if (!(cause in SHORTFALL_LABEL)) continue;
+        cost.set(cause, (cost.get(cause) ?? 0) + Number(entry.data?.unservedUnitHours ?? 0));
+        counts.set(cause, (counts.get(cause) ?? 0) + 1);
+      }
+      const worst = [...cost.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+
+      const others = [...counts.entries()]
+        .filter(([cause]) => !worst || cause !== worst[0])
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([cause, n]) => `${n} to ${SHORTFALL_LABEL[cause]}`);
+
       alerts.push({
         severity: 'critical',
-        title: `${breaches.length} SLA breach${breaches.length > 1 ? 'es' : ''}`,
-        detail: 'Contracted capacity went unserved. Penalties are charged against the month\u2019s revenue '
-          + 'and reputation falls, which closes off the better contracts.',
+        title: `${breaches.length} SLA breach${breaches.length > 1 ? 'es' : ''}`
+          + (penalties > 0 ? ` \u00b7 $${Math.round(penalties).toLocaleString()} in penalties` : ''),
+        detail: (worst
+          ? `${counts.get(worst[0]) ?? 0} of ${breaches.length} came down to `
+            + `${SHORTFALL_LABEL[worst[0]]}: ${SHORTFALL_REMEDY[worst[0]]}`
+            + (others.length > 0 ? ` Also ${others.join(', ')}.` : '')
+          : 'Contracted capacity went unserved.')
+          + ' Reputation falls with every miss, which closes off the better contracts.',
       });
     }
 
@@ -575,10 +614,21 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
       });
       const contracts = engine.state.contracts.map((contract) => {
         const definition = registry.contract(contract.definitionId, contract.instanceId);
+        const last = contract.lastPeriod;
+        const ticksLeft = Math.max(0, contract.endTick - engine.state.meta.tickIndex);
         return {
           name: definition.name,
           computeUnits: contract.computeUnits,
           workload: registry.workload(definition.workloadId, definition.id).name,
+          monthsLeft: ticksLeft * engine.state.meta.minutesPerTick / (60 * 24 * 30.44),
+          availability01: last ? last.availability01 : null,
+          required01: definition.slaUptime01,
+          penalty: last ? last.penalty : 0,
+          // The book is where a player looks when the alert has scrolled away,
+          // so the reason travels with the row rather than only with the event.
+          cause: last && last.cause
+            ? `${SHORTFALL_LABEL[last.cause]} \u2014 ${SHORTFALL_REMEDY[last.cause]}`
+            : null,
         };
       });
       const research = engine.state.research.completed.map((id) => {

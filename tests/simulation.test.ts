@@ -10,6 +10,7 @@ import { importContent } from '../src/content/importer.js';
 import type { ContentRegistry } from '../src/content/registry.js';
 import { SimulationEngine } from '../src/sim/engine.js';
 import { allAutopilot } from '../src/sim/operator.js';
+import { applyAction, enumerateActions } from '../src/sim/player.js';
 import {
   DEFAULT_SAVE_DIAGNOSTICS, createSave, loadSave, serializeSave,
 } from '../src/save/save.js';
@@ -246,7 +247,7 @@ describe('save and load', () => {
     const migrated = migrate(legacy as { saveVersion: number });
     expect(migrated.applied).toEqual([
       '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
-      '004-annual-reports-in-state',
+      '004-annual-reports-in-state', '005-sla-shortfall-attribution',
     ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
 
@@ -463,5 +464,107 @@ describe('scoring', () => {
     const score = scoreYear(dirty, profile(), { minimumAvailability01: 0.995, gateFlags: [] });
     // Fully offset but genuinely dirty operations must not reach a good score.
     expect(score.categories.environmental.score).toBeLessThan(40);
+  });
+});
+
+describe('explaining an SLA breach', () => {
+  /**
+   * A breach the player cannot diagnose is indistinguishable from a broken
+   * game, which is exactly how it reads from the console. These check that the
+   * cause is attributed to something the player can act on, and that the two
+   * causes needing opposite responses are never confused.
+   */
+  function playerEngine(seed: string): SimulationEngine {
+    return new SimulationEngine(registry, {
+      scenarioId: 'scenario.dry_grid', campaignSeed: seed, autopilot: allAutopilot(false),
+    });
+  }
+
+  /** Signs every offer on the table, which is how a player oversells. */
+  function signEverything(engine: SimulationEngine): void {
+    for (const action of enumerateActions(engine.context, engine.operator)) {
+      if (action.kind === 'contract.sign' && !action.blocked) {
+        applyAction(engine.context, engine.operator, action.id);
+      }
+    }
+  }
+
+  it('names a cause and a remedy on every breach it reports', () => {
+    const engine = playerEngine('breach-cause');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+    signEverything(engine);
+    engine.advanceTicks(engine.clock.ticksForDays(200));
+
+    const breaches = engine.state.diagnostics.filter((entry) => entry.kind === 'sla.breach');
+    expect(breaches.length).toBeGreaterThan(0);
+    for (const breach of breaches) {
+      expect(breach.data?.cause).toBeDefined();
+      expect(breach.data?.cause).not.toBe('unattributed');
+      // The message has to carry the remedy: the log is what the player reads.
+      expect(breach.message.length).toBeGreaterThan(60);
+    }
+  });
+
+  it('tells "nothing can run this" apart from "you sold too much of it"', () => {
+    const engine = playerEngine('breach-kinds');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    // Pick the two offers deliberately rather than hoping a seed produces
+    // both: one for a workload the fleet cannot touch, one for a workload it
+    // can serve but not at that size.
+    let signedUnservable = false;
+    let signedOversized = false;
+    for (let month = 0; month < 24 && !(signedUnservable && signedOversized); month += 1) {
+      for (const action of enumerateActions(engine.context, engine.operator)) {
+        if (action.kind !== 'contract.sign' || action.blocked) continue;
+        if (!signedUnservable && action.servableUnits <= 0) {
+          applyAction(engine.context, engine.operator, action.id);
+          signedUnservable = true;
+        } else if (!signedOversized && action.servableUnits > 0 && !action.fits) {
+          applyAction(engine.context, engine.operator, action.id);
+          signedOversized = true;
+        }
+      }
+      engine.advanceTicks(engine.clock.ticksForDays(30.44));
+    }
+    expect(signedUnservable).toBe(true);
+    expect(signedOversized).toBe(true);
+
+    const causes = new Set(engine.state.diagnostics
+      .filter((entry) => entry.kind === 'sla.breach')
+      .map((entry) => String(entry.data?.cause)));
+    expect(causes.has('noCompatibleHardware')).toBe(true);
+    expect(causes.has('oversold')).toBe(true);
+  });
+
+  it('charges the largest credit for the worst month, not the smallest', () => {
+    // Penalties used to be charged against delivered revenue, so serving
+    // nothing cost nothing and serving 90% cost real money. A contract that is
+    // entirely unserved has to be the most expensive outcome there is.
+    const engine = playerEngine('breach-penalty');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+    signEverything(engine);
+    engine.advanceTicks(engine.clock.ticksForDays(200));
+
+    const total = engine.state.diagnostics
+      .filter((entry) => entry.kind === 'sla.breach' && Number(entry.data?.achieved ?? 1) === 0);
+    expect(total.length).toBeGreaterThan(0);
+    for (const breach of total) {
+      expect(Number(breach.data?.penalty ?? 0)).toBeGreaterThan(0);
+    }
+  });
+
+  it('clears the attribution at the end of each SLA period', () => {
+    const engine = playerEngine('breach-reset');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+    signEverything(engine);
+    engine.advanceTicks(engine.clock.ticksForDays(400));
+
+    // Every contract's record covers the period in progress only, so a month
+    // is never judged on hours it did not contain.
+    for (const contract of engine.state.contracts) {
+      const booked = Object.values(contract.shortfall).reduce((a, b) => a + b, 0);
+      expect(booked).toBeLessThanOrEqual(contract.demandedUnitHours + 1e-6);
+    }
   });
 });

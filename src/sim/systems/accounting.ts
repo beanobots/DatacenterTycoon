@@ -133,6 +133,8 @@ export class AccountingSystem implements ISimulationSystem {
       const billedUnitHours = contract.computeUnits * tick.hours * deliveryRatio;
       const revenue = billedUnitHours * contract.pricePerComputeUnitHour * market.contractPriceFactor;
       contract.revenueThisPeriod += revenue;
+      contract.contractedRevenueThisPeriod += contract.computeUnits * tick.hours
+        * contract.pricePerComputeUnitHour * market.contractPriceFactor;
       period.revenue += revenue;
       period.servedUnitHours += servedUnitHours;
       period.demandedUnitHours += demandedUnitHours;

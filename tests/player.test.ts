@@ -272,3 +272,105 @@ describe('player and autopilot share one implementation', () => {
       .toBeGreaterThan(5);
   });
 });
+
+describe('changing what you already own', () => {
+  // Every other action in the game acquires something. Without these the only
+  // response to a bad position is to buy your way out of it, which is exactly
+  // the position a player who has oversold cannot afford.
+  /** Signs whatever the market is offering, so there is a book to act on. */
+  function withSignedContracts(seed: string): SimulationEngine {
+    const engine = manualEngine(seed);
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+    for (const action of actionsFor(engine)) {
+      if (action.kind === 'contract.sign' && !action.blocked) {
+        applyAction(engine.context, engine.operator, action.id);
+      }
+    }
+    return engine;
+  }
+
+  it('offers a way out of every live contract', () => {
+    const engine = withSignedContracts('exit-offered');
+
+    const drops = actionsFor(engine).filter((action) => action.kind === 'contract.drop');
+    expect(drops.length).toBe(engine.state.contracts.length);
+    expect(drops.length).toBeGreaterThan(0);
+    for (const drop of drops) {
+      expect(drop.cost).toBeGreaterThan(0);
+      expect(drop.tradeOff).toContain('reputation');
+    }
+  });
+
+  it('ends a contract for its exit fee and the standing that goes with it', () => {
+    const engine = withSignedContracts('exit-taken');
+
+    const drop = actionsFor(engine).find((action) => action.kind === 'contract.drop');
+    expect(drop).toBeDefined();
+    const before = {
+      contracts: engine.state.contracts.length,
+      cash: engine.state.company.cash,
+      reputation: engine.state.company.reputation,
+    };
+
+    const result = applyAction(engine.context, engine.operator, drop!.id);
+    expect(result.ok).toBe(true);
+    expect(engine.state.contracts.length).toBe(before.contracts - 1);
+    expect(engine.state.company.cash).toBeCloseTo(before.cash - drop!.cost, 4);
+    expect(engine.state.company.reputation).toBeLessThan(before.reputation);
+  });
+
+  it('frees the floor when racks are retired early, and pays for them', () => {
+    const engine = manualEngine('retire-early');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    const retire = actionsFor(engine).find((action) => action.kind === 'hardware.retire');
+    expect(retire).toBeDefined();
+    const racksBefore = engine.state.facilities
+      .flatMap((facility) => facility.halls)
+      .flatMap((hall) => hall.rackGroups)
+      .reduce((total, group) => total + group.count, 0);
+    const cashBefore = engine.state.company.cash;
+
+    const result = applyAction(engine.context, engine.operator, retire!.id);
+    expect(result.ok).toBe(true);
+
+    const racksAfter = engine.state.facilities
+      .flatMap((facility) => facility.halls)
+      .flatMap((hall) => hall.rackGroups)
+      .reduce((total, group) => total + group.count, 0);
+    expect(racksAfter).toBe(racksBefore - retire!.racks);
+    // Resale is booked as revenue for the hour, so it reaches cash through
+    // accounting rather than landing in the balance on the spot.
+    expect(engine.state.hour.hardwareResaleRevenue).toBeGreaterThan(0);
+    expect(engine.state.company.cash).toBeGreaterThanOrEqual(cashBefore);
+  });
+
+  it('values young racks above old ones when retiring them', () => {
+    const young = manualEngine('resale-young');
+    young.advanceTicks(young.clock.ticksForDays(40));
+    const youngQuote = actionsFor(young).find((a) => a.kind === 'hardware.retire');
+
+    const old = manualEngine('resale-young');
+    old.advanceTicks(old.clock.ticksForDays(365 * 3));
+    const oldQuote = actionsFor(old).find((a) => a.kind === 'hardware.retire');
+
+    expect(youngQuote).toBeDefined();
+    expect(oldQuote).toBeDefined();
+    const perRackYoung = youngQuote!.resale / youngQuote!.racks;
+    const perRackOld = oldQuote!.resale / oldQuote!.racks;
+    expect(perRackYoung).toBeGreaterThan(perRackOld);
+  });
+
+  it('decommissions a power asset and takes its capacity off the site', () => {
+    const engine = manualEngine('decommission');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    const action = actionsFor(engine).find((a) => a.kind === 'power.retire');
+    expect(action).toBeDefined();
+    const before = engine.state.facilities.flatMap((f) => f.powerAssets).length;
+
+    const result = applyAction(engine.context, engine.operator, action!.id);
+    expect(result.ok).toBe(true);
+    expect(engine.state.facilities.flatMap((f) => f.powerAssets).length).toBe(before - 1);
+  });
+});

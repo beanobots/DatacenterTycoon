@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -106,6 +106,30 @@ const MIGRATIONS: readonly Migration[] = [
       // Campaign length and autopilot were not recorded either; the loader
       // falls back to the scenario's own duration and a fully autonomous
       // operator, which is what a version-4 save was.
+    },
+  },
+  {
+    from: 5, to: 6, id: '005-sla-shortfall-attribution',
+    apply: (save) => {
+      // Version 5 recorded that a contract had breached but not why. The
+      // attribution accumulates over an SLA period, so an older save starts
+      // its next period with an empty record rather than a guessed one - the
+      // first month after a resume explains itself, and nothing claims to know
+      // about months it did not watch.
+      const contracts = save.state.contracts;
+      if (!Array.isArray(contracts)) return;
+      for (const entry of contracts) {
+        const contract = entry as Record<string, unknown>;
+        contract.shortfall = {
+          noCompatibleHardware: 0, oversold: 0, throttled: 0, failedRacks: 0, degraded: 0,
+        };
+        // Version 5 charged SLA credits against delivered revenue, which made a
+        // contract served at zero cost nothing. The basis is now the contract's
+        // own value, accumulated over the period; a migrated save starts that
+        // accumulator at zero and falls back to delivered revenue until the
+        // first full period has run.
+        contract.contractedRevenueThisPeriod = 0;
+      }
     },
   },
 ];
