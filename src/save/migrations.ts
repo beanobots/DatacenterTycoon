@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -92,6 +92,20 @@ const MIGRATIONS: readonly Migration[] = [
       }
       const company = state.company as Record<string, unknown> | undefined;
       if (company) delete company.researchPoints;
+    },
+  },
+  {
+    from: 4, to: 5, id: '004-annual-reports-in-state',
+    apply: (save) => {
+      // Version 4 kept the annual reports in the scoring system's memory, so a
+      // save carried the scores without the reports they came from and resumed
+      // with an empty history. An older save cannot recover reports it never
+      // stored; it resumes with the history it has and builds from there.
+      const state = save.state;
+      if (!Array.isArray(state.annualReports)) state.annualReports = [];
+      // Campaign length and autopilot were not recorded either; the loader
+      // falls back to the scenario's own duration and a fully autonomous
+      // operator, which is what a version-4 save was.
     },
   },
 ];

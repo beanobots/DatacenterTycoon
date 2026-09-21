@@ -14,7 +14,7 @@
 import type { ContentRegistry } from '../content/registry.js';
 import type { GameState } from '../state/types.js';
 import { SimulationEngine } from '../sim/engine.js';
-import type { StrategyName } from '../sim/operator.js';
+import type { AutopilotState, StrategyName } from '../sim/operator.js';
 import { migrate, SAVE_VERSION } from './migrations.js';
 
 export interface SaveFile {
@@ -26,11 +26,42 @@ export interface SaveFile {
   readonly tickIndex: number;
   readonly contentHash: string;
   readonly strategy: StrategyName;
+  /** Which decisions the heuristic was holding, so a resumed campaign plays the same. */
+  readonly autopilot: AutopilotState;
+  /** Campaign length in years, so a resumed campaign ends where it was going to. */
+  readonly campaignYears: number;
   readonly state: GameState;
 }
 
-export function createSave(engine: SimulationEngine, registry: ContentRegistry): SaveFile {
+export interface SaveOptions {
+  /**
+   * Diagnostics to keep, newest first. The log is write-only - nothing in the
+   * simulation reads it - so trimming changes no outcome, and leaving it whole
+   * is what makes a save too large to store: at fifteen years the log is 746 KB
+   * of a 776 KB save, against a 256 KB ceiling.
+   */
+  readonly maxDiagnostics?: number;
+  /** Campaign length in years. Defaults to the scenario's own duration. */
+  readonly campaignYears?: number;
+}
+
+/** Diagnostics a save keeps when the caller does not say. */
+export const DEFAULT_SAVE_DIAGNOSTICS = 150;
+
+export function createSave(
+  engine: SimulationEngine,
+  registry: ContentRegistry,
+  options: SaveOptions = {},
+): SaveFile {
   const state = engine.state;
+  // Round-trip through JSON so the save holds plain data with no live
+  // references into the running simulation.
+  const snapshot = JSON.parse(JSON.stringify(state)) as GameState;
+  const keep = options.maxDiagnostics ?? DEFAULT_SAVE_DIAGNOSTICS;
+  if (keep >= 0 && snapshot.diagnostics.length > keep) {
+    snapshot.diagnostics = snapshot.diagnostics.slice(-keep);
+  }
+
   return {
     saveVersion: SAVE_VERSION,
     migrationHistory: [],
@@ -40,18 +71,26 @@ export function createSave(engine: SimulationEngine, registry: ContentRegistry):
     tickIndex: state.meta.tickIndex,
     contentHash: registry.contentHash(),
     strategy: engine.strategy,
-    // Round-trip through JSON so the save holds plain data with no live
-    // references into the running simulation.
-    state: JSON.parse(JSON.stringify(state)) as GameState,
+    autopilot: engine.operator.autopilotState(),
+    campaignYears: options.campaignYears
+      ?? registry.scenario(state.meta.scenarioId, '<save>').durationYears,
+    state: snapshot,
   };
 }
 
-export function serializeSave(save: SaveFile): string {
-  return JSON.stringify(save, null, 2);
+/**
+ * `pretty` is for a file a person will read. Storage wants compact: the
+ * indentation alone is a third of the bytes, and a stored document has a hard
+ * size ceiling.
+ */
+export function serializeSave(save: SaveFile, pretty = true): string {
+  return pretty ? JSON.stringify(save, null, 2) : JSON.stringify(save);
 }
 
 export interface LoadResult {
   readonly engine: SimulationEngine;
+  /** Campaign length the save was configured with. */
+  readonly campaignYears: number;
   /** Set when the save was written against different content. */
   readonly contentMismatch: boolean;
   readonly appliedMigrations: readonly string[];
@@ -78,11 +117,14 @@ export function restoreSave(save: SaveFile, registry: ContentRegistry): LoadResu
     campaignSeed: migrated.save.campaignSeed,
     minutesPerTick: migrated.save.state.meta.minutesPerTick,
     strategy: migrated.save.strategy,
+    ...(migrated.save.autopilot ? { autopilot: migrated.save.autopilot } : {}),
     restoreState: migrated.save.state,
   });
 
   return {
     engine,
+    campaignYears: migrated.save.campaignYears
+      ?? registry.scenario(migrated.save.scenarioId, '<save>').durationYears,
     contentMismatch: migrated.save.contentHash !== registry.contentHash(),
     appliedMigrations: migrated.applied,
   };

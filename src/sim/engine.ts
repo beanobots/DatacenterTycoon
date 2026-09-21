@@ -147,7 +147,7 @@ export class SimulationEngine {
   }
 
   get annualReports(): readonly AnnualReport[] {
-    return this.scoringSystem.reports;
+    return this.context.state.annualReports as unknown as readonly AnnualReport[];
   }
 
   /** Advances one tick through every system in pipeline order. */

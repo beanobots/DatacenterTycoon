@@ -9,7 +9,10 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { importContent } from '../src/content/importer.js';
 import type { ContentRegistry } from '../src/content/registry.js';
 import { SimulationEngine } from '../src/sim/engine.js';
-import { createSave, loadSave, serializeSave } from '../src/save/save.js';
+import { allAutopilot } from '../src/sim/operator.js';
+import {
+  DEFAULT_SAVE_DIAGNOSTICS, createSave, loadSave, serializeSave,
+} from '../src/save/save.js';
 import { migrate, SAVE_VERSION } from '../src/save/migrations.js';
 import { evaluateCooling } from '../src/sim/cooling-model.js';
 import { ModifierStack } from '../src/sim/modifiers.js';
@@ -163,6 +166,43 @@ describe('save and load', () => {
     }
   });
 
+  it('trims the diagnostic log so a save fits a stored document', () => {
+    const engine = engineFor('save-size');
+    engine.runYears(5);
+    expect(engine.state.diagnostics.length).toBeGreaterThan(DEFAULT_SAVE_DIAGNOSTICS);
+
+    const save = createSave(engine, registry);
+    expect(save.state.diagnostics.length).toBe(DEFAULT_SAVE_DIAGNOSTICS);
+    // The log is write-only, so trimming it changes no outcome - but the size
+    // it saves is the difference between storable and not.
+    expect(serializeSave(save, false).length).toBeLessThan(256 * 1024);
+  });
+
+  it('records how the campaign was configured, so a resume plays the same', () => {
+    const engine = new SimulationEngine(registry, {
+      scenarioId: 'scenario.dry_grid', campaignSeed: 'config', autopilot: allAutopilot(false),
+    });
+    engine.operator.setAutopilot('power', true);
+    const save = createSave(engine, registry, { campaignYears: 9 });
+    expect(save.campaignYears).toBe(9);
+    expect(save.autopilot).toMatchObject({ power: true, research: false });
+
+    const { engine: restored, campaignYears } = loadSave(serializeSave(save), registry);
+    expect(campaignYears).toBe(9);
+    expect(restored.operator.autopilotState()).toEqual(save.autopilot);
+  });
+
+  it('carries the campaign history so a resumed save is not blank', () => {
+    const engine = engineFor('history');
+    engine.runYears(3);
+    expect(engine.annualReports.length).toBe(3);
+
+    const { engine: restored } = loadSave(serializeSave(createSave(engine, registry)), registry);
+    expect(restored.annualReports.length).toBe(3);
+    expect(restored.state.annualScores.length).toBe(3);
+    expect(restored.annualReports[0]).toEqual(engine.annualReports[0]);
+  });
+
   it('preserves random stream state across the round-trip', () => {
     const engine = engineFor('stream-state');
     engine.runYears(1);
@@ -196,6 +236,7 @@ describe('save and load', () => {
     for (const facility of state.facilities as Array<Record<string, unknown>>) {
       for (const hall of facility.halls as Array<Record<string, unknown>>) delete hall.installedTick;
     }
+    delete state.annualReports;
     const research = state.research as Record<string, unknown>;
     delete research.active;
     research.activeId = 'technology.cooling.containment';
@@ -205,6 +246,7 @@ describe('save and load', () => {
     const migrated = migrate(legacy as { saveVersion: number });
     expect(migrated.applied).toEqual([
       '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
+      '004-annual-reports-in-state',
     ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
 
@@ -220,6 +262,7 @@ describe('save and load', () => {
     expect(active[0]!.fundedUsd).toBe(750_000);
     expect(migratedResearch.activeId).toBeUndefined();
     expect((migratedState.company as Record<string, unknown>).researchPoints).toBeUndefined();
+    expect(Array.isArray(migratedState.annualReports)).toBe(true);
   });
 
   it('restores a migrated save into a runnable campaign', () => {

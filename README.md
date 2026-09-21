@@ -56,6 +56,21 @@ simulation stops and hands you the decisions the autopilot would otherwise make:
 research, contracts, hardware, halls, cooling retrofits and power. Untick a
 category's autopilot to take it over, tick it to hand it back.
 
+**Saving and resuming.** Save at any month boundary. A save carries the
+scenario, the campaign seed, the tick index, the content hash, the autopilot
+settings, the campaign length and the whole game state, so resuming replays the
+same campaign rather than a similar one - the random streams continue from where
+they stopped, not from a reseed. Saves are keyed by scenario and seed, so saving
+again overwrites that campaign's slot instead of accumulating copies.
+
+Where a save lives depends on how the page is opened. Opened as a published
+artifact it uses that artifact's stored documents and follows you between
+devices; opened from a plain file server there is nothing to store it in, so it
+falls back to that browser's local storage. The page says which it did. The
+diagnostic log is trimmed to the last 150 entries before writing, which is what
+keeps a fifteen-year campaign inside a stored document - diagnostics are a
+write-only record, so trimming them changes no outcome.
+
 ## Commands
 
 | Command | What it does |
@@ -112,8 +127,9 @@ is priced, aged and failed exactly like one the heuristic builds. The browser
 build in `web/` is the game: advance a month, read what happened, decide.
 
 **Determinism and saves** — nine independent counter-based random streams,
-persisted stream state, content hashing, and save migrations across three
-schema versions.
+persisted stream state, content hashing, and save migrations across every
+schema version the format has had - a save written against the first version
+still loads and runs.
 
 ## Design notes worth knowing
 

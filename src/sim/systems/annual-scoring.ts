@@ -8,16 +8,13 @@
 
 import type { SimulationTick } from '../../core/clock.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
-import { buildAnnualReport, type AnnualReport } from '../report.js';
+import { buildAnnualReport } from '../report.js';
 import { scoreYear } from '../scoring.js';
-import { createAccumulator } from '../../state/types.js';
+import { createAccumulator, type AnnualReportRecord } from '../../state/types.js';
 
 export class AnnualScoringSystem implements ISimulationSystem {
   readonly name = 'annual-scoring';
   readonly order = 200;
-
-  /** Reports are kept alongside scores so the CLI can print either. */
-  readonly reports: AnnualReport[] = [];
 
   tick(tick: SimulationTick, context: SimulationContext): void {
     context.state.meta.campaignYear = tick.year;
@@ -32,7 +29,9 @@ export class AnnualScoringSystem implements ISimulationSystem {
       gateFlags: context.state.gateFlags,
     });
 
-    this.reports.push(report);
+    // Both go into state: the report is as much a part of the campaign's
+    // record as the score computed from it, and a save has to carry both.
+    context.state.annualReports.push(report as unknown as AnnualReportRecord);
     context.state.annualScores.push(score);
     context.diagnostic('score.annual',
       `${closingYear}: ${score.rating} (${score.overall.toFixed(1)}) - ${score.label}`,

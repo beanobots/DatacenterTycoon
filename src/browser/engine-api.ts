@@ -17,6 +17,7 @@ import {
   type ActionResult, type PlayerAction,
 } from '../sim/player.js';
 import { freeSpecialists, totalSpecialists } from '../sim/systems/research.js';
+import { createSave, restoreSave, type SaveFile } from '../save/save.js';
 import {
   commissioningSchedule, projectCapacity, workloadHeadroom,
   type ProjectedMonth, type ScheduleEntry, type WorkloadHeadroom,
@@ -217,6 +218,26 @@ export interface CampaignRun {
   diagnostics(): DiagnosticEntry[];
   fleet(): FleetSummary;
   years(): YearResult[];
+  /** A resumable snapshot of this campaign, plus what a save list needs to show. */
+  save(): { file: SaveFile; summary: SaveSummary };
+}
+
+/** What a save list shows without opening the save itself. */
+export interface SaveSummary {
+  readonly scenarioId: string;
+  readonly scenarioName: string;
+  readonly seed: string;
+  readonly dateIso: string;
+  readonly monthLabel: string;
+  readonly monthsElapsed: number;
+  readonly totalMonths: number;
+  readonly itCapacityMw: number;
+  readonly cash: number;
+  readonly contracts: number;
+  readonly rating: string | null;
+  readonly overall: number | null;
+  readonly manual: boolean;
+  readonly contentHash: string;
 }
 
 export interface FleetSummary {
@@ -240,18 +261,38 @@ export interface FleetSummary {
 
 function createRun(scenarioId: string, seed: string, strategy: StrategyName, years: number,
                    manual: boolean): CampaignRun {
-  const engine = new SimulationEngine(registry, {
+  return wrapRun(new SimulationEngine(registry, {
     scenarioId, campaignSeed: seed, strategy,
     autopilot: allAutopilot(!manual),
-  });
+  }), years);
+}
+
+/** Resumes a saved campaign, with the same turn loop as a fresh one. */
+function restoreRun(file: SaveFile): { run: CampaignRun; contentMismatch: boolean; migrations: string[] } {
+  const restored = restoreSave(file, registry);
+  return {
+    run: wrapRun(restored.engine, restored.campaignYears, restored.engine.state.meta.tickIndex),
+    contentMismatch: restored.contentMismatch,
+    migrations: [...restored.appliedMigrations],
+  };
+}
+
+function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): CampaignRun {
   const context = engine.context;
   const operator = engine.operator;
   const ticksPerYear = engine.clock.ticksForDays(365.25);
   const ticksPerMonth = engine.clock.ticksForDays(30.44);
   const totalTicks = ticksPerYear * years;
-  let ticksRun = 0;
-  let reported = 0;
-  const collected: YearResult[] = [];
+  // A resumed campaign has already run its saved ticks; the budget is what is
+  // left, not the whole campaign again.
+  let ticksRun = Math.min(alreadyRunTicks, totalTicks);
+  // Years already closed are part of the record, so the collector starts past
+  // them rather than replaying them as newly closed.
+  let reported = engine.annualReports.length;
+  const collected: YearResult[] = engine.annualReports.map((report, index) => ({
+    report,
+    score: engine.state.annualScores[index] ?? engine.state.annualScores[engine.state.annualScores.length - 1]!,
+  })).filter((entry) => entry.score !== undefined);
 
   function collectYears(): YearResult[] {
     const closed: YearResult[] = [];
@@ -474,6 +515,37 @@ function createRun(scenarioId: string, seed: string, strategy: StrategyName, yea
       });
     },
     diagnostics: () => [...engine.state.diagnostics],
+    save(): { file: SaveFile; summary: SaveSummary } {
+      const file = createSave(engine, registry, { campaignYears: years });
+      const scenario = context.scenario;
+      const latest = engine.state.annualScores.at(-1);
+      const time = new Date(engine.state.meta.gameTimeIso);
+      const totalMonths = years * 12;
+      const elapsed = Math.round((ticksRun / totalTicks) * totalMonths);
+      return {
+        file,
+        summary: {
+          scenarioId: scenario.id,
+          scenarioName: scenario.name,
+          seed: engine.state.meta.campaignSeed,
+          dateIso: engine.state.meta.gameTimeIso,
+          monthLabel: time.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
+          monthsElapsed: Math.min(totalMonths, elapsed),
+          totalMonths,
+          itCapacityMw: engine.state.facilities.flatMap((f) => f.halls)
+            .filter((hall) => hall.constructionProgress01 >= 1)
+            .reduce((mw, hall) => mw + hall.rackGroups.reduce((kw, group) => kw + group.count
+              * context.balance.baseRackPowerKw
+              * registry.hardware(group.hardwareId, group.instanceId).powerFactor, 0) / 1000, 0),
+          cash: engine.state.company.cash,
+          contracts: engine.state.contracts.length,
+          rating: latest ? latest.rating : null,
+          overall: latest ? latest.overall : null,
+          manual: Object.values(operator.autopilotState()).some((on) => !on),
+          contentHash: registry.contentHash(),
+        },
+      };
+    },
     fleet(): FleetSummary {
       const hardware = new Map<string, number>();
       const halls = [];
@@ -541,6 +613,7 @@ const api = {
     })),
   }),
   createRun,
+  restoreRun,
   decisionCategories: DECISION_CATEGORIES,
   rackOrderSizes: RACK_ORDER_SIZES,
 };

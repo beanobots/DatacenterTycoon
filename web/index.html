@@ -348,6 +348,23 @@
 
   .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 
+  /* ---------- saves ---------- */
+  .saves { display: flex; flex-direction: column; gap: 8px; }
+  .save-row { display: flex; gap: 8px; align-items: stretch; }
+  .save-main {
+    flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px;
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 9px; padding: 11px 14px;
+  }
+  .save-main:hover { border-color: var(--accent); }
+  .save-main .sn { font-size: 13px; font-weight: 600; }
+  .save-main .sm { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .save-del {
+    flex: none; font: inherit; font-size: 12px; cursor: pointer; color: var(--ink-3);
+    background: transparent; border: 1px solid var(--rule); border-radius: 9px; padding: 0 14px;
+  }
+  .save-del:hover { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, transparent); }
+
   /* ---------- plan ---------- */
   .plan { display: flex; flex-direction: column; gap: 22px; }
   .plan-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -395,6 +412,7 @@
     <div class="turnbar" id="turnbar">
       <button class="step" id="next-month" type="button">Advance month</button>
       <button class="step ghost" id="next-year" type="button">Advance year</button>
+      <button class="step ghost" id="save" type="button">Save</button>
       <button class="step ghost" id="restart" type="button">New campaign</button>
     </div>
   </div>
@@ -436,6 +454,12 @@
         <button class="step" id="begin" type="button">Begin</button>
       </div>
       <div class="tags" id="setup-tags"></div>
+    </div>
+
+    <div class="card brief-main" style="margin-top:16px">
+      <h3>Resume a campaign</h3>
+      <p id="saves-note">Connecting to storage&hellip;</p>
+      <div class="saves" id="saves"></div>
     </div>
   </section>
 
@@ -547,7 +571,7 @@
     meta: null, scenarios: [], years: [], alerts: [], actions: [],
     dashboard: null, fleet: null, objectives: [], diagnostics: [],
     openYear: null, hover: null, filter: 'all', tab: 'site', finished: false, busy: false,
-    headroom: [], projection: [], schedule: [], horizon: 12,
+    headroom: [], projection: [], schedule: [], horizon: 12, saves: [],
     chartWorkload: null, projectionByWorkload: {}, chartGap: null,
   };
 
@@ -1549,6 +1573,273 @@
     host.appendChild(again);
   }
 
+
+  // ---------- save storage ------------------------------------------------
+  /**
+   * Where campaigns are kept.
+   *
+   * The `db` capability is durable and follows the player between devices, but
+   * a view may not be granted it - `claude.use` resolves null for reasons the
+   * page cannot distinguish - so the browser's own storage is the fallback and
+   * the page works with neither. Nothing here blocks the first paint: the save
+   * list fills in when the backend answers.
+   */
+  var store = {
+    backend: 'pending',
+    db: null,
+
+    async connect() {
+      try {
+        var db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+        if (db) { this.db = db; this.backend = 'db'; return; }
+      } catch (error) {
+        // An unavailable capability is not an error condition for the page.
+      }
+      this.backend = this.localAvailable() ? 'local' : 'none';
+    },
+
+    localAvailable() {
+      try {
+        window.localStorage.setItem('dct.probe', '1');
+        window.localStorage.removeItem('dct.probe');
+        return true;
+      } catch (error) {
+        return false;
+      }
+    },
+
+    readLocal() {
+      try {
+        var raw = window.localStorage.getItem(LOCAL_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (error) {
+        return {};
+      }
+    },
+
+    writeLocal(map) {
+      try {
+        window.localStorage.setItem(LOCAL_KEY, JSON.stringify(map));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    },
+
+    /** Saved campaigns, newest first. */
+    async list() {
+      if (this.backend === 'db' && this.db) {
+        try {
+          var snap = await this.db.collection('saves').orderBy('savedAtIso', 'desc').limit(24).get();
+          return snap.docs.map(function (doc) {
+            var data = doc.data() || {};
+            return { id: doc.id, name: data.name, savedAtIso: data.savedAtIso, summary: data.summary };
+          });
+        } catch (error) {
+          return [];
+        }
+      }
+      if (this.backend === 'local') {
+        var map = this.readLocal();
+        return Object.keys(map).map(function (id) {
+          return { id: id, name: map[id].name, savedAtIso: map[id].savedAtIso, summary: map[id].summary };
+        }).sort(function (a, b) { return (b.savedAtIso || '').localeCompare(a.savedAtIso || ''); });
+      }
+      return [];
+    },
+
+    async put(id, record) {
+      if (this.backend === 'db' && this.db) {
+        await this.db.doc('saves/' + id).set(record);
+        return true;
+      }
+      if (this.backend === 'local') {
+        var map = this.readLocal();
+        map[id] = record;
+        return this.writeLocal(map);
+      }
+      return false;
+    },
+
+    async get(id) {
+      if (this.backend === 'db' && this.db) {
+        var snap = await this.db.doc('saves/' + id).get();
+        return snap.exists ? snap.data() : null;
+      }
+      if (this.backend === 'local') return this.readLocal()[id] || null;
+      return null;
+    },
+
+    async remove(id) {
+      if (this.backend === 'db' && this.db) {
+        await this.db.doc('saves/' + id).delete();
+        return true;
+      }
+      if (this.backend === 'local') {
+        var map = this.readLocal();
+        delete map[id];
+        return this.writeLocal(map);
+      }
+      return false;
+    },
+
+    describe() {
+      if (this.backend === 'db') return 'Saved with this artifact, on any device you open it from.';
+      if (this.backend === 'local') return 'Saved in this browser only.';
+      if (this.backend === 'pending') return 'Connecting to storage\u2026';
+      return 'Storage is unavailable in this view, so campaigns cannot be saved.';
+    },
+  };
+
+  var LOCAL_KEY = 'dct.saves.v1';
+
+  /**
+   * A slot id per campaign, so saving the same campaign again replaces it
+   * rather than growing a pile of near-identical snapshots. A different site
+   * or seed is a different campaign and gets its own slot.
+   */
+  function slotId(scenarioId, seed) {
+    var clean = function (text) {
+      return String(text).replace(/[^A-Za-z0-9_.~:@+-]/g, '-').slice(0, 60);
+    };
+    return (clean(scenarioId) + '~' + clean(seed || 'default')).slice(0, 180);
+  }
+
+  async function saveCampaign() {
+    if (!run) return;
+    if (store.backend === 'pending') { toast('Storage is still connecting. Try again in a moment.'); return; }
+    if (store.backend === 'none') { toast('Storage is unavailable in this view.', true); return; }
+
+    var saved = run.save();
+    var id = slotId(saved.summary.scenarioId, saved.summary.seed);
+    var record = {
+      name: saved.summary.scenarioName + ' \u00b7 ' + saved.summary.monthLabel,
+      savedAtIso: new Date().toISOString(),
+      summary: saved.summary,
+      file: saved.file,
+    };
+    try {
+      var ok = await store.put(id, record);
+      if (!ok) { toast('Could not save: storage refused the write.', true); return; }
+      toast('Saved ' + record.name + '. ' + store.describe());
+      await refreshSaveList();
+    } catch (error) {
+      // A write can be refused by quota or by this viewer's access level.
+      toast('Could not save: ' + (error && error.message ? error.message : 'storage refused the write'), true);
+    }
+  }
+
+  async function resumeCampaign(id) {
+    var record = null;
+    try {
+      record = await store.get(id);
+    } catch (error) {
+      toast('Could not read that save.', true);
+      return;
+    }
+    if (!record || !record.file) { toast('That save is no longer there.', true); return; }
+
+    var restored;
+    try {
+      restored = DCT.restoreRun(record.file);
+    } catch (error) {
+      toast('That save could not be resumed: ' + (error && error.message ? error.message : 'unknown error'), true);
+      return;
+    }
+
+    run = restored.run;
+    state.finished = restored.run.remainingTicks() <= 0;
+    state.alerts = [];
+    state.openYear = null;
+    $('setup-sec').hidden = true;
+    $('game-sec').hidden = false;
+    $('turnbar').hidden = false;
+
+    var when = new Date(record.summary.dateIso);
+    $('clock-date').textContent = MONTHS[when.getUTCMonth()] + ' ' + when.getUTCFullYear();
+    $('clock-sub').textContent = 'Month ' + (record.summary.monthsElapsed + 1)
+      + ' of ' + record.summary.totalMonths + ' \u00b7 resumed';
+    renderAlerts();
+    refresh();
+    window.scrollTo({ top: 0 });
+
+    if (restored.contentMismatch) {
+      toast('Resumed, but this save was written against different game content. '
+        + 'Numbers may not line up.', true);
+    } else if (restored.migrations.length > 0) {
+      toast('Resumed and upgraded from an older save format.');
+    } else {
+      toast('Resumed ' + record.name + '.');
+    }
+  }
+
+  async function deleteSave(id, name) {
+    try {
+      await store.remove(id);
+      toast('Deleted ' + name + '.');
+    } catch (error) {
+      toast('Could not delete that save.', true);
+    }
+    await refreshSaveList();
+  }
+
+  async function refreshSaveList() {
+    var host = $('saves');
+    if (!host) return;
+    var note = $('saves-note');
+    if (note) note.textContent = store.describe();
+
+    var saves = [];
+    try {
+      saves = await store.list();
+    } catch (error) {
+      saves = [];
+    }
+    state.saves = saves;
+
+    host.textContent = '';
+    if (store.backend === 'pending') {
+      host.appendChild(el('div', 'empty', 'Connecting to storage\u2026'));
+      return;
+    }
+    if (saves.length === 0) {
+      host.appendChild(el('div', 'empty',
+        store.backend === 'none'
+          ? 'Campaigns cannot be saved in this view.'
+          : 'No saved campaigns yet. Use Save during a campaign to keep one.'));
+      return;
+    }
+
+    saves.forEach(function (entry) {
+      var summary = entry.summary || {};
+      var row = el('div', 'save-row');
+
+      var main = el('button', 'save-main');
+      main.type = 'button';
+      main.appendChild(el('span', 'sn', entry.name || 'Saved campaign'));
+      var meta = el('span', 'sm');
+      meta.textContent = [
+        'month ' + ((summary.monthsElapsed || 0) + 1) + ' of ' + (summary.totalMonths || '?'),
+        (summary.itCapacityMw || 0).toFixed(2) + ' MW',
+        money(summary.cash || 0),
+        (summary.contracts || 0) + ' contracts',
+        summary.rating ? summary.rating + ' ' + (summary.overall || 0).toFixed(1) : 'unscored',
+        summary.manual ? 'you decide' : 'autopilot',
+      ].join(' \u00b7 ');
+      main.appendChild(meta);
+      main.addEventListener('click', function () { resumeCampaign(entry.id); });
+      row.appendChild(main);
+
+      var remove = el('button', 'save-del', 'Delete');
+      remove.type = 'button';
+      remove.title = 'Delete this save';
+      remove.addEventListener('click', function () { deleteSave(entry.id, entry.name || 'save'); });
+      row.appendChild(remove);
+
+      host.appendChild(row);
+    });
+  }
+
   // ---------- turn loop --------------------------------------------------
   function refresh() {
     if (!run) return;
@@ -1572,6 +1863,7 @@
     $('bar').style.width = ((1 - remaining / run.totalTicks) * 100).toFixed(1) + '%';
     $('next-month').disabled = state.finished || state.busy;
     $('next-year').disabled = state.finished || state.busy;
+    $('save').disabled = state.busy || store.backend === 'none';
   }
 
   function advance(kind) {
@@ -1613,6 +1905,7 @@
     $('clock-sub').textContent = 'Choose a site to begin';
     $('bar').style.width = '0%';
     renderSetupTags();
+    refreshSaveList();
   }
 
   function renderSetupTags() {
@@ -1696,6 +1989,7 @@
     scenarioSelect.addEventListener('change', renderSetupTags);
 
     $('begin').addEventListener('click', begin);
+    $('save').addEventListener('click', saveCampaign);
     $('restart').addEventListener('click', showSetup);
     $('next-month').addEventListener('click', function () { advance('month'); });
     $('next-year').addEventListener('click', function () { advance('year'); });
@@ -1707,6 +2001,13 @@
     renderFooter();
     setTab('site');
     showSetup();
+
+    // Storage connects after the page is up: `use()` can take seconds and may
+    // never answer, and none of that should hold the first paint.
+    store.connect().then(function () {
+      refreshSaveList();
+    });
+
     // Open on a real site rather than an empty form, then start it for them.
     begin();
   }

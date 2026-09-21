@@ -283,6 +283,13 @@ export interface AnnualScore {
   readonly gatesTripped: readonly string[];
 }
 
+/**
+ * An annual report as stored. Structurally the `AnnualReport` the report
+ * builder produces; typed loosely here so the state module does not depend on
+ * the simulation layer.
+ */
+export type AnnualReportRecord = Record<string, unknown> & { readonly year: number };
+
 export interface GameState {
   meta: MetaState;
   world: WorldState;
@@ -299,6 +306,14 @@ export interface GameState {
   month: PeriodAccumulator;
   year: PeriodAccumulator;
   annualScores: AnnualScore[];
+  /**
+   * The reports those scores were computed from.
+   *
+   * In state rather than in the scoring system's memory because they are the
+   * campaign's record: a resumed save that kept the scores but lost the
+   * reports would come back with an empty history table and blank charts.
+   */
+  annualReports: AnnualReportRecord[];
   randomStreams: RandomStreamsState;
   /** Gates currently tripped, e.g. an unresolved safety incident. */
   gateFlags: string[];
