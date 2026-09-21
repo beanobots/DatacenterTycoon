@@ -17,6 +17,16 @@ export interface MetaState {
   readonly startDateIso: string;
   readonly minutesPerTick: number;
   tickIndex: number;
+  /**
+   * Next suffix for a generated instance ID.
+   *
+   * Campaign state, not operator state: it lived on the OperatorSystem, which
+   * is rebuilt on load, so a resumed campaign restarted the counter at zero and
+   * could mint a rack group whose ID already belonged to another one. Anything
+   * keyed by group ID - utilisation, the capacity probe, allocation's
+   * tie-breaks - then had two groups sharing one entry.
+   */
+  nextInstanceId: number;
   /** Simulated UTC instant at the end of the last completed tick. */
   gameTimeIso: string;
   campaignYear: number;
@@ -113,6 +123,17 @@ export interface HallState {
   coolingFailed: boolean;
   /** 0-1 share of IT load shed by thermal throttling, applied next tick. */
   throttle01: number;
+  /**
+   * The worst throttling this hall has reached recently, decaying with a
+   * one-year half-life.
+   *
+   * Capacity advice needs this, not today's reading. A hall in the desert
+   * throttles in August and runs clean in February, so an offer judged against
+   * a February fleet fits in February and breaches in August - which is a
+   * capacity promise the operator could not keep and was never warned about.
+   * Fixing the cooling lets the figure decay back down.
+   */
+  peakThrottle01: number;
   /** Current cold-aisle inlet temperature, degrees C. */
   inletTempC: number;
 }

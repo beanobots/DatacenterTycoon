@@ -13,6 +13,13 @@ import type { ISimulationSystem, SimulationContext } from '../context.js';
 /** How fast inlet temperature moves toward its target per tick, 0-1. */
 const THERMAL_RESPONSE = 0.55;
 
+/**
+ * Per-tick decay on a hall's remembered worst throttle: a one-year half-life
+ * at 15 simulated minutes per tick. A year is the right window because that is
+ * one full turn of the season that caused it.
+ */
+const PEAK_THROTTLE_DECAY_PER_TICK = Math.pow(0.5, 1 / (4 * 8766));
+
 export class CoolingDispatchSystem implements ISimulationSystem {
   readonly name = 'cooling-dispatch';
   readonly order = 70;
@@ -40,6 +47,13 @@ export class CoolingDispatchSystem implements ISimulationSystem {
         const previous = hall.throttle01;
         hall.throttle01 = clamp01(
           remap(hall.inletTempC, balance.thermalThrottleStartC, balance.thermalShutdownC, 0, 1),
+        );
+
+        // Decayed rather than reset, so one fixed summer does not immediately
+        // make the hall look like it never struggled.
+        hall.peakThrottle01 = Math.max(
+          hall.throttle01,
+          (hall.peakThrottle01 ?? 0) * PEAK_THROTTLE_DECAY_PER_TICK,
         );
 
         if (hall.throttle01 > 0.05 && previous <= 0.05) {

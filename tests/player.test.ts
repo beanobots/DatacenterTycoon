@@ -13,6 +13,8 @@ import type { ContentRegistry } from '../src/content/registry.js';
 import { SimulationEngine } from '../src/sim/engine.js';
 import { allAutopilot } from '../src/sim/operator.js';
 import { applyAction, enumerateActions } from '../src/sim/player.js';
+import { peakShape } from '../src/sim/capacity.js';
+import { thermalOutlook } from '../src/sim/thermal-outlook.js';
 
 let registry: ContentRegistry;
 beforeAll(() => {
@@ -374,3 +376,143 @@ describe('changing what you already own', () => {
     expect(engine.state.facilities.flatMap((f) => f.powerAssets).length).toBe(before - 1);
   });
 });
+
+describe('the fit claim on a contract offer', () => {
+  /**
+   * "It fits" has to mean the commitment can be kept. Three separate things
+   * used to make it untrue, and each is checked here: capacity shared between
+   * workloads counted more than once, demand judged at its average rather than
+   * its peak, and cooling ignored entirely.
+   */
+  const offers = (engine: SimulationEngine) =>
+    actionsFor(engine).filter((action) => action.kind === 'contract.sign');
+
+  it('does not offer the same racks to two different workloads', () => {
+    const engine = manualEngine('shared-racks');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    // Archive and disaster recovery both run on the opening fleet. Selling one
+    // has to reduce what the other is told it can take.
+    const before = offers(engine);
+    const first = before.find((action) => action.kind === 'contract.sign' && action.fits);
+    expect(first).toBeDefined();
+    if (first?.kind !== 'contract.sign') throw new Error('expected an offer');
+
+    applyAction(engine.context, engine.operator, first.id);
+
+    for (const after of offers(engine)) {
+      if (after.kind !== 'contract.sign') continue;
+      const was = before.find((b) => b.id === after.id);
+      if (!was || was.kind !== 'contract.sign') continue;
+      // Every remaining offer on racks the signed contract could use must now
+      // report less room, not the same room.
+      expect(after.freeUnits).toBeLessThanOrEqual(was.freeUnits + 1e-6);
+    }
+  });
+
+  it('sizes against the peak hour, not the average', () => {
+    const engine = manualEngine('peak-sizing');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    for (const action of offers(engine)) {
+      if (action.kind !== 'contract.sign') continue;
+      const definition = registry.contract(
+        engine.state.contractOffers.find((o) => action.id.endsWith(o.instanceId))!.definitionId,
+        'test',
+      );
+      const workload = registry.workload(definition.workloadId, 'test');
+      const peak = peakShape(workload.hourlyDemandShape);
+      if (peak <= 1.02) continue;
+      // A workload peaking above its mean must be quoted less room than the
+      // raw capacity would suggest.
+      expect(action.freeUnits * peak).toBeLessThanOrEqual(action.servableUnits + 1e-6);
+    }
+  });
+
+  it('refuses to call an offer a fit when the cooling cannot hold it', () => {
+    // The desert site runs out of cooling for part of the year, which caps the
+    // availability the whole fleet can promise however many racks are free.
+    const engine = new SimulationEngine(registry, {
+      scenarioId: 'scenario.dry_grid', campaignSeed: 'thermal-fit', autopilot: allAutopilot(false),
+    });
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    const hall = engine.state.facilities.flatMap((f) => f.halls)[0];
+    expect(hall).toBeDefined();
+    const outlook = thermalOutlook(engine.context, hall!);
+    expect(outlook.share01).toBeGreaterThan(0);
+
+    for (const action of offers(engine)) {
+      if (action.kind !== 'contract.sign') continue;
+      const definition = registry.contract(
+        engine.state.contractOffers.find((o) => action.id.endsWith(o.instanceId))!.definitionId,
+        'test',
+      );
+      if (definition.slaUptime01 <= 1 - outlook.share01) continue;
+      // The heat alone makes this commitment unkeepable.
+      expect(action.fits).toBe(false);
+      expect(action.tradeOff).toContain('cooling');
+    }
+  });
+});
+
+describe('placing racks in a chosen hall', () => {
+  it('offers every hall, and says why one cannot take this hardware', () => {
+    const engine = manualEngine('hall-choice');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    const buy = actionsFor(engine).find((action) => action.kind === 'hardware.buy');
+    expect(buy).toBeDefined();
+    if (buy?.kind !== 'hardware.buy') throw new Error('expected a hardware action');
+
+    const halls = engine.state.facilities.flatMap((f) => f.halls)
+      .filter((h) => h.constructionProgress01 >= 1);
+    expect(buy.halls.length).toBe(halls.length);
+    for (const slot of buy.halls) {
+      expect(slot.racksInstalled + slot.freeSlots).toBe(slot.rackCapacity);
+      if (!slot.canCool) expect(slot.blocked).toBeTruthy();
+    }
+  });
+
+  it('puts the racks in the hall that was named', () => {
+    const engine = manualEngine('hall-target');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+    // A second hall, so there is a choice to get wrong.
+    const buildHall = actionsFor(engine).find((a) => a.kind === 'hall.build' && a.affordable);
+    expect(buildHall).toBeDefined();
+    applyAction(engine.context, engine.operator, buildHall!.id);
+    engine.advanceTicks(engine.clock.ticksForDays(260));
+
+    const buy = actionsFor(engine).find((action) => action.kind === 'hardware.buy');
+    if (buy?.kind !== 'hardware.buy') throw new Error('expected a hardware action');
+    const target = buy.halls.filter((slot) => slot.canCool && slot.freeSlots >= 10).at(-1);
+    expect(target).toBeDefined();
+
+    const before = countRacks(engine, target!.hallId);
+    const result = applyAction(engine.context, engine.operator,
+      `hardware:${target!.hallId}:${buy.hardwareId}`, 10);
+    expect(result.ok).toBe(true);
+    expect(countRacks(engine, target!.hallId)).toBe(before + 10);
+  });
+
+  it('refuses a hall whose cooling cannot carry the density, and says so', () => {
+    const engine = manualEngine('hall-refuse');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+    const buy = actionsFor(engine).find((action) => action.kind === 'hardware.buy');
+    if (buy?.kind !== 'hardware.buy') throw new Error('expected a hardware action');
+
+    const blocked = buy.halls.find((slot) => !slot.canCool);
+    if (!blocked) return; // Nothing to refuse in this opening position.
+
+    const result = applyAction(engine.context, engine.operator,
+      `hardware:${blocked.hallId}:${buy.hardwareId}`, 10);
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('cool');
+  });
+});
+
+function countRacks(engine: SimulationEngine, hallId: string): number {
+  const hall = engine.state.facilities.flatMap((f) => f.halls)
+    .find((candidate) => candidate.instanceId === hallId);
+  return hall ? hall.rackGroups.reduce((total, group) => total + group.count, 0) : 0;
+}

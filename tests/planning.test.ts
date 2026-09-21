@@ -13,7 +13,8 @@ import type { ContentRegistry } from '../src/content/registry.js';
 import { SimulationEngine } from '../src/sim/engine.js';
 import { allAutopilot } from '../src/sim/operator.js';
 import { applyAction, enumerateActions } from '../src/sim/player.js';
-import { COMMIT_MARGIN, commissioningSchedule, projectCapacity, workloadHeadroom } from '../src/sim/planning.js';
+import { commissioningSchedule, projectCapacity, workloadHeadroom } from '../src/sim/planning.js';
+import { REPORTING_SLA, peakShape, requiredHeadroom } from '../src/sim/capacity.js';
 
 let registry: ContentRegistry;
 beforeAll(() => {
@@ -81,13 +82,29 @@ describe('headroom', () => {
     const was = before.find((row) => row.workloadId === workloadId)!;
     const now = workloadHeadroom(engine.context).find((row) => row.workloadId === workloadId)!;
 
-    expect(now.reservedUnits - was.reservedUnits).toBeCloseTo(action.computeUnits, 6);
-    expect(was.freeUnits - now.freeUnits).toBeCloseTo(action.computeUnits, 6);
+    // Signing N contracted units does NOT consume N units of capacity. It
+    // consumes N at the workload's peak hour, plus the spare its availability
+    // needs to absorb arrival noise - which is the whole reason a fit check
+    // built on a flat 1:1 assumption promised capacity that was not there.
+    const definition = registry.contract(engine.state.contracts[0]!.definitionId, 'test');
+    const spare = requiredHeadroom(definition.slaUptime01);
+
+    expect(now.reservedUnits - was.reservedUnits)
+      .toBeCloseTo(action.computeUnits * spare, 4);
+    // Free units are quoted at the reporting availability, so the drop scales
+    // by the ratio between this contract's demands and that.
+    expect(was.freeUnits - now.freeUnits)
+      .toBeCloseTo(action.computeUnits * spare / requiredHeadroom(REPORTING_SLA), 4);
   });
 
   it('holds free capacity below servable capacity by the commit margin', () => {
     for (const row of workloadHeadroom(manualEngine().context)) {
-      expect(row.freeUnits).toBeLessThanOrEqual(row.servableUnits * COMMIT_MARGIN + 1e-6);
+      // Free units are a contract SIZE, so they sit below servable capacity by
+      // the workload's peak and the spare a reported availability needs.
+      const workload = registry.workload(row.workloadId, 'test');
+      const ceiling = row.servableUnits
+        / (peakShape(workload.hourlyDemandShape) * requiredHeadroom(REPORTING_SLA));
+      expect(row.freeUnits).toBeLessThanOrEqual(ceiling + 1e-6);
       expect(row.freeUnits).toBeGreaterThanOrEqual(0);
     }
   });

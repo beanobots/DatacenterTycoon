@@ -14,6 +14,15 @@ import type { ISimulationSystem, SimulationContext } from '../context.js';
 /** Share of a deferred backlog that can be caught up in any one tick. */
 const BACKLOG_CATCHUP_RATE = 0.12;
 
+/**
+ * Log-space standard deviation of arrival noise.
+ *
+ * Exported because capacity advice is only honest if it is derived from the
+ * same number the arrivals are drawn from: how much headroom a contract needs
+ * is entirely a function of this and the availability it is buying.
+ */
+export const ARRIVAL_SIGMA = 0.09;
+
 export class WorkloadArrivalSystem implements ISimulationSystem {
   readonly name = 'workload-arrival';
   readonly order = 30;
@@ -30,7 +39,7 @@ export class WorkloadArrivalSystem implements ISimulationSystem {
       const shape = sampleHourlyCurve(workload.hourlyDemandShape, hourFraction);
       // Arrival noise is lognormal so demand never goes negative and spikes
       // are possible without the mean drifting.
-      const noise = Math.exp(stream.normal(0, 0.09));
+      const noise = Math.exp(stream.normal(0, ARRIVAL_SIGMA));
       // Demand is the capacity the customer RESERVED, shaped by their daily
       // curve - not the share of it they happen to be using. A tenant holding
       // 2,000 units occupies 2,000 units of the fleet whether or not their jobs

@@ -334,6 +334,14 @@
   }
   .qty button:hover:not(:disabled) { border-color: var(--accent); }
   .qty button:disabled { opacity: .4; cursor: not-allowed; }
+  .qty button.fill { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
+  .qty select {
+    font-family: var(--mono); font-size: 11px; padding: 3px 6px; border-radius: 5px; cursor: pointer;
+    background: var(--panel-sunk); border: 1px solid var(--rule-strong); color: var(--ink);
+    max-width: 100%; min-width: 0; flex: 1;
+  }
+  .qty select:hover { border-color: var(--accent); }
+  .order { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
 
   .toast {
     position: fixed; left: 50%; transform: translateX(-50%);
@@ -1013,23 +1021,92 @@
     if (action.blocked) card.appendChild(el('div', 'bl', action.blocked));
     else if (!action.affordable) card.appendChild(el('div', 'bl', 'Beyond the free capital you hold.'));
 
-    if (action.kind === 'hardware.buy' && !action.blocked) {
-      var qty = el('div', 'qty');
+    if (action.kind === 'hardware.buy' && !action.blocked) card.appendChild(rackOrderRow(action));
+    return card;
+  }
+
+  /**
+   * Choose a hall, then an order size.
+   *
+   * Racks used to go into whichever hall happened to come first, so a second
+   * hall could never be filled and no hall could be given a job of its own.
+   * The hall is part of the order now, and "fill" takes whatever is left in
+   * the one selected.
+   */
+  function rackOrderRow(action) {
+    var wrap = el('div', 'order');
+    var chosen = DCT.anyHall;
+
+    var usable = action.halls.filter(function (h) { return h.canCool && h.freeSlots > 0; });
+    if (action.halls.length > 1 || usable.length !== action.halls.length) {
+      var row = el('div', 'qty');
+      row.appendChild(el('span', null, 'into'));
+      var select = document.createElement('select');
+      var any = document.createElement('option');
+      any.value = DCT.anyHall;
+      any.textContent = 'wherever it fits (' + action.spaceAvailable + ' free)';
+      select.appendChild(any);
+      action.halls.forEach(function (h) {
+        var opt = document.createElement('option');
+        opt.value = h.hallId;
+        opt.textContent = h.name + ' \u00b7 ' + h.racksInstalled + '/' + h.rackCapacity
+          + (h.blocked ? ' \u00b7 ' + h.blocked : ' \u00b7 ' + h.freeSlots + ' free');
+        opt.disabled = !!h.blocked;
+        select.appendChild(opt);
+      });
+      select.addEventListener('change', function () {
+        chosen = select.value;
+        paintSizes();
+      });
+      row.appendChild(select);
+      wrap.appendChild(row);
+    }
+
+    var qty = el('div', 'qty');
+    wrap.appendChild(qty);
+
+    function slotsHere() {
+      if (chosen === DCT.anyHall) return action.spaceAvailable;
+      for (var i = 0; i < action.halls.length; i++) {
+        if (action.halls[i].hallId === chosen) return action.halls[i].freeSlots;
+      }
+      return 0;
+    }
+
+    function order(size) {
+      return function () { take('hardware:' + chosen + ':' + action.hardwareId, size); };
+    }
+
+    function paintSizes() {
+      qty.textContent = '';
       qty.appendChild(el('span', null, 'order'));
+      var free = slotsHere();
       DCT.rackOrderSizes.forEach(function (size) {
         var b = el('button', null, size + '');
         b.type = 'button';
-        var can = size <= action.spaceAvailable && size <= action.maxAffordable && !state.finished;
+        var can = size <= free && size <= action.maxAffordable && !state.finished;
         b.disabled = !can;
         b.title = can ? money(size * action.costPerRack)
-          : (size > action.spaceAvailable ? 'Only ' + action.spaceAvailable + ' rack slots free'
+          : (size > free ? 'Only ' + free + ' rack slots free there'
             : 'Beyond the free capital you hold');
-        b.addEventListener('click', function () { take(action.id, size); });
+        b.addEventListener('click', order(size));
         qty.appendChild(b);
       });
-      card.appendChild(qty);
+
+      // Filling a 220-rack hall in fifties is five clicks and four chances to
+      // put racks somewhere you did not mean to.
+      var most = Math.min(free, action.maxAffordable);
+      var fill = el('button', 'fill', most > 0 ? 'fill (' + most + ')' : 'fill');
+      fill.type = 'button';
+      fill.disabled = most <= 0 || state.finished;
+      fill.title = most > 0 ? money(most * action.costPerRack)
+        : (free <= 0 ? 'No free slots there' : 'Beyond the free capital you hold');
+      fill.addEventListener('click', order(most));
+      qty.appendChild(fill);
     }
-    return card;
+
+    paintSizes();
+    return wrap;
   }
 
   function take(actionId, quantity) {
@@ -1384,8 +1461,14 @@
     }
 
     column('Halls', fleet.halls.map(function (h) {
+      // The thermal ceiling is shown even when the hall is cool right now: it
+      // is what decides which SLAs can be sold against this hall, and the
+      // hours-a-year figure is directly comparable to one.
       var note = h.underConstruction ? 'building'
         : h.throttle01 > 0.02 ? 'throttling ' + pct(h.throttle01, 0)
+        : h.thermalCeilingC !== null && h.hoursAboveCeiling >= 1
+          ? h.inletTempC.toFixed(0) + '\u00b0C \u00b7 caps at '
+            + h.thermalCeilingC.toFixed(0) + '\u00b0C, ' + Math.round(h.hoursAboveCeiling) + ' h/yr over'
         : h.inletTempC.toFixed(0) + '\u00b0C';
       return [h.id + ' \u00b7 ' + h.cooling, h.racks + '/' + h.capacity + ' \u00b7 ' + note, true];
     }), 'No halls.');

@@ -119,6 +119,28 @@ same constants the systems advance by, so the forecast and the outcome cannot
 drift. Headroom is reported per workload and never summed: the same rack serves
 several workloads, so a total would promise capacity that does not exist.
 
+**One capacity calculation, used everywhere.** `src/sim/capacity.ts` places the
+contract book on the fleet the same way the allocation step places it, and
+reports what is left. Everything that answers "will this fit" goes through it:
+the offer advice, the planning table, the forecast, and the autopilot's own
+signing. It exists because three separate things used to make a fit claim
+untrue. Capacity is shared - a CPU rack serves six workloads - but reservations
+were counted per workload, so the same rack could be sold six times. Demand was
+judged at its average when contracts are served at their peak, which is up to
+1.45x. And the spare capacity an availability needs was a flat 15% for
+everything, when it follows from the arrival distribution: holding 99.9% needs
+32% spare, holding 95% needs 16%.
+
+**A thermal ceiling on what can be promised.** `src/sim/thermal-outlook.ts`
+bisects the real cooling model to find the ambient temperature at which a hall
+starts shedding load, then integrates the region's climate for how much of the
+year is above it. The desert site's air-cooled hall caps out around 45 C and is
+above that for roughly 40 hours a year, so it cannot hold better than 99.5%
+availability however many racks are free - which is why a 99.9% contract is
+refused there with that number quoted, rather than accepted and breached every
+summer. A retrofit moves the ceiling immediately, and the autopilot now
+retrofits against it instead of quietly selling less for ever.
+
 **Breaches that explain themselves.** The allocation step is the only place
 that can see the difference between the capacity the fleet is rated for and
 what it actually delivered, so that is where an unserved compute-unit-hour is
@@ -137,6 +159,11 @@ layer with an optional heuristic on top, switchable per decision category. A
 player and the autopilot call the same operations, so a hall the player builds
 is priced, aged and failed exactly like one the heuristic builds. The browser
 build in `web/` is the game: advance a month, read what happened, decide.
+
+Racks go into a hall you choose. Every commissioned hall is listed with what is
+installed, what is free and - when its cooling cannot carry the density - why it
+cannot take this hardware, with a fill option that takes whatever is left in the
+one selected.
 
 Actions come in two kinds and the deck separates them. Acquiring - research,
 contracts, racks, halls, power - and changing what you already own: ending a

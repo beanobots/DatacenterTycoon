@@ -12,7 +12,7 @@ import { clamp, clamp01, sampleMonthlyCurve } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
 
 /** Hour of day at which dry-bulb temperature peaks. */
-const PEAK_HOUR = 15;
+export const PEAK_HOUR = 15;
 
 /**
  * Stull's single-equation wet-bulb approximation. Accurate to a few tenths of

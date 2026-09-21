@@ -90,3 +90,58 @@ export function sampleHourlyCurve(curve: readonly number[], hourOfDay: number): 
   const high = curve[highIndex] ?? 0;
   return lerp(low, high, hourOfDay - Math.floor(hourOfDay));
 }
+
+/**
+ * Inverse standard normal CDF, Acklam's rational approximation.
+ *
+ * Accurate to about 1.15e-9 in relative error across the open interval, which
+ * is far beyond what any balance number needs. It exists so that "how much
+ * spare capacity does a 99.9% commitment need" can be answered from the
+ * distribution the arrivals are actually drawn from, rather than guessed at
+ * with a flat margin.
+ */
+export function inverseNormal(p: number): number {
+  if (p <= 0) return -Infinity;
+  if (p >= 1) return Infinity;
+
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+    1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+    6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+    -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+    3.754408661907416e+00];
+  const low = 0.02425;
+
+  const at = (row: readonly number[], index: number): number => row[index] ?? 0;
+
+  if (p < low) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (((((at(c, 0) * q + at(c, 1)) * q + at(c, 2)) * q + at(c, 3)) * q + at(c, 4)) * q + at(c, 5))
+      / ((((at(d, 0) * q + at(d, 1)) * q + at(d, 2)) * q + at(d, 3)) * q + 1);
+  }
+  if (p > 1 - low) {
+    const q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((at(c, 0) * q + at(c, 1)) * q + at(c, 2)) * q + at(c, 3)) * q + at(c, 4)) * q + at(c, 5))
+      / ((((at(d, 0) * q + at(d, 1)) * q + at(d, 2)) * q + at(d, 3)) * q + 1);
+  }
+  const q = p - 0.5;
+  const r = q * q;
+  return (((((at(a, 0) * r + at(a, 1)) * r + at(a, 2)) * r + at(a, 3)) * r + at(a, 4)) * r + at(a, 5)) * q
+    / (((((at(b, 0) * r + at(b, 1)) * r + at(b, 2)) * r + at(b, 3)) * r + at(b, 4)) * r + 1);
+}
+
+/**
+ * Standard normal CDF, via Abramowitz & Stegun 7.1.26 on the error function.
+ * Accurate to about 1.5e-7, which is well inside what a climate estimate can
+ * claim. Used to answer "how much of the year is above this temperature".
+ */
+export function normalCdf(z: number): number {
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const erf = 1 - ((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736)
+    * t * t * Math.exp(-x * x) - 0.254829592 * t * Math.exp(-x * x);
+  return 0.5 * (1 + sign * erf);
+}

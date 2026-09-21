@@ -50,6 +50,7 @@ export function createInitialState(
       startDateIso: startDate.toISOString(),
       minutesPerTick,
       tickIndex: 0,
+      nextInstanceId: 0,
       gameTimeIso: startDate.toISOString(),
       campaignYear: startDate.getUTCFullYear(),
     },

@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 8;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -130,6 +130,55 @@ const MIGRATIONS: readonly Migration[] = [
         // first full period has run.
         contract.contractedRevenueThisPeriod = 0;
       }
+    },
+  },
+  {
+    from: 6, to: 7, id: '006-hall-peak-throttle',
+    apply: (save) => {
+      // Capacity advice is now judged on the worst throttling a hall has
+      // reached recently rather than on the current instant. A version-6 save
+      // never recorded that, so each hall starts from where it is now and the
+      // figure builds from the resumed campaign forward.
+      const facilities = save.state.facilities;
+      if (!Array.isArray(facilities)) return;
+      for (const entry of facilities) {
+        const halls = (entry as Record<string, unknown>).halls;
+        if (!Array.isArray(halls)) continue;
+        for (const hallEntry of halls) {
+          const hall = hallEntry as Record<string, unknown>;
+          hall.peakThrottle01 = Number(hall.throttle01 ?? 0);
+        }
+      }
+    },
+  },
+  {
+    from: 7, to: 8, id: '007-instance-counter-in-state',
+    apply: (save) => {
+      // The instance counter used to live on the operator, which is rebuilt on
+      // load, so a resumed campaign restarted it at zero and could mint a rack
+      // group ID that already existed. Seed it past every ID already in use.
+      const state = save.state;
+      const meta = state.meta as Record<string, unknown> | undefined;
+      if (!meta) return;
+
+      let highest = -1;
+      const facilities = state.facilities;
+      if (Array.isArray(facilities)) {
+        for (const facilityEntry of facilities) {
+          const halls = (facilityEntry as Record<string, unknown>).halls;
+          if (!Array.isArray(halls)) continue;
+          for (const hallEntry of halls) {
+            const groups = (hallEntry as Record<string, unknown>).rackGroups;
+            if (!Array.isArray(groups)) continue;
+            for (const groupEntry of groups) {
+              const id = String((groupEntry as Record<string, unknown>).instanceId ?? '');
+              const suffix = Number(id.slice(id.lastIndexOf('.') + 1));
+              if (Number.isFinite(suffix)) highest = Math.max(highest, suffix);
+            }
+          }
+        }
+      }
+      meta.nextInstanceId = highest + 1;
     },
   },
 ];

@@ -13,11 +13,12 @@ import {
   type AutopilotState, type DecisionCategory, type StrategyName,
 } from '../sim/operator.js';
 import {
-  RACK_ORDER_SIZES, applyAction, enumerateActions, hallName,
+  ANY_HALL, RACK_ORDER_SIZES, applyAction, enumerateActions, hallName,
   type ActionResult, type PlayerAction,
 } from '../sim/player.js';
 import { freeSpecialists, totalSpecialists } from '../sim/systems/research.js';
 import { SHORTFALL_LABEL, SHORTFALL_REMEDY } from '../sim/systems/sla.js';
+import { thermalOutlook } from '../sim/thermal-outlook.js';
 import { createSave, restoreSave, type SaveFile } from '../save/save.js';
 import {
   commissioningSchedule, projectCapacity, workloadHeadroom,
@@ -251,6 +252,12 @@ export interface FleetSummary {
     readonly throttle01: number;
     readonly condition01: number;
     readonly underConstruction: boolean;
+    /** Share of load this hall sheds on an ordinary hot afternoon, 0-1. */
+    readonly summerShed01: number;
+    /** Ambient temperature at which it starts shedding, or null when nothing here does. */
+    readonly thermalCeilingC: number | null;
+    /** Hours a year this site spends above that. */
+    readonly hoursAboveCeiling: number;
   }>;
   readonly hardware: ReadonlyArray<{ readonly name: string; readonly racks: number }>;
   readonly power: ReadonlyArray<{ readonly name: string; readonly capacityMw: number; readonly clean: boolean }>;
@@ -339,6 +346,32 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
         title: `${throttling.length} hall${throttling.length > 1 ? 's' : ''} throttling`,
         detail: `Inlet ${worst.inletTempC.toFixed(0)} \u00b0C is above the throttle point, so load is being shed. `
           + 'Retrofit to denser cooling, or stop adding racks until it recovers.',
+      });
+    }
+
+    // Raised whether or not anything is throttling today: a hall that will shed
+    // load in July is a decision to make in March, and the only month it is
+    // invisible is every month before the one it ruins.
+    const exposed = engine.state.facilities.flatMap((facility) => facility.halls)
+      .filter((hall) => hall.constructionProgress01 >= 1)
+      .map((hall) => ({ hall, outlook: thermalOutlook(context, hall) }))
+      .filter((entry) => entry.outlook.share01 > 0.001)
+      .sort((a, b) => b.outlook.share01 - a.outlook.share01);
+    if (exposed.length > 0 && exposed[0]) {
+      const worst = exposed[0];
+      const share = worst.outlook.share01;
+      alerts.push({
+        // Against the availability contracts are written at: losing 1% of the
+        // year is survivable on a 98% contract and fatal on a 99.9% one.
+        severity: share > 0.01 ? 'serious' : 'warning',
+        title: `${hallName(worst.hall)} runs out of cooling above `
+          + `${worst.outlook.ceilingC.toFixed(0)} \u00b0C`,
+        detail: `This site is above that for about ${Math.round(worst.outlook.hoursAbovePerYear)} `
+          + `hours a year, or ${(share * 100).toFixed(1)}% of it - so this hall cannot hold `
+          + `better than ${((1 - share) * 100).toFixed(2)}% availability as it stands`
+          + (exposed.length > 1 ? `, and ${exposed.length - 1} other hall`
+            + `${exposed.length > 2 ? 's are' : ' is'} exposed too` : '')
+          + '. Retrofit denser cooling, or keep the strict SLAs off these halls.',
       });
     }
 
@@ -596,6 +629,7 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
             const name = registry.hardware(group.hardwareId, group.instanceId).name;
             hardware.set(name, (hardware.get(name) ?? 0) + group.count);
           }
+          const outlook = thermalOutlook(context, hall);
           halls.push({
             id: hallName(hall),
             cooling: registry.cooling(hall.coolingId, hall.instanceId).name,
@@ -605,6 +639,9 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
             throttle01: hall.throttle01,
             condition01: hall.condition01,
             underConstruction: hall.constructionProgress01 < 1,
+            summerShed01: outlook.shedOnHotAfternoon01,
+            thermalCeilingC: Number.isFinite(outlook.ceilingC) ? outlook.ceilingC : null,
+            hoursAboveCeiling: outlook.hoursAbovePerYear,
           });
         }
       }
@@ -666,6 +703,7 @@ const api = {
   restoreRun,
   decisionCategories: DECISION_CATEGORIES,
   rackOrderSizes: RACK_ORDER_SIZES,
+  anyHall: ANY_HALL,
 };
 
 (globalThis as unknown as { DCT: typeof api }).DCT = api;

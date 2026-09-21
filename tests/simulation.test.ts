@@ -248,6 +248,7 @@ describe('save and load', () => {
     expect(migrated.applied).toEqual([
       '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
       '004-annual-reports-in-state', '005-sla-shortfall-attribution',
+      '006-hall-peak-throttle', '007-instance-counter-in-state',
     ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
 

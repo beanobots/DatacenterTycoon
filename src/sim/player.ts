@@ -18,6 +18,8 @@ import {
   freeSpecialists, researchBlocker, startResearch, totalSpecialists,
 } from './systems/research.js';
 import { installedItMw } from './report.js';
+import { probeCapacity, requiredHeadroom } from './capacity.js';
+import { thermalOutlook } from './thermal-outlook.js';
 import type { HallState } from '../state/types.js';
 
 export interface PlayerActionBase {
@@ -67,6 +69,21 @@ export interface ContractAction extends PlayerActionBase {
   readonly shortBy: number;
 }
 
+/** A hall this hardware could go into, and how much of it is free. */
+export interface HallSlot {
+  readonly hallId: string;
+  readonly name: string;
+  /** Rack slots free in this hall. */
+  readonly freeSlots: number;
+  readonly racksInstalled: number;
+  readonly rackCapacity: number;
+  readonly cooling: string;
+  /** False when this hall's cooling cannot carry this hardware's density. */
+  readonly canCool: boolean;
+  /** Why not, when it cannot. */
+  readonly blocked?: string;
+}
+
 export interface HardwareAction extends PlayerActionBase {
   readonly kind: 'hardware.buy';
   readonly hardwareId: string;
@@ -77,6 +94,12 @@ export interface HardwareAction extends PlayerActionBase {
   readonly spaceAvailable: number;
   readonly maxAffordable: number;
   readonly computePerRack: number;
+  /**
+   * Every hall, whether or not it can take this hardware. Ordering racks used
+   * to fill whichever hall came first, so a second hall could not be filled
+   * and specific halls could not be specialised at all.
+   */
+  readonly halls: readonly HallSlot[];
 }
 
 export interface HallAction extends PlayerActionBase {
@@ -149,6 +172,8 @@ export interface ActionResult {
 const HALL_SIZES = [60, 120, 220];
 /** Rack order sizes offered. */
 export const RACK_ORDER_SIZES = [10, 25, 50];
+/** Hall token meaning "wherever there is room", the old placement behaviour. */
+export const ANY_HALL = 'any';
 /** Power block sizes offered, MW. */
 const POWER_SIZES = [2, 5];
 
@@ -169,6 +194,10 @@ function money(value: number): string {
  */
 export function enumerateActions(context: SimulationContext, operator: OperatorSystem): PlayerAction[] {
   const actions: PlayerAction[] = [];
+  // Commissioned halls, needed from the contract section onward: the thermal
+  // outlook on an offer depends on them just as much as a rack order does.
+  const halls = context.state.facilities.flatMap((facility) => facility.halls)
+    .filter((hall) => hall.constructionProgress01 >= 1);
   const cash = context.state.company.cash;
   const budget = operator.budget(context);
 
@@ -220,12 +249,31 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
   }
 
   // ------------------------------------------------------------ contracts
+  // One allocation pass answers every offer: the existing book is placed on
+  // the fleet exactly as the allocation step places it, at each contract's own
+  // peak hour, and what is left is what can still be sold.
+  const probe = probeCapacity(context);
+
+  // Thermal exposure is a property of the fleet, not of an offer, so it is
+  // worked out once and said against every commitment it would threaten. A
+  // hall that runs out of cooling for part of the year cannot hold an
+  // availability above what the heat leaves it, however many racks are free -
+  // and the player has to hear that BEFORE signing, not from a breach in July.
+  const exposed = halls
+    .map((hall) => ({ hall, outlook: thermalOutlook(context, hall) }))
+    .filter((entry) => entry.outlook.share01 > 0.0005)
+    .sort((a, b) => b.outlook.share01 - a.outlook.share01);
+  const thermalCeiling01 = 1 - (exposed[0]?.outlook.share01 ?? 0);
+
   for (const offer of context.state.contractOffers) {
     const definition = context.registry.contract(offer.definitionId, offer.instanceId);
     const workload = context.registry.workload(definition.workloadId, definition.id);
-    const servable = operator.servableFor(context, workload.id);
-    const reserved = operator.reservedFor(context, workload.id);
-    const headroom = servable * 0.85 - reserved;
+    const capacity = probe.forWorkload(workload.id);
+    const servable = capacity.totalUnits;
+    const reserved = capacity.claimedContractUnits;
+    // What fits depends on the availability this offer is buying: a 99.9%
+    // commitment needs half again the spare capacity a 98% one does.
+    const headroom = capacity.fittingUnits(definition.slaUptime01);
     const annualRevenue = offer.computeUnits * offer.pricePerComputeUnitHour * 8766;
 
     const reputationShort = definition.minimumReputation > context.state.company.reputation;
@@ -244,8 +292,39 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
     }
 
     const free = Math.max(0, headroom);
-    const fits = offer.computeUnits <= free;
+    const roomFor = offer.computeUnits <= free;
     const shortBy = Math.max(0, offer.computeUnits - free);
+    // Said plainly on every offer, because the peak is where the SLA is
+    // measured and a player sizing against the mean will breach every evening.
+    const spare = requiredHeadroom(definition.slaUptime01);
+    const atPeak = offer.computeUnits * capacity.peakShape * spare;
+    const peakNote = ` Holding ${(definition.slaUptime01 * 100).toFixed(2)}% needs `
+      + `${Math.round(atPeak).toLocaleString()} units of capacity free at the busiest hour`
+      + (capacity.peakShape > 1.02
+        ? ` - ${workload.name} peaks at ${capacity.peakShape.toFixed(2)}x its average, `
+          + `and demand varies around that.`
+        : ', because demand varies around its average.');
+
+    // Capacity is only half of a commitment. The other half is whether the
+    // cooling can hold through the year's hot hours at all.
+    const thermalHolds = definition.slaUptime01 <= thermalCeiling01;
+    const worstHall = exposed[0];
+    const thermalNote = worstHall && !thermalHolds
+      ? ` ${hallName(worstHall.hall)} runs out of cooling above `
+        + `${worstHall.outlook.ceilingC.toFixed(0)} \u00b0C, and this site is above that for about `
+        + `${Math.round(worstHall.outlook.hoursAbovePerYear)} hours a year - so the fleet cannot `
+        + `hold better than ${(thermalCeiling01 * 100).toFixed(2)}% against this contract's `
+        + `${(definition.slaUptime01 * 100).toFixed(2)}%. Retrofit denser cooling first.`
+      : worstHall
+        ? ` ${hallName(worstHall.hall)} loses about `
+          + `${Math.round(worstHall.outlook.hoursAbovePerYear)} hours a year to heat, which this `
+          + 'SLA has room for.'
+        : '';
+
+    // "Fits" has to mean the commitment can be kept, not merely that racks are
+    // free. Reporting capacity alone is what produced a fit claim followed by
+    // breaches every summer.
+    const fits = roomFor && thermalHolds;
 
     actions.push({
       kind: 'contract.sign',
@@ -263,6 +342,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
           + `this takes ${offer.computeUnits.toLocaleString()}, leaving `
           + `${Math.round(free - offer.computeUnits).toLocaleString()}. `
           + `${workload.penaltyClass === 'extreme' ? 'Extreme' : 'Standard'} penalties if you miss the SLA.`
+          + peakNote + thermalNote
         // Zero servable capacity is a different problem from too little of it,
         // and the fix is different too: no quantity of the racks already on the
         // floor will serve a workload they are not compatible with. Naming the
@@ -272,9 +352,16 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
           ? `Nothing in your fleet can run ${workload.name}. It needs `
             + `${workload.compatibleFamilies.join(' or ')} racks; buying more of what you have will `
             + 'not serve a single unit of this, and every unit unserved is an SLA breach.'
-          : `Oversells by ${Math.round(shortBy).toLocaleString()} units: you have room for `
-            + `${Math.round(free).toLocaleString()} of ${workload.name} and this wants `
-            + `${offer.computeUnits.toLocaleString()}. Unserved units are SLA breaches.`,
+          // Racks but no cooling is its own answer: adding capacity does not
+          // help, and that distinction is the whole complaint.
+          : roomFor
+            ? `You have the racks - ${Math.round(free).toLocaleString()} units of ${workload.name} `
+              + `free against ${offer.computeUnits.toLocaleString()} wanted - but not the cooling.`
+              + thermalNote
+            : `Oversells by ${Math.round(shortBy).toLocaleString()} units: you have room for `
+              + `${Math.round(free).toLocaleString()} of ${workload.name} and this wants `
+              + `${offer.computeUnits.toLocaleString()}. Unserved units are SLA breaches.`
+              + peakNote + thermalNote,
       cost: 0,
       affordable: true,
       blocked,
@@ -335,8 +422,6 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
 
   // ------------------------------------------------------------- hardware
   const unlockedHardware = ['hardware.cpu.gen1', ...context.state.research.unlockedHardware];
-  const halls = context.state.facilities.flatMap((facility) => facility.halls)
-    .filter((hall) => hall.constructionProgress01 >= 1);
 
   for (const hardwareId of [...new Set(unlockedHardware)]) {
     const hardware = context.registry.hardware(hardwareId, 'player');
@@ -344,17 +429,37 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       * context.modifiers.value('hardware.powerDraw', 1);
     const costPerRack = operator.rackPrice(context, hardware);
 
-    // Space only counts in halls whose cooling can carry this rack density.
+    // Every hall is listed, so the player can see where this hardware can go
+    // and put it there. Space only counts in halls whose cooling can carry the
+    // density, but a hall that cannot is shown with the reason rather than
+    // silently left out.
     let space = 0;
-    for (const hall of halls) {
-      if (operator.coolingCeilingKw(context, hall) < hardware.requiredCoolingKwPerRack) continue;
+    const hallSlots: HallSlot[] = halls.map((hall) => {
+      const ceiling = operator.coolingCeilingKw(context, hall);
+      const canCool = ceiling >= hardware.requiredCoolingKwPerRack;
       const installed = hall.rackGroups.reduce((total, group) => total + group.count, 0);
-      space += Math.max(0, hall.rackCapacity - installed);
-    }
+      const freeSlots = Math.max(0, hall.rackCapacity - installed);
+      if (canCool) space += freeSlots;
+      return {
+        hallId: hall.instanceId,
+        name: hallName(hall),
+        freeSlots,
+        racksInstalled: installed,
+        rackCapacity: hall.rackCapacity,
+        cooling: context.registry.cooling(hall.coolingId, hall.instanceId).name,
+        canCool,
+        ...(canCool
+          ? freeSlots <= 0 ? { blocked: 'Full.' } : {}
+          : {
+            blocked: `Cools ${ceiling.toFixed(1)} kW/rack; this needs `
+              + `${hardware.requiredCoolingKwPerRack} kW/rack.`,
+          }),
+      };
+    });
 
     actions.push({
       kind: 'hardware.buy',
-      id: `hardware:${hardwareId}`,
+      id: `hardware:${ANY_HALL}:${hardwareId}`,
       category: 'capacity',
       label: hardware.name,
       detail: `${money(costPerRack)} per rack, ${rackKw.toFixed(1)} kW each, `
@@ -377,6 +482,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       spaceAvailable: space,
       maxAffordable: Math.floor(budget / Math.max(1, costPerRack)),
       computePerRack: context.balance.baseRackComputeUnits * hardware.computeFactor,
+      halls: hallSlots,
     });
   }
 
@@ -612,11 +718,30 @@ export function applyAction(
   }
 
   if (kind === 'hardware') {
-    const hardwareId = rest.join(':');
+    // `hardware:<hallId>:<hardwareId>`, where a hall of ANY_HALL keeps the old
+    // behaviour of filling whatever has room. Hardware IDs contain dots rather
+    // than colons, so the hall is safe to take from the front.
+    const target = rest[0] ?? ANY_HALL;
+    const hardwareId = rest.slice(1).join(':');
     const hardware = context.registry.hardware(hardwareId, 'player');
-    const halls = context.state.facilities.flatMap((facility) => facility.halls)
+    const cooled = context.state.facilities.flatMap((facility) => facility.halls)
       .filter((hall) => hall.constructionProgress01 >= 1
         && operator.coolingCeilingKw(context, hall) >= hardware.requiredCoolingKwPerRack);
+
+    const halls = target === ANY_HALL
+      ? cooled
+      : cooled.filter((hall) => hall.instanceId === target);
+    if (halls.length === 0) {
+      const named = context.state.facilities.flatMap((facility) => facility.halls)
+        .find((hall) => hall.instanceId === target);
+      return {
+        ok: false,
+        message: named
+          ? `${hallName(named)} cannot cool ${hardware.name} at `
+            + `${hardware.requiredCoolingKwPerRack} kW/rack. Retrofit it first.`
+          : 'No hall with cooling dense enough. Build or retrofit a hall first.',
+      };
+    }
 
     let remaining = Math.max(1, quantity);
     let installed = 0;
@@ -627,9 +752,14 @@ export function applyAction(
       remaining -= placed;
     }
     if (installed === 0) {
-      return { ok: false, message: 'Could not order racks: no cooled space, or not enough cash.' };
+      return { ok: false, message: 'Could not order racks: no free slots there, or not enough cash.' };
     }
-    return { ok: true, message: `Installed ${installed} racks of ${hardware.name}.` };
+    const where = halls.length === 1 && halls[0] ? ` in ${hallName(halls[0])}` : '';
+    return {
+      ok: true,
+      message: `Installed ${installed} racks of ${hardware.name}${where}.`
+        + (remaining > 0 ? ` ${remaining} could not be placed.` : ''),
+    };
   }
 
   if (kind === 'hall') {

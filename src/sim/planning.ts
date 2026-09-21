@@ -18,11 +18,10 @@
 
 import type { SimulationContext } from './context.js';
 import { HALL_BUILD_WEEKS } from './systems/construction.js';
+import { probeCapacity, probeFleet, type BookedDemand } from './capacity.js';
 import { RETIREMENT_SHARE_PER_MONTH } from './operator.js';
 import type { HallState, RackGroupState } from '../state/types.js';
 
-/** Share of servable capacity an operator should commit, leaving failure headroom. */
-export const COMMIT_MARGIN = 0.85;
 /** Worst-case wait for the first Monday after work starts. */
 const WEEK_ALIGNMENT_SLACK_DAYS = 6;
 const HOURS_PER_YEAR = 8766;
@@ -88,24 +87,6 @@ export interface ScheduleEntry {
   readonly detail: string;
 }
 
-/** Compute units a set of rack groups can deliver for one workload. */
-function servableFor(
-  context: SimulationContext,
-  groups: ReadonlyArray<{ hardwareId: string; count: number; instanceId: string }>,
-  workloadId: string,
-): number {
-  const workload = context.registry.workload(workloadId, 'planning');
-  const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
-  let units = 0;
-  for (const group of groups) {
-    const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-    if (!workload.compatibleFamilies.includes(hardware.family)) continue;
-    const affinity = hardware.workloadAffinity[workloadId] ?? 0;
-    units += group.count * context.balance.baseRackComputeUnits
-      * hardware.computeFactor * computeModifier * affinity;
-  }
-  return units;
-}
 
 /** Racks in commissioned halls, flattened. */
 function installedGroups(context: SimulationContext): RackGroupState[] {
@@ -128,17 +109,18 @@ function installedGroups(context: SimulationContext): RackGroupState[] {
  */
 export function workloadHeadroom(context: SimulationContext): WorkloadHeadroom[] {
   const groups = installedGroups(context);
+  const probe = probeCapacity(context);
   const rows: WorkloadHeadroom[] = [];
 
   for (const workload of context.registry.all('workloads').values()) {
     if (workload.availableFromYear > context.state.meta.campaignYear) continue;
 
-    const servable = servableFor(context, groups, workload.id);
-    let reserved = 0;
-    for (const contract of context.state.contracts) {
-      const definition = context.registry.contract(contract.definitionId, contract.instanceId);
-      if (definition.workloadId === workload.id) reserved += contract.computeUnits;
-    }
+    // Capacity is shared: a CPU rack serves six workloads, so what is free for
+    // this one depends on everything already sold, not only on contracts for
+    // this workload. The probe answers that the way allocation would.
+    const capacity = probe.forWorkload(workload.id);
+    const servable = capacity.totalUnits;
+    const reserved = capacity.claimedContractUnits;
 
     let capableRacks = 0;
     for (const group of groups) {
@@ -170,7 +152,7 @@ export function workloadHeadroom(context: SimulationContext): WorkloadHeadroom[]
       unlockedBy: unitsPerAddedRack > 0 ? null : unlockingTechnology(context, workload.id),
       servableUnits: servable,
       reservedUnits: reserved,
-      freeUnits: Math.max(0, servable * COMMIT_MARGIN - reserved),
+      freeUnits: capacity.freeContractUnits,
       utilisation01: servable > 0 ? reserved / servable : 0,
       capableRacks,
       bestHardware,
@@ -302,7 +284,7 @@ export function projectCapacity(context: SimulationContext, horizonMonths: numbe
     }
 
     // Contracts still running at this point, on their contracted terms.
-    const reservedByWorkload = new Map<string, number>();
+    const book: BookedDemand[] = [];
     for (const contract of context.state.contracts) {
       const definition = context.registry.contract(contract.definitionId, contract.instanceId);
       if (contract.endTick < tick) {
@@ -311,8 +293,12 @@ export function projectCapacity(context: SimulationContext, horizonMonths: numbe
         }
         continue;
       }
-      reservedByWorkload.set(definition.workloadId,
-        (reservedByWorkload.get(definition.workloadId) ?? 0) + contract.computeUnits);
+      book.push({
+        workloadId: definition.workloadId,
+        contractedUnits: contract.computeUnits,
+        sla01: definition.slaUptime01,
+        id: contract.instanceId,
+      });
     }
 
     const live = groups.filter((group) => group.count > 0);
@@ -325,18 +311,31 @@ export function projectCapacity(context: SimulationContext, horizonMonths: numbe
       kw += group.count * context.balance.baseRackPowerKw * hardware.powerFactor * powerModifier;
     }
 
+    // The forecast places this projected book on this projected fleet with the
+    // same allocation the live advice uses, so a month predicted to have room
+    // and a month that turns out to have room are the same calculation.
+    const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
+    const probe = probeFleet(context, live.map((group) => {
+      const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
+      return {
+        groupId: group.instanceId,
+        hardwareId: group.hardwareId,
+        units: group.count * context.balance.baseRackComputeUnits
+          * hardware.computeFactor * computeModifier,
+      };
+    }), book);
+
     const perWorkload: ProjectedWorkload[] = [];
     for (const workload of context.registry.all('workloads').values()) {
       if (workload.availableFromYear > context.state.meta.campaignYear) continue;
-      const servable = servableFor(context, live, workload.id);
-      const reserved = reservedByWorkload.get(workload.id) ?? 0;
-      if (servable <= 0 && reserved <= 0) continue;
+      const capacity = probe.forWorkload(workload.id);
+      if (capacity.totalUnits <= 0 && capacity.claimedContractUnits <= 0) continue;
       perWorkload.push({
         workloadId: workload.id,
         name: workload.name,
-        servableUnits: servable,
-        reservedUnits: reserved,
-        freeUnits: Math.max(0, servable * COMMIT_MARGIN - reserved),
+        servableUnits: capacity.totalUnits,
+        reservedUnits: capacity.claimedContractUnits,
+        freeUnits: capacity.freeContractUnits,
       });
     }
     perWorkload.sort((a, b) => b.servableUnits - a.servableUnits);

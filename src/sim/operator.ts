@@ -17,6 +17,8 @@ import type { ISimulationSystem, SimulationContext } from './context.js';
 import { canStartResearch, startResearch } from './systems/research.js';
 import { CRITICAL_TRUST } from './systems/community.js';
 import { installedItMw } from './report.js';
+import { probeCapacity } from './capacity.js';
+import { thermalOutlook } from './thermal-outlook.js';
 import type { CoolingTechnologyDefinition, HardwareDefinition } from '../definitions/types.js';
 import { emptyShortfall } from '../state/types.js';
 import type {
@@ -88,6 +90,14 @@ const EXIT_REPUTATION_CLASS: Record<string, number> = {
 
 /** Share of a power asset's original capital recovered on decommissioning. */
 const POWER_SALVAGE_SHARE = 0.18;
+
+/**
+ * Share of the year a hall may lose to heat before its cooling is worth
+ * replacing. Roughly 0.2% - about the gap between a 99.9% commitment and a
+ * 99.7% one, which is the difference between the contracts worth having and
+ * the rest.
+ */
+const THERMAL_CEILING_TOLERANCE = 0.002;
 /** Premium for replacing cooling plant in a hall that is carrying live load. */
 const RETROFIT_PREMIUM = 1.25;
 /** Cooling capacity installed above the hall's design IT load. */
@@ -124,7 +134,6 @@ export function allAutopilot(enabled: boolean): AutopilotState {
 export class OperatorSystem implements ISimulationSystem {
   readonly name = 'operator';
   readonly order = 130;
-  private nextInstance = 0;
   /**
    * Which decisions the heuristic still makes. A category switched off is the
    * player's: the autopilot stops acting on it and the action list offers it up
@@ -340,17 +349,23 @@ export class OperatorSystem implements ISimulationSystem {
 
   /** Compute units the fleet can deliver for a workload, exposed for the UI. */
   servableFor(context: SimulationContext, workloadId: string): number {
-    return this.servableUnits(context, workloadId);
+    return probeCapacity(context).forWorkload(workloadId).totalUnits;
   }
 
-  /** Compute units already committed against a workload. */
+  /**
+   * Compute units already claimed on racks this workload could have used.
+   *
+   * Not "contracts signed for this workload": a rack sold as archive is gone
+   * whether or not the thing that took it was archive, and reporting only
+   * same-workload reservations is what let the fleet be sold several times.
+   */
   reservedFor(context: SimulationContext, workloadId: string): number {
-    let units = 0;
-    for (const contract of context.state.contracts) {
-      const definition = context.registry.contract(contract.definitionId, contract.instanceId);
-      if (definition.workloadId === workloadId) units += contract.computeUnits;
-    }
-    return units;
+    return probeCapacity(context).forWorkload(workloadId).claimedContractUnits;
+  }
+
+  /** What could still be sold as this workload, margin and peak hour included. */
+  freeContractUnitsFor(context: SimulationContext, workloadId: string): number {
+    return probeCapacity(context).forWorkload(workloadId).freeContractUnits;
   }
 
   // -------------------------------------------------------------- research
@@ -390,16 +405,6 @@ export class OperatorSystem implements ISimulationSystem {
     const state = context.state;
     let unitsLeft = this.spareComputeUnits(context);
 
-    // Capacity is workload-specific: an ASIC rack that can carry 300 units of
-    // inference carries almost no units of archive. Tracking only a total would
-    // let the operator sign work its fleet is physically unable to serve.
-    const reservedByWorkload = new Map<string, number>();
-    for (const contract of state.contracts) {
-      const definition = context.registry.contract(contract.definitionId, contract.instanceId);
-      reservedByWorkload.set(definition.workloadId,
-        (reservedByWorkload.get(definition.workloadId) ?? 0) + contract.computeUnits);
-    }
-
     const offers = [...state.contractOffers]
       .filter((offer) => {
         const definition = context.registry.contract(offer.definitionId, offer.instanceId);
@@ -412,14 +417,16 @@ export class OperatorSystem implements ISimulationSystem {
         || a.instanceId.localeCompare(b.instanceId));
 
     const taken = new Set<string>();
+    // Re-probed after every signature: capacity is shared between workloads, so
+    // taking an archive contract genuinely reduces what can be sold as
+    // streaming. Tracking reservations per workload - as this did - let the
+    // heuristic sell the same CPU rack to six different tenants.
+    let probe = probeCapacity(context);
     for (const offer of offers) {
       if (offer.computeUnits > unitsLeft) continue;
       const definition = context.registry.contract(offer.definitionId, offer.instanceId);
 
-      const alreadyReserved = reservedByWorkload.get(definition.workloadId) ?? 0;
-      const servable = this.servableUnits(context, definition.workloadId) * WORKLOAD_CAPACITY_MARGIN;
-      if (alreadyReserved + offer.computeUnits > servable) continue;
-      reservedByWorkload.set(definition.workloadId, alreadyReserved + offer.computeUnits);
+      if (offer.computeUnits > probe.forWorkload(definition.workloadId).freeContractUnits) continue;
       state.contracts.push({
         instanceId: `contract.${offer.instanceId}`,
         definitionId: offer.definitionId,
@@ -434,6 +441,7 @@ export class OperatorSystem implements ISimulationSystem {
       });
       unitsLeft -= offer.computeUnits;
       taken.add(offer.instanceId);
+      probe = probeCapacity(context);
       context.diagnostic('contract.signed', `Signed ${definition.name}`, {
         tick, contractId: definition.id, computeUnits: offer.computeUnits,
         pricePerComputeUnitHour: Number(offer.pricePerComputeUnitHour.toFixed(4)),
@@ -637,7 +645,12 @@ export class OperatorSystem implements ISimulationSystem {
           * this.chooseHardware(context).powerFactor
           * context.modifiers.value('hardware.powerDraw', 1);
         const densityNeeded = plannedRackKw > current.densityKwPerRack;
-        if (!throttling && !densityNeeded && energyGain < 1.15) continue;
+        // A hall that runs out of cooling for part of the year caps what the
+        // whole fleet can promise, and it does that whether or not it happens
+        // to be throttling today. Without this the operator answers a thermal
+        // ceiling by quietly selling less for ever, which is not a strategy.
+        const capped = thermalOutlook(context, hall).share01 > THERMAL_CEILING_TOLERANCE;
+        if (!throttling && !capped && !densityNeeded && energyGain < 1.15) continue;
 
         const capacityMw = this.requiredCoolingKw(context, hall) / 1000;
         const newPlant = capacityMw * context.balance.baseCoolingCapexPerMw * best.capexFactor;
@@ -657,7 +670,7 @@ export class OperatorSystem implements ISimulationSystem {
           `Retrofitted hall ${hall.instanceId} from ${current.name} to ${best.name}`,
           {
             tick: tick.index, from: current.id, to: best.id,
-            cost: Math.round(cost), throttling,
+            cost: Math.round(cost), throttling, capped,
             ratedCoolingKw: Math.round(hall.ratedCoolingKw),
           });
         return; // One retrofit at a time: they are disruptive and expensive.
@@ -733,6 +746,7 @@ export class OperatorSystem implements ISimulationSystem {
       ratedCoolingKw,
       coolingFailed: false,
       throttle01: 0,
+      peakThrottle01: 0,
       inletTempC: context.balance.referenceInletTempC,
     });
   }
@@ -796,7 +810,7 @@ export class OperatorSystem implements ISimulationSystem {
     }
 
     hall.rackGroups.push({
-      instanceId: `${hall.instanceId}.${hardware.id}.${this.nextInstance++}`,
+      instanceId: `${hall.instanceId}.${hardware.id}.${state.meta.nextInstanceId++}`,
       hardwareId: hardware.id,
       count,
       condition01: 1,
