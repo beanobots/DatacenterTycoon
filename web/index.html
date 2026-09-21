@@ -1,0 +1,1062 @@
+<title>Cold Aisle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* Coolant teal against heat copper: the two things a hall is always trading.
+     Neutrals carry a faint green bias so they sit with the accent rather than
+     under it. Status hues are fixed and never themed. */
+  :root {
+    --ground: #f2f5f3;
+    --panel: #ffffff;
+    --panel-sunk: #eef2f0;
+    --ink: #131a1b;
+    --ink-2: #47585a;
+    --ink-3: #6b7d7e;
+    --rule: #dbe3e0;
+    --rule-strong: #c3cecb;
+    --accent: #0a918c;
+    --accent-soft: #e2f1ef;
+    --heat: #b85c2a;
+    --heat-soft: #f8ece4;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+    --shadow: 0 1px 2px rgba(19, 26, 27, .06), 0 8px 24px -16px rgba(19, 26, 27, .28);
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101617;
+      --panel: #191f22;
+      --panel-sunk: #141a1c;
+      --ink: #e8efee;
+      --ink-2: #a3b5b5;
+      --ink-3: #7d9092;
+      --rule: #263031;
+      --rule-strong: #354244;
+      --accent: #2ba8a2;
+      --accent-soft: #16302f;
+      --heat: #cf7538;
+      --heat-soft: #2e2018;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101617;
+    --panel: #191f22;
+    --panel-sunk: #141a1c;
+    --ink: #e8efee;
+    --ink-2: #a3b5b5;
+    --ink-3: #7d9092;
+    --rule: #263031;
+    --rule-strong: #354244;
+    --accent: #2ba8a2;
+    --accent-soft: #16302f;
+    --heat: #cf7538;
+    --heat-soft: #2e2018;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 72px; }
+
+  /* ---------- header + controls ---------- */
+  header {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .head-in { max-width: 1180px; margin: 0 auto; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; }
+  .brand { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
+  .brand h1 { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .brand p { margin: 0; font-size: 12px; color: var(--ink-3); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  select, input[type="text"], input[type="number"] {
+    font-family: var(--mono); font-size: 13px; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--rule-strong); border-radius: 6px;
+    padding: 7px 9px; min-height: 36px;
+  }
+  select { font-family: var(--sans); }
+  input[type="text"] { width: 110px; }
+  input[type="number"] { width: 72px; }
+  select:focus-visible, input:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  button.run {
+    font-family: var(--sans); font-size: 13px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 1px solid transparent; border-radius: 6px;
+    padding: 8px 18px; min-height: 36px; cursor: pointer;
+  }
+  button.run:hover:not(:disabled) { filter: brightness(1.08); }
+  button.run:disabled { opacity: .55; cursor: progress; }
+
+  .progress { height: 2px; background: var(--rule); position: relative; overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .12s linear; }
+
+  /* ---------- section scaffolding ---------- */
+  section { margin-top: 30px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .sec-head h2 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+  .sec-head .hint { font-size: 12px; color: var(--ink-3); }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; }
+
+  /* ---------- briefing ---------- */
+  .brief { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+  .brief-main { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .brief-main h3 { font-size: 20px; font-weight: 600; letter-spacing: -.015em; }
+  .brief-main p { margin: 0; color: var(--ink-2); max-width: 62ch; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 999px;
+    background: var(--panel-sunk); color: var(--ink-2); border: 1px solid var(--rule);
+  }
+  .site-facts { padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; align-content: start; }
+  .fact { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .fact dt { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .fact dd { margin: 0; font-family: var(--mono); font-size: 14px; }
+
+  /* ---------- headline strip ---------- */
+  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+  .stat { background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .stat .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .stat .v { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; }
+  .stat .v small { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 2px; }
+  .stat .d { font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .pill.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); background: color-mix(in srgb, var(--good) 10%, transparent); }
+  .pill.good .dot { background: var(--good); }
+  .pill.warning { color: color-mix(in srgb, var(--warning) 72%, var(--ink)); border-color: color-mix(in srgb, var(--warning) 45%, transparent); background: color-mix(in srgb, var(--warning) 14%, transparent); }
+  .pill.warning .dot { background: var(--warning); }
+  .pill.serious { color: color-mix(in srgb, var(--serious) 72%, var(--ink)); border-color: color-mix(in srgb, var(--serious) 45%, transparent); background: color-mix(in srgb, var(--serious) 14%, transparent); }
+  .pill.serious .dot { background: var(--serious); }
+  .pill.critical { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 40%, transparent); background: color-mix(in srgb, var(--critical) 10%, transparent); }
+  .pill.critical .dot { background: var(--critical); }
+  .pill.neutral { color: var(--ink-2); border-color: var(--rule-strong); background: var(--panel-sunk); }
+  .pill.neutral .dot { background: var(--ink-3); }
+
+  /* ---------- small multiples ---------- */
+  .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 900px) { .panels { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .panels { grid-template-columns: 1fr; } }
+  .panel { padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .panel-head .t { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .panel-head .r { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+  .panel svg { display: block; width: 100%; height: auto; max-width: 100%; overflow: visible; }
+  .panel .foot { display: flex; justify-content: space-between; gap: 8px; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .panel .foot .off-target { color: var(--heat); }
+
+  /* ---------- table ---------- */
+  .scroll-x { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12.5px; }
+  th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+  th {
+    font-family: var(--sans); font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; position: sticky; top: 0; background: var(--panel);
+  }
+  th:first-child, td:first-child { text-align: left; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--panel-sunk); }
+  tbody tr.open { background: var(--accent-soft); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.dim { color: var(--ink-3); }
+
+  /* ---------- score drawer ---------- */
+  .two-col { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .drawer { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .drawer-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .drawer-head .y { font-family: var(--mono); font-size: 15px; font-weight: 600; }
+  .cat { display: flex; flex-direction: column; gap: 5px; }
+  .cat-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .cat-top .n { font-size: 12.5px; font-weight: 600; }
+  .cat-top .w { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .cat-top .s { font-family: var(--mono); font-size: 13px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--panel-sunk); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .comps { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 3px 12px; margin-top: 3px; }
+  .comp { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--ink-3); }
+  .comp .cv { font-family: var(--mono); color: var(--ink-2); }
+
+  .list { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .obj { display: flex; gap: 9px; align-items: flex-start; }
+  .obj .mark { flex: none; margin-top: 2px; font-family: var(--mono); font-size: 11px; font-weight: 600; }
+  .obj .body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .obj .desc { font-size: 12.5px; }
+  .obj .val { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .gate { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* ---------- fleet ---------- */
+  .fleet { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .fleet-col { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .fleet-col h3 { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed var(--rule); }
+  .row:last-child { border-bottom: 0; }
+  .row .l { color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .l.wrap { white-space: normal; overflow: visible; }
+  .row .r { font-family: var(--mono); flex: none; color: var(--ink); }
+  .empty { font-size: 12px; color: var(--ink-3); font-style: italic; }
+
+  /* ---------- diagnostics ---------- */
+  .diag-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .log { max-height: 340px; overflow-y: auto; padding: 4px 0; }
+  .log-row { display: grid; grid-template-columns: 82px 156px minmax(0, 1fr); gap: 10px; padding: 5px 16px; border-bottom: 1px solid var(--rule); font-size: 12px; }
+  .log-row:last-child { border-bottom: 0; }
+  .log-row .when { font-family: var(--mono); color: var(--ink-3); }
+  .log-row .kind { font-family: var(--mono); font-size: 11px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; }
+  .log-row .kind.heat { color: var(--heat); }
+  .log-row .msg { color: var(--ink-2); min-width: 0; }
+
+  footer { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  footer .num { color: var(--ink-2); }
+
+  @media (max-width: 860px) {
+    .brief, .two-col { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .head-in { padding: 12px 16px; }
+    .brand { width: 100%; }
+    .controls { width: 100%; }
+    .field { flex: 1 1 96px; }
+    .log-row { grid-template-columns: 1fr; gap: 2px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<header>
+  <div class="head-in">
+    <div class="brand">
+      <h1>Cold Aisle</h1>
+      <p>DatacenterTycoon simulation console &mdash; deterministic, headless, in your browser</p>
+    </div>
+    <div class="controls">
+      <div class="field">
+        <label for="scenario">Site</label>
+        <select id="scenario"></select>
+      </div>
+      <div class="field">
+        <label for="strategy">Strategy</label>
+        <select id="strategy"></select>
+      </div>
+      <div class="field">
+        <label for="seed">Seed</label>
+        <input type="text" id="seed" value="golden" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="years">Years</label>
+        <input type="number" id="years" value="8" min="1" max="25" step="1">
+      </div>
+      <button class="run" id="run" type="button">Run campaign</button>
+    </div>
+  </div>
+  <div class="progress"><i id="bar"></i></div>
+</header>
+
+<div class="wrap">
+  <section id="brief-sec">
+    <div class="brief">
+      <div class="card brief-main">
+        <h3 id="brief-title">Loading site&hellip;</h3>
+        <p id="brief-desc"></p>
+        <div class="tags" id="brief-tags"></div>
+      </div>
+      <dl class="card site-facts" id="site-facts"></dl>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Final year</h2>
+      <span class="hint" id="strip-hint"></span>
+    </div>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Campaign trend</h2>
+      <span class="hint" id="chart-hint">Hover a panel to read every metric for that year</span>
+    </div>
+    <div class="panels" id="panels"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Annual report</h2>
+      <span class="hint">Select a year to decompose its score</span>
+    </div>
+    <div class="two-col">
+      <div class="card scroll-x">
+        <table id="report-table">
+          <thead id="report-head"></thead>
+          <tbody id="report-body"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="card drawer" id="drawer"></div>
+        <div class="card list" id="objectives"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>The operation</h2>
+      <span class="hint" id="fleet-hint"></span>
+    </div>
+    <div class="fleet" id="fleet"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Diagnostics</h2>
+      <span class="hint" id="diag-hint"></span>
+    </div>
+    <div class="diag-head" id="diag-filters"></div>
+    <div class="card log" id="log" style="margin-top:10px"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var DCT = window.DCT;
+  var state = {
+    meta: null, scenarios: [], years: [], objectives: [], fleet: null,
+    diagnostics: [], openYear: null, hover: null, filter: 'all', running: false,
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var el = function (tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  };
+
+  // ---------- formatting -------------------------------------------------
+  function money(value) {
+    var abs = Math.abs(value);
+    if (abs >= 1e9) return (value / 1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+    if (abs >= 1e3) return (value / 1e3).toFixed(0) + 'k';
+    return value.toFixed(0);
+  }
+  function pct(value, digits) { return (value * 100).toFixed(digits === undefined ? 1 : digits) + '%'; }
+  function num(value, digits) {
+    if (value === null || value === undefined || !isFinite(value)) return 'n/a';
+    return value.toFixed(digits === undefined ? 2 : digits);
+  }
+  function ratingTone(rating) {
+    if (rating === 'S+' || rating === 'S' || rating === 'A') return 'good';
+    if (rating === 'B') return 'warning';
+    if (rating === 'C') return 'serious';
+    return 'critical';
+  }
+  function pill(tone, label) {
+    var node = el('span', 'pill ' + tone);
+    node.appendChild(el('span', 'dot'));
+    node.appendChild(el('span', null, label));
+    return node;
+  }
+
+  // ---------- charts -----------------------------------------------------
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    var node = document.createElementNS(SVG_NS, tag);
+    for (var key in attrs) if (attrs[key] !== null) node.setAttribute(key, String(attrs[key]));
+    return node;
+  }
+
+  /**
+   * One single-series line panel. Each metric gets its own scale and its own
+   * panel: putting capacity and PUE on one pair of axes would need two y-scales,
+   * and a dual-axis chart invites exactly the false correlation this console
+   * exists to disprove.
+   */
+  function panel(spec) {
+    var W = 260, H = 104, L = 38, R = 8, T = 10, B = 18;
+    var values = spec.values;
+    var card = el('div', 'card panel');
+
+    var head = el('div', 'panel-head');
+    head.appendChild(el('span', 't', spec.title));
+    var readout = el('span', 'r');
+    head.appendChild(readout);
+    card.appendChild(head);
+
+    var finite = values.filter(function (v) { return v !== null && isFinite(v); });
+    if (finite.length === 0) {
+      card.appendChild(el('div', 'empty', 'No data yet'));
+      return { node: card, update: function () {} };
+    }
+
+    var lo = Math.min.apply(null, finite);
+    var hi = Math.max.apply(null, finite);
+    var dataRange = Math.max(hi - lo, Math.abs(hi) * 0.02, 1e-6);
+    // A target far outside the data's own range would squash the series into a
+    // flat line against the axis, so it moves to the footer instead of the plot.
+    var target = spec.target;
+    var targetInReach = target !== undefined && target !== null
+      && target >= lo - dataRange * 2 && target <= hi + dataRange * 2;
+    if (targetInReach) { lo = Math.min(lo, target); hi = Math.max(hi, target); }
+    if (spec.zero) lo = Math.min(lo, 0);
+    if (hi - lo < 1e-9) { hi = lo + Math.max(Math.abs(lo) * 0.1, 1); }
+    var padRange = (hi - lo) * 0.14;
+    lo -= padRange; hi += padRange;
+
+    var x = function (i) { return L + (values.length <= 1 ? 0 : (i / (values.length - 1)) * (W - L - R)); };
+    var y = function (v) { return T + (1 - (v - lo) / (hi - lo)) * (H - T - B); };
+
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+      'aria-label': spec.title + ' by year' });
+
+    // Recessive frame: a baseline and two value ticks, no full grid.
+    [hi - padRange, lo + padRange].forEach(function (v) {
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v),
+        stroke: 'var(--rule)', 'stroke-width': 1, fill: 'none' }));
+      var label = svgEl('text', { x: L - 5, y: y(v) + 3, 'text-anchor': 'end',
+        fill: 'var(--ink-3)', 'font-size': 8.5, 'font-family': 'var(--mono)' });
+      label.textContent = spec.fmt(v);
+      svg.appendChild(label);
+    });
+
+    if (targetInReach) {
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(target), y2: y(target),
+        stroke: 'var(--heat)', 'stroke-width': 1, 'stroke-dasharray': '3 3', fill: 'none', opacity: .75 }));
+      var tl = svgEl('text', { x: W - R, y: y(target) - 3.5, 'text-anchor': 'end',
+        fill: 'var(--heat)', 'font-size': 8, 'font-family': 'var(--mono)' });
+      tl.textContent = spec.targetLabel || ('target ' + spec.fmt(target));
+      svg.appendChild(tl);
+    }
+
+    var path = '';
+    values.forEach(function (v, i) {
+      if (v === null || !isFinite(v)) return;
+      path += (path === '' ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2);
+    });
+    svg.appendChild(svgEl('path', { d: path, fill: 'none', stroke: 'var(--accent)',
+      'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+
+    // The endpoint is the value that matters most, so it always carries a mark.
+    var lastIndex = -1;
+    for (var i = values.length - 1; i >= 0; i -= 1) {
+      if (values[i] !== null && isFinite(values[i])) { lastIndex = i; break; }
+    }
+    if (lastIndex >= 0) {
+      svg.appendChild(svgEl('circle', { cx: x(lastIndex), cy: y(values[lastIndex]), r: 3.2,
+        fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 1.5 }));
+    }
+
+    var marker = svgEl('circle', { cx: 0, cy: 0, r: 4.5, fill: 'var(--accent)',
+      stroke: 'var(--panel)', 'stroke-width': 2, opacity: 0 });
+    var rule = svgEl('line', { x1: 0, x2: 0, y1: T, y2: H - B, stroke: 'var(--rule-strong)',
+      'stroke-width': 1, fill: 'none', opacity: 0 });
+    svg.appendChild(rule);
+    svg.appendChild(marker);
+
+    var hit = svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: 'transparent', style: 'cursor:crosshair' });
+    svg.appendChild(hit);
+    card.appendChild(svg);
+
+    var foot = el('div', 'foot');
+    foot.appendChild(el('span', null, spec.labels[0]));
+    if (target !== undefined && target !== null && !targetInReach) {
+      foot.appendChild(el('span', 'off-target', spec.targetLabel || ('target ' + spec.fmt(target))));
+    }
+    foot.appendChild(el('span', null, spec.labels[spec.labels.length - 1]));
+    card.appendChild(foot);
+
+    function nearest(event) {
+      var box = svg.getBoundingClientRect();
+      var px = ((event.clientX - box.left) / box.width) * W;
+      var best = 0, bestDist = Infinity;
+      for (var i = 0; i < values.length; i += 1) {
+        var d = Math.abs(x(i) - px);
+        if (d < bestDist) { bestDist = d; best = i; }
+      }
+      return best;
+    }
+    hit.addEventListener('pointermove', function (e) { setHover(nearest(e)); });
+    hit.addEventListener('pointerleave', function () { setHover(null); });
+
+    function update(index) {
+      var pick = index === null ? lastIndex : index;
+      var v = values[pick];
+      if (v === null || v === undefined || !isFinite(v)) {
+        readout.textContent = 'n/a';
+        marker.setAttribute('opacity', 0);
+        rule.setAttribute('opacity', 0);
+        return;
+      }
+      readout.textContent = spec.fmt(v);
+      var show = index !== null;
+      marker.setAttribute('cx', x(pick)); marker.setAttribute('cy', y(v));
+      marker.setAttribute('opacity', show ? 1 : 0);
+      rule.setAttribute('x1', x(pick)); rule.setAttribute('x2', x(pick));
+      rule.setAttribute('opacity', show ? 1 : 0);
+    }
+    update(null);
+    return { node: card, update: update };
+  }
+
+  var panelUpdaters = [];
+  function setHover(index) {
+    state.hover = index;
+    panelUpdaters.forEach(function (fn) { fn(index); });
+    var hint = $('chart-hint');
+    if (index === null) {
+      hint.textContent = 'Hover a panel to read every metric for that year';
+    } else {
+      var entry = state.years[index];
+      hint.textContent = entry ? 'Showing ' + entry.report.year : '';
+    }
+  }
+
+  function renderPanels() {
+    var host = $('panels');
+    host.textContent = '';
+    panelUpdaters = [];
+    if (state.years.length === 0) return;
+
+    var labels = state.years.map(function (y) { return String(y.report.year); });
+    var scenario = currentScenario();
+    var specs = [
+      { title: 'IT capacity', values: state.years.map(function (y) { return y.report.capacity.itCapacityMw; }),
+        fmt: function (v) { return v.toFixed(1) + ' MW'; }, zero: true,
+        target: scenario ? scenario.targetCapacityMw : null,
+        targetLabel: scenario ? 'target ' + scenario.targetCapacityMw + ' MW' : null },
+      { title: 'PUE', values: state.years.map(function (y) { return y.report.environment.pue; }),
+        fmt: function (v) { return v.toFixed(3); }, target: 1.15, targetLabel: 'best in class 1.15' },
+      { title: 'Availability', values: state.years.map(function (y) { return y.report.reliability.availability01; }),
+        fmt: function (v) { return (v * 100).toFixed(2) + '%'; },
+        target: scenario ? scenario.minimumAvailability01 : null,
+        targetLabel: scenario ? 'floor ' + (scenario.minimumAvailability01 * 100).toFixed(1) + '%' : null },
+      { title: 'Carbon intensity', values: state.years.map(function (y) { return y.report.environment.cue; }),
+        fmt: function (v) { return v.toFixed(0) + ' kg'; }, zero: true },
+      { title: 'Operating margin', values: state.years.map(function (y) { return y.report.financial.operatingMargin01; }),
+        fmt: function (v) { return (v * 100).toFixed(0) + '%'; }, zero: true, target: 0, targetLabel: 'break-even' },
+      { title: 'Overall score', values: state.years.map(function (y) { return y.score.overall; }),
+        fmt: function (v) { return v.toFixed(1); }, target: 75, targetLabel: 'A grade 75' },
+    ];
+
+    specs.forEach(function (spec) {
+      spec.labels = labels;
+      var built = panel(spec);
+      host.appendChild(built.node);
+      panelUpdaters.push(built.update);
+    });
+  }
+
+  // ---------- briefing ---------------------------------------------------
+  function currentScenario() {
+    var id = $('scenario').value;
+    for (var i = 0; i < state.scenarios.length; i += 1) {
+      if (state.scenarios[i].id === id) return state.scenarios[i];
+    }
+    return state.scenarios[0] || null;
+  }
+
+  function renderBrief() {
+    var s = currentScenario();
+    if (!s) return;
+    $('brief-title').textContent = s.name;
+    $('brief-desc').textContent = s.description;
+
+    var tags = $('brief-tags');
+    tags.textContent = '';
+    [s.regionName, s.archetype + ' climate', s.difficulty + ' difficulty',
+     s.targetCapacityMw + ' MW objective', '$' + money(s.startingCash) + ' opening cash',
+     '$' + money(s.startingDebt) + ' debt'].forEach(function (text) {
+      tags.appendChild(el('span', 'tag', text));
+    });
+
+    var facts = $('site-facts');
+    facts.textContent = '';
+    [
+      ['Summer peak', num(s.region.summerPeakC, 0) + ' \u00b0C'],
+      ['Winter low', num(s.region.winterLowC, 0) + ' \u00b0C'],
+      ['Grid carbon', num(s.region.gridCarbonKgPerMwh, 0) + ' kg/MWh'],
+      ['Grid price', '$' + num(s.region.gridPricePerMwh, 0) + '/MWh'],
+      ['Interconnection', num(s.region.gridCapacityMw, 0) + ' MW'],
+      ['Water stress', num(s.region.waterStress01 * 100, 0) + ' / 100'],
+      ['Latency to demand', num(s.region.latencyMs, 0) + ' ms'],
+      ['Carbon price', '$' + num(s.region.carbonPricePerTonne, 0) + '/t'],
+      ['Permit lead time', num(s.region.permitDays, 0) + ' days'],
+      ['Opening trust', (s.region.startingTrust > 0 ? '+' : '') + num(s.region.startingTrust, 0)],
+    ].forEach(function (pair) {
+      var f = el('div', 'fact');
+      f.appendChild(el('dt', null, pair[0]));
+      f.appendChild(el('dd', null, pair[1]));
+      facts.appendChild(f);
+    });
+  }
+
+  // ---------- headline strip --------------------------------------------
+  function renderStrip() {
+    var host = $('strip');
+    host.textContent = '';
+    var latest = state.years[state.years.length - 1];
+    if (!latest) {
+      host.appendChild(el('div', 'stat', 'Running\u2026'));
+      return;
+    }
+    var r = latest.report, sc = latest.score;
+    $('strip-hint').textContent = 'Year ' + r.year + ' of ' + state.years.length + ' simulated';
+
+    function stat(key, value, unit, detail, tone) {
+      var node = el('div', 'stat');
+      node.appendChild(el('div', 'k', key));
+      var v = el('div', 'v', value);
+      if (unit) { var u = el('small', null, unit); v.appendChild(u); }
+      node.appendChild(v);
+      if (tone) {
+        var wrap = el('div', 'd');
+        wrap.appendChild(pill(tone, detail));
+        node.appendChild(wrap);
+      } else if (detail) {
+        node.appendChild(el('div', 'd', detail));
+      }
+      host.appendChild(node);
+    }
+
+    stat('Overall', sc.overall.toFixed(1), null, sc.rating + ' \u00b7 ' + sc.label, ratingTone(sc.rating));
+    stat('IT capacity', r.capacity.itCapacityMw.toFixed(2), ' MW', r.capacity.rackCount + ' racks \u00b7 ' + r.capacity.hallCount + ' halls');
+    stat('PUE', r.environment.pue === null ? 'n/a' : r.environment.pue.toFixed(3), null,
+      'CUE ' + num(r.environment.cue, 0) + ' kg/MWh');
+    stat('WUE', r.environment.wue === null ? 'n/a' : r.environment.wue.toFixed(3), ' L/kWh',
+      num(r.environment.waterWithdrawnM3, 0) + ' m\u00b3 drawn');
+    stat('Availability', pct(r.reliability.availability01, 3), null,
+      r.reliability.incidents + ' incidents',
+      r.reliability.availability01 >= 0.999 ? 'good' : r.reliability.availability01 >= 0.99 ? 'warning' : 'critical');
+    stat('Revenue', '$' + money(r.financial.revenue), null, pct(r.financial.operatingMargin01, 0) + ' margin');
+    stat('Cash', '$' + money(r.financial.cash), null, '$' + money(r.financial.debt) + ' debt');
+    stat('Trust', (r.social.trust > 0 ? '+' : '') + r.social.trust.toFixed(0), null,
+      r.social.jobs + ' jobs', r.social.trust > 10 ? 'good' : r.social.trust > -30 ? 'warning' : 'critical');
+  }
+
+  // ---------- annual table ----------------------------------------------
+  var COLUMNS = [
+    ['Year', function (y) { return y.report.year; }, false],
+    ['IT MW', function (y) { return y.report.capacity.itCapacityMw.toFixed(2); }, false],
+    ['PUE', function (y) { return y.report.environment.pue === null ? 'n/a' : y.report.environment.pue.toFixed(3); }, false],
+    ['CUE', function (y) { return num(y.report.environment.cue, 0); }, true],
+    ['WUE', function (y) { return y.report.environment.wue === null ? 'n/a' : y.report.environment.wue.toFixed(3); }, true],
+    ['Avail', function (y) { return pct(y.report.reliability.availability01, 3); }, false],
+    ['Revenue', function (y) { return '$' + money(y.report.financial.revenue); }, false],
+    ['Margin', function (y) { return pct(y.report.financial.operatingMargin01, 0); }, true],
+    ['Cash', function (y) { return '$' + money(y.report.financial.cash); }, true],
+    ['Tech', function (y) { return y.report.research.completed; }, true],
+    ['Score', function (y) { return y.score.overall.toFixed(1); }, false],
+  ];
+
+  function renderTable() {
+    var head = $('report-head');
+    head.textContent = '';
+    var hr = el('tr');
+    COLUMNS.forEach(function (col) { hr.appendChild(el('th', null, col[0])); });
+    hr.appendChild(el('th', null, 'Rating'));
+    head.appendChild(hr);
+
+    var body = $('report-body');
+    body.textContent = '';
+    state.years.forEach(function (entry, index) {
+      var tr = el('tr');
+      if (state.openYear === index) tr.className = 'open';
+      COLUMNS.forEach(function (col) {
+        tr.appendChild(el('td', col[2] ? 'dim' : null, col[1](entry)));
+      });
+      var last = el('td');
+      last.appendChild(pill(ratingTone(entry.score.rating), entry.score.rating));
+      tr.appendChild(last);
+      tr.addEventListener('click', function () {
+        state.openYear = index;
+        renderTable();
+        renderDrawer();
+      });
+      tr.addEventListener('pointerenter', function () { setHover(index); });
+      body.appendChild(tr);
+    });
+    body.addEventListener('pointerleave', function () { setHover(null); });
+  }
+
+  // ---------- score drawer ----------------------------------------------
+  var WEIGHTS = { financial: 0.20, reliability: 0.25, environmental: 0.25, customer: 0.15, social: 0.15 };
+  var CATEGORY_ORDER = ['reliability', 'environmental', 'financial', 'customer', 'social'];
+  var CATEGORY_NAMES = {
+    financial: 'Financial health', reliability: 'Reliability', environmental: 'Environmental',
+    customer: 'Customer success', social: 'Social licence',
+  };
+  var COMPONENT_NAMES = {
+    margin: 'Margin', runway: 'Runway', debtCoverage: 'Debt cover', diversity: 'Book diversity',
+    utilization: 'Utilisation', availability: 'Availability', slaCompliance: 'SLA met',
+    recovery: 'Recovery', preventableIncidents: 'Preventable', reserves: 'Reserves',
+    carbon: 'Carbon', pue: 'PUE', water: 'Water', renewable: 'Renewable', hourlyMatch: 'Hourly match',
+    circularity: 'Circularity', heatReuse: 'Heat reuse', habitat: 'Habitat', offsets: 'Offsets',
+    completion: 'Completion', latency: 'Latency', reputation: 'Reputation', retention: 'Retention',
+    trust: 'Trust', jobs: 'Jobs', heatBenefit: 'Heat benefit', gridCooperation: 'Grid services',
+    transparency: 'Transparency',
+  };
+
+  function renderDrawer() {
+    var host = $('drawer');
+    host.textContent = '';
+    var index = state.openYear === null ? state.years.length - 1 : state.openYear;
+    var entry = state.years[index];
+    if (!entry) {
+      host.appendChild(el('div', 'empty', 'Run a campaign to decompose a year.'));
+      return;
+    }
+
+    var head = el('div', 'drawer-head');
+    head.appendChild(el('span', 'y', entry.report.year + ' score ' + entry.score.overall.toFixed(1)));
+    head.appendChild(pill(ratingTone(entry.score.rating), entry.score.rating + ' \u00b7 ' + entry.score.label));
+    host.appendChild(head);
+
+    CATEGORY_ORDER.forEach(function (key) {
+      var detail = entry.score.categories[key];
+      if (!detail) return;
+      var cat = el('div', 'cat');
+      var top = el('div', 'cat-top');
+      var left = el('span');
+      left.appendChild(el('span', 'n', CATEGORY_NAMES[key]));
+      left.appendChild(document.createTextNode(' '));
+      left.appendChild(el('span', 'w', '\u00d7' + WEIGHTS[key].toFixed(2)));
+      top.appendChild(left);
+      top.appendChild(el('span', 's', detail.score.toFixed(1)));
+      cat.appendChild(top);
+
+      var bar = el('div', 'bar');
+      var fill = el('i');
+      fill.style.width = Math.max(0, Math.min(100, detail.score)) + '%';
+      bar.appendChild(fill);
+      cat.appendChild(bar);
+
+      var comps = el('div', 'comps');
+      Object.keys(detail.components).forEach(function (name) {
+        var row = el('div', 'comp');
+        row.appendChild(el('span', null, COMPONENT_NAMES[name] || name));
+        row.appendChild(el('span', 'cv', detail.components[name].toFixed(0)));
+        comps.appendChild(row);
+      });
+      cat.appendChild(comps);
+      host.appendChild(cat);
+    });
+
+    if (entry.score.gatesTripped && entry.score.gatesTripped.length > 0) {
+      var gates = el('div', 'gate');
+      gates.appendChild(el('span', 'w', 'Gates tripped:'));
+      entry.score.gatesTripped.forEach(function (gate) {
+        gates.appendChild(pill('critical', gate.replace('gate.', '').replace(/_/g, ' ')));
+      });
+      host.appendChild(gates);
+    }
+  }
+
+  function renderObjectives() {
+    var host = $('objectives');
+    host.textContent = '';
+    host.appendChild(el('h3', null, 'Scenario objectives'));
+    if (state.objectives.length === 0) {
+      host.appendChild(el('div', 'empty', 'No objectives reported yet.'));
+      return;
+    }
+    state.objectives.forEach(function (objective) {
+      var row = el('div', 'obj');
+      var mark = el('span', 'mark');
+      mark.appendChild(pill(objective.met ? 'good' : 'neutral', objective.met ? 'met' : 'open'));
+      row.appendChild(mark);
+      var body = el('div', 'body');
+      body.appendChild(el('div', 'desc', objective.description));
+      var shown = objective.value === null ? 'n/a'
+        : (Math.abs(objective.value) >= 100 ? objective.value.toFixed(0) : objective.value.toFixed(3));
+      body.appendChild(el('div', 'val', objective.metric + ' = ' + shown
+        + '  (need ' + objective.comparison + ' ' + objective.target + ')'));
+      row.appendChild(body);
+      host.appendChild(row);
+    });
+  }
+
+  // ---------- fleet ------------------------------------------------------
+  function renderFleet() {
+    var host = $('fleet');
+    host.textContent = '';
+    var fleet = state.fleet;
+    if (!fleet) return;
+
+    function column(title, rows, emptyText) {
+      var col = el('div', 'card fleet-col');
+      col.appendChild(el('h3', null, title));
+      if (rows.length === 0) {
+        col.appendChild(el('div', 'empty', emptyText));
+      } else {
+        rows.forEach(function (pair) {
+          var row = el('div', 'row');
+          var label = el('span', 'l', pair[0]);
+          if (pair[2]) label.classList.add('wrap');
+          row.appendChild(label);
+          row.appendChild(el('span', 'r', pair[1]));
+          col.appendChild(row);
+        });
+      }
+      host.appendChild(col);
+    }
+
+    column('Halls', fleet.halls.map(function (hall) {
+      var note = hall.underConstruction ? 'building'
+        : hall.throttle01 > 0.02 ? 'throttling ' + pct(hall.throttle01, 0)
+        : hall.inletTempC.toFixed(0) + ' \u00b0C inlet';
+      return [hall.cooling, hall.racks + '/' + hall.capacity + ' \u00b7 ' + note];
+    }), 'No halls built.');
+
+    column('Fleet', fleet.hardware.map(function (h) {
+      return [h.name, h.racks + ' racks'];
+    }), 'No racks installed.');
+
+    column('Power', fleet.power.map(function (p) {
+      return [p.name + (p.clean ? ' \u00b7' : ''), p.capacityMw.toFixed(1) + ' MW'];
+    }), 'No power assets.');
+
+    column('Contract book', fleet.contracts.map(function (c) {
+      return [c.name, c.computeUnits.toLocaleString() + ' CU'];
+    }), 'No contracts signed.');
+
+    var byBranch = {};
+    fleet.research.forEach(function (tech) {
+      byBranch[tech.branch] = (byBranch[tech.branch] || 0) + 1;
+    });
+    column('Research', Object.keys(byBranch).sort().map(function (branch) {
+      return [branch, String(byBranch[branch])];
+    }), 'Nothing researched.');
+
+    $('fleet-hint').textContent = fleet.researching
+      ? 'Currently researching ' + fleet.researching
+      : fleet.research.length + ' technologies complete';
+  }
+
+  // ---------- diagnostics ------------------------------------------------
+  var FILTERS = [
+    ['all', 'Everything'],
+    ['failure.', 'Failures'],
+    ['thermal.', 'Thermal'],
+    ['event.', 'Events'],
+    ['build.', 'Build'],
+    ['research.', 'Research'],
+    ['contract.', 'Contracts'],
+    ['sla.', 'SLA'],
+    ['grid.', 'Grid'],
+  ];
+
+  function renderFilters() {
+    var host = $('diag-filters');
+    host.textContent = '';
+    FILTERS.forEach(function (pair) {
+      var chip = el('button', 'chip', pair[1]);
+      chip.type = 'button';
+      chip.setAttribute('aria-pressed', state.filter === pair[0] ? 'true' : 'false');
+      chip.addEventListener('click', function () {
+        state.filter = pair[0];
+        renderFilters();
+        renderLog();
+      });
+      host.appendChild(chip);
+    });
+  }
+
+  function renderLog() {
+    var host = $('log');
+    host.textContent = '';
+    var rows = state.diagnostics.filter(function (entry) {
+      return state.filter === 'all' || entry.kind.indexOf(state.filter) === 0;
+    });
+    $('diag-hint').textContent = rows.length.toLocaleString() + ' of '
+      + state.diagnostics.length.toLocaleString() + ' entries \u00b7 newest first';
+
+    if (rows.length === 0) {
+      var none = el('div', 'log-row');
+      none.appendChild(el('span', 'msg empty', 'Nothing logged under this filter.'));
+      host.appendChild(none);
+      return;
+    }
+    rows.slice(-400).reverse().forEach(function (entry) {
+      var row = el('div', 'log-row');
+      row.appendChild(el('span', 'when', entry.timeIso.slice(0, 10)));
+      var kind = el('span', 'kind', entry.kind);
+      if (entry.kind.indexOf('thermal.') === 0 || entry.kind.indexOf('failure.') === 0) {
+        kind.className = 'kind heat';
+      }
+      row.appendChild(kind);
+      row.appendChild(el('span', 'msg', entry.message));
+      host.appendChild(row);
+    });
+  }
+
+  function renderFooter() {
+    var host = $('footer');
+    host.textContent = '';
+    if (!state.meta) return;
+    var counts = state.meta.counts;
+    [
+      ['Definitions', state.meta.definitionCount],
+      ['Technologies', counts.technologies],
+      ['Content hash', state.meta.contentHash],
+      ['Validation', state.meta.errors + ' errors \u00b7 ' + state.meta.warnings + ' warnings'],
+      ['Tick', '15 simulated minutes'],
+    ].forEach(function (pair) {
+      var span = el('span');
+      span.appendChild(document.createTextNode(pair[0] + ' '));
+      span.appendChild(el('span', 'num', pair[1]));
+      host.appendChild(span);
+    });
+  }
+
+  // ---------- run loop ---------------------------------------------------
+  /**
+   * The engine is stepped in slices rather than run in one call: a decade is a
+   * few hundred thousand ticks, and yielding to the browser between slices keeps
+   * the page responsive and lets each year appear as it closes.
+   */
+  var SLICE_TICKS = 3000;
+
+  function startRun() {
+    if (state.running) return;
+    state.running = true;
+    $('run').disabled = true;
+    $('run').textContent = 'Running\u2026';
+
+    var scenarioId = $('scenario').value;
+    var strategy = $('strategy').value;
+    var seed = $('seed').value || 'default';
+    var years = Math.max(1, Math.min(25, parseInt($('years').value, 10) || 8));
+
+    state.years = [];
+    state.objectives = [];
+    state.diagnostics = [];
+    state.fleet = null;
+    state.openYear = null;
+    state.hover = null;
+    renderBrief();
+    renderStrip();
+    renderPanels();
+    renderTable();
+    renderDrawer();
+    renderObjectives();
+
+    var run;
+    try {
+      run = DCT.createRun(scenarioId, seed, strategy, years);
+    } catch (error) {
+      state.running = false;
+      $('run').disabled = false;
+      $('run').textContent = 'Run campaign';
+      $('strip-hint').textContent = 'Could not start: ' + error.message;
+      return;
+    }
+
+    function slice() {
+      var closed = run.advance(SLICE_TICKS);
+      if (closed.length > 0) {
+        closed.forEach(function (entry) { state.years.push(entry); });
+        renderStrip();
+        renderPanels();
+        renderTable();
+        renderDrawer();
+      }
+      var remaining = run.remainingTicks();
+      $('bar').style.width = ((1 - remaining / run.totalTicks) * 100).toFixed(1) + '%';
+
+      if (remaining > 0) {
+        setTimeout(slice, 0);
+        return;
+      }
+
+      state.objectives = run.objectives();
+      state.fleet = run.fleet();
+      state.diagnostics = run.diagnostics();
+      renderObjectives();
+      renderFleet();
+      renderFilters();
+      renderLog();
+      state.running = false;
+      $('run').disabled = false;
+      $('run').textContent = 'Run campaign';
+      setTimeout(function () { $('bar').style.width = '0%'; }, 500);
+    }
+    setTimeout(slice, 0);
+  }
+
+  // ---------- boot -------------------------------------------------------
+  function boot() {
+    if (!DCT) {
+      $('brief-title').textContent = 'Engine failed to load';
+      $('brief-desc').textContent = 'The simulation bundle did not initialise, so no campaign can run.';
+      return;
+    }
+    state.meta = DCT.describe();
+    state.scenarios = state.meta.scenarios;
+
+    var scenarioSelect = $('scenario');
+    state.scenarios.forEach(function (scenario) {
+      var option = el('option', null, scenario.name);
+      option.value = scenario.id;
+      scenarioSelect.appendChild(option);
+    });
+    scenarioSelect.value = 'scenario.dry_grid';
+    if (!scenarioSelect.value) scenarioSelect.selectedIndex = 0;
+
+    var strategySelect = $('strategy');
+    var strategyLabels = {
+      balanced: 'Balanced', green: 'Green pioneer',
+      hyperscaler: 'Hyperscaler', lean: 'Lean operator',
+    };
+    state.meta.strategies.forEach(function (name) {
+      var option = el('option', null, strategyLabels[name] || name);
+      option.value = name;
+      strategySelect.appendChild(option);
+    });
+
+    scenarioSelect.addEventListener('change', renderBrief);
+    $('run').addEventListener('click', startRun);
+
+    renderBrief();
+    renderFilters();
+    renderFooter();
+    // Open in a working state rather than an empty shell.
+    startRun();
+  }
+
+  boot();
+})();
+</script>
