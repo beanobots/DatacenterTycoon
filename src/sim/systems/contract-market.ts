@@ -13,7 +13,7 @@
 import type { SimulationTick } from '../../core/clock.js';
 import { clamp, clamp01 } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
-import { eraFactors } from '../era.js';
+import { eraFactors, eraSlaUptime01, fractionalYear } from '../era.js';
 
 /** How long an offer stays on the table. */
 /** Smallest offer worth making, in 2025 compute units; scaled by the era. */
@@ -110,12 +110,21 @@ export class ContractMarketSystem implements ISimulationSystem {
 
       const termMonths = Math.max(6, Math.round(definition.termMonths * (0.75 + stream.float01() * 0.5)));
 
+      // What the customer will actually hold the operator to, in this decade.
+      // Three nines was a premium claim in 2006 and a baseline by the late
+      // 2010s; offering 2025 terms in 2006 makes the desert site unwinnable,
+      // because air cooling of that era genuinely cannot hold them.
+      const slaUptime01 = eraSlaUptime01(
+        context.balance, definition.slaUptime01, fractionalYear(context),
+      );
+
       state.contractOffers.push({
         instanceId: `offer.${definition.id}.${tick}.${this.nextOffer++}`,
         definitionId: definition.id,
         computeUnits,
         pricePerComputeUnitHour: price,
         termMonths,
+        slaUptime01,
         offeredTick: tick,
         expiresTick: tick + context.clock.ticksForDays(OFFER_LIFETIME_MONTHS * 30.44),
       });

@@ -296,7 +296,10 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
     const reserved = capacity.claimedContractUnits;
     // What fits depends on the availability this offer is buying: a 99.9%
     // commitment needs half again the spare capacity a 98% one does.
-    const headroom = capacity.fittingUnits(definition.slaUptime01);
+    // The availability THIS offer asks for, which the era negotiates down in
+    // earlier decades - not the archetype's modern figure.
+    const promised01 = offer.slaUptime01;
+    const headroom = capacity.fittingUnits(promised01);
     const annualRevenue = offer.computeUnits * offer.pricePerComputeUnitHour * 8766;
 
     const reputationShort = definition.minimumReputation > context.state.company.reputation;
@@ -319,9 +322,9 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
     const shortBy = Math.max(0, offer.computeUnits - free);
     // Said plainly on every offer, because the peak is where the SLA is
     // measured and a player sizing against the mean will breach every evening.
-    const spare = requiredHeadroom(definition.slaUptime01);
+    const spare = requiredHeadroom(promised01);
     const atPeak = offer.computeUnits * capacity.peakShape * spare;
-    const peakNote = ` Holding ${(definition.slaUptime01 * 100).toFixed(2)}% needs `
+    const peakNote = ` Holding ${(promised01 * 100).toFixed(2)}% needs `
       + `${Math.round(atPeak).toLocaleString()} units of capacity free at the busiest hour`
       + (capacity.peakShape > 1.02
         ? ` - ${workload.name} peaks at ${capacity.peakShape.toFixed(2)}x its average, `
@@ -330,14 +333,14 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
 
     // Capacity is only half of a commitment. The other half is whether the
     // cooling can hold through the year's hot hours at all.
-    const thermalHolds = definition.slaUptime01 <= thermalCeiling01;
+    const thermalHolds = promised01 <= thermalCeiling01;
     const worstHall = exposed[0];
     const thermalNote = worstHall && !thermalHolds
       ? ` ${hallName(worstHall.hall)} runs out of cooling above `
         + `${worstHall.outlook.ceilingC.toFixed(0)} \u00b0C, and this site is above that for about `
         + `${Math.round(worstHall.outlook.hoursAbovePerYear)} hours a year - so the fleet cannot `
         + `hold better than ${(thermalCeiling01 * 100).toFixed(2)}% against this contract's `
-        + `${(definition.slaUptime01 * 100).toFixed(2)}%. Retrofit denser cooling first.`
+        + `${(promised01 * 100).toFixed(2)}%. Retrofit denser cooling first.`
       : worstHall
         ? ` ${hallName(worstHall.hall)} loses about `
           + `${Math.round(worstHall.outlook.hoursAbovePerYear)} hours a year to heat, which this `
@@ -356,7 +359,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       label: definition.name,
       detail: `${offer.computeUnits.toLocaleString()} compute units of ${workload.name} for `
         + `${offer.termMonths} months at $${offer.pricePerComputeUnitHour.toFixed(4)}/unit-hour `
-        + `(${money(annualRevenue)}/year). SLA ${(definition.slaUptime01 * 100).toFixed(2)}%.`,
+        + `(${money(annualRevenue)}/year). SLA ${(promised01 * 100).toFixed(2)}%.`,
       // The fit is stated either way. Warning only on an oversell leaves the
       // player guessing on every offer that does fit, which is the same
       // arithmetic by hand.

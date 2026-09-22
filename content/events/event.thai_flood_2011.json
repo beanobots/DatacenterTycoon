@@ -1,0 +1,33 @@
+{
+  "id": "event.thai_flood_2011",
+  "schemaVersion": 2,
+  "name": "Thai Hard Drive Flood",
+  "description": "Flooding across Ayutthaya province takes out a large share of world hard drive production. Storage prices double and stay high for over a year.",
+  "eventClass": "operational",
+  "trigger": {
+    "dailyProbability": 0,
+    "minimumYear": 1995,
+    "cooldownDays": 3650,
+    "scheduledDate": "2011-10-10"
+  },
+  "durationDays": 430,
+  "durationVarianceDays": 60,
+  "effects": [
+    {
+      "target": "hardware.purchaseCost",
+      "operation": "multiply",
+      "value": 1.5,
+      "priority": 25
+    },
+    {
+      "target": "hardware.resaleValue",
+      "operation": "multiply",
+      "value": 1.35,
+      "priority": 25
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 0,
+  "immediateReputation": 0,
+  "mitigation": "Storage-heavy expansion can wait; the fleet you already own is worth more than it was, and refurbished stock is suddenly competitive."
+}

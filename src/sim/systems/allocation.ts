@@ -53,11 +53,10 @@ export class AllocationSystem implements ISimulationSystem {
     // Serve the strictest availability commitment first.
     const ordered = [...context.state.contracts]
       .filter((c) => (context.scratch.demandByContract.get(c.instanceId) ?? 0) > 0)
-      .sort((a, b) => {
-        const defA = context.registry.contract(a.definitionId, a.instanceId);
-        const defB = context.registry.contract(b.definitionId, b.instanceId);
-        return defB.slaUptime01 - defA.slaUptime01 || a.instanceId.localeCompare(b.instanceId);
-      });
+      // Strictest PROMISE first, which is not the same as the strictest
+      // archetype once contracts from different decades share a floor.
+      .sort((a, b) => b.slaUptime01 - a.slaUptime01
+        || a.instanceId.localeCompare(b.instanceId));
 
     for (const contract of ordered) {
       const demand = context.scratch.demandByContract.get(contract.instanceId) ?? 0;

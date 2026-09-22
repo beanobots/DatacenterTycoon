@@ -68,35 +68,35 @@
     "revenuePerComputeUnit": [
       {
         "year": 2006,
-        "value": 26.5
+        "value": 35.0
       },
       {
         "year": 2010,
-        "value": 11.9
+        "value": 16.8889
       },
       {
         "year": 2014,
-        "value": 5.82
+        "value": 7.4545
       },
       {
         "year": 2018,
-        "value": 2.91
+        "value": 3.56
       },
       {
         "year": 2022,
-        "value": 1.46
+        "value": 1.6667
       },
       {
         "year": 2026,
-        "value": 0.847
+        "value": 0.9043
       },
       {
         "year": 2030,
-        "value": 0.529
+        "value": 0.5581
       },
       {
         "year": 2036,
-        "value": 0.291
+        "value": 0.3222
       }
     ],
     "rackPowerKw": [
@@ -228,7 +228,37 @@
         "year": 2036,
         "value": 1.28
       }
+    ],
+    "slaSlackIndex": [
+      {
+        "year": 2006,
+        "value": 8.0
+      },
+      {
+        "year": 2010,
+        "value": 5.0
+      },
+      {
+        "year": 2014,
+        "value": 2.6
+      },
+      {
+        "year": 2018,
+        "value": 1.4
+      },
+      {
+        "year": 2022,
+        "value": 1.1
+      },
+      {
+        "year": 2025,
+        "value": 1.0
+      },
+      {
+        "year": 2036,
+        "value": 0.9
+      }
     ]
   },
-  "contractPriceScale": 1.0
+  "contractPriceScale": 1.5
 }

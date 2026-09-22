@@ -264,6 +264,28 @@ the effect namespace that technologies, events and policies write against.
 The engine runs 35-year campaigns deterministically and every acceptance
 criterion in chapter 14 that does not require a UI is covered by tests.
 
+**The design target is measured, not argued about.** `scripts/balance.mjs` runs
+every scenario across seeds and reports when a competent operator turns
+profitable and when it has paid off the loan it started with;
+`scripts/sweep.mjs` moves one balance number at a time against that target.
+Current state: seven of eight runs turn profitable, mean year 2.0, and every
+run survives its campaign. Three of the four sites finish A-rated.
+
+**The desert site is still fragile and is the live balance problem.** It opens
+in 2006, which is the hardest position in the game: the fewest technologies,
+the hottest site, and a cooling plant whose maintenance runs at around 40% of
+revenue because a desert hall needs far more plant per rack than a cold one.
+It now trades from day one and reaches B on some seeds, but on others the
+fleet still decays faster than the operator replaces it and the campaign ends
+with almost no operation. The next thing to look at is the maintenance charge
+on cooling plant specifically, which is currently levied on asset value
+without regard to how much of that value is plant rather than racks.
+
+**Capacity targets are not reachable yet.** The megawatt objectives (12 to 30
+MW) are far above what an operator actually builds - about 3 to 9 MW by year
+12. Growth is better than it was, but the objectives were written against a
+different growth curve and need revisiting.
+
 **Balance is a prototype, as the spec intends.** Chapter 12 states its values
 are "prototype gameplay values... they require simulation testing and iterative
 playtesting". Two open items are worth naming:

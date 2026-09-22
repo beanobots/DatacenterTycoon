@@ -112,7 +112,8 @@ describe('the action list', () => {
 
   it('keeps offering research while projects run, and drops the one taken', () => {
     const engine = manualEngine();
-    const first = actionsFor(engine).find((action) => action.kind === 'research.start');
+    const first = actionsFor(engine)
+      .find((action) => action.kind === 'research.start' && !action.blocked);
     expect(first).toBeDefined();
     act(engine, first!.id);
 
@@ -162,7 +163,9 @@ describe('the action list', () => {
 describe('taking an action', () => {
   it('starts research and refuses to start the same project twice', () => {
     const engine = manualEngine();
-    const action = actionsFor(engine).find((a) => a.kind === 'research.start');
+    const action = actionsFor(engine)
+      .find((a) => a.kind === 'research.start' && !a.blocked);
+    expect(action, 'a project the decade has actually reached').toBeDefined();
     expect(act(engine, action!.id).ok).toBe(true);
     expect(engine.state.research.active[0]!.technologyId).toBe(
       action!.kind === 'research.start' ? action!.technologyId : '',
@@ -388,8 +391,16 @@ describe('the fit claim on a contract offer', () => {
     actionsFor(engine).filter((action) => action.kind === 'contract.sign');
 
   it('does not offer the same racks to two different workloads', () => {
-    const engine = manualEngine('shared-racks');
-    engine.advanceTicks(engine.clock.ticksForDays(40));
+    // The autopilot builds the fleet but the contract book is left to the
+    // player, so there is real capacity sitting unsold to reason about. A
+    // fully autonomous operator sells everything it can and leaves no offer
+    // fitting; a fully manual one never builds a fleet at all.
+    const engine = new SimulationEngine(registry, {
+      scenarioId: 'scenario.fossil_grid',
+      campaignSeed: 'shared-racks',
+      autopilot: { ...allAutopilot(true), contracts: false },
+    });
+    engine.runYears(2);
 
     // Archive and disaster recovery both run on the opening fleet. Selling one
     // has to reduce what the other is told it can take.
@@ -444,12 +455,12 @@ describe('the fit claim on a contract offer', () => {
 
     for (const action of offers(engine)) {
       if (action.kind !== 'contract.sign') continue;
-      const definition = registry.contract(
-        engine.state.contractOffers.find((o) => action.id.endsWith(o.instanceId))!.definitionId,
-        'test',
-      );
-      if (definition.slaUptime01 <= 1 - outlook.share01) continue;
-      // The heat alone makes this commitment unkeepable.
+      const offer = engine.state.contractOffers.find((o) => action.id.endsWith(o.instanceId))!;
+      // Judged on what the offer PROMISES, which its decade negotiates down.
+      if (offer.slaUptime01 <= 1 - outlook.share01) continue;
+      // An offer the fleet cannot serve at all fails for a different reason,
+      // and says so; this test is about the cooling refusal specifically.
+      if (action.servableUnits <= 0) continue;
       expect(action.fits).toBe(false);
       expect(action.tradeOff).toContain('cooling');
     }

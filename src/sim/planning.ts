@@ -296,7 +296,7 @@ export function projectCapacity(context: SimulationContext, horizonMonths: numbe
       book.push({
         workloadId: definition.workloadId,
         contractedUnits: contract.computeUnits,
-        sla01: definition.slaUptime01,
+        sla01: contract.slaUptime01,
         id: contract.instanceId,
       });
     }

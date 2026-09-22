@@ -85,7 +85,9 @@ export class SlaSystem implements ISimulationSystem {
       const availability = clamp01(
         safeDivide(contract.servedUnitHours, contract.demandedUnitHours, 1),
       );
-      const shortfall = Math.max(0, definition.slaUptime01 - availability);
+      // What THIS contract promised, not what its archetype asks for today.
+      const required01 = contract.slaUptime01;
+      const shortfall = Math.max(0, required01 - availability);
 
       if (shortfall > 0) {
         const multiplier = PENALTY_CLASS_MULTIPLIER[workload.penaltyClass] ?? 1;
@@ -111,11 +113,11 @@ export class SlaSystem implements ISimulationSystem {
 
         context.diagnostic('sla.breach',
           `${definition.name} served ${(availability * 100).toFixed(1)}% against a `
-          + `${(definition.slaUptime01 * 100).toFixed(2)}% commitment.${because}`,
+          + `${(required01 * 100).toFixed(2)}% commitment.${because}`,
           {
             tick: tick.index,
             contract: definition.id,
-            required: definition.slaUptime01,
+            required: required01,
             achieved: Number(availability.toFixed(5)),
             penalty: Math.round(penalty),
             cause: dominant ? dominant.cause : 'unattributed',
@@ -125,7 +127,7 @@ export class SlaSystem implements ISimulationSystem {
 
         contract.lastPeriod = {
           endedTick: tick.index,
-          required01: definition.slaUptime01,
+          required01,
           availability01: availability,
           penalty,
           ...(dominant
@@ -148,7 +150,7 @@ export class SlaSystem implements ISimulationSystem {
       } else {
         contract.lastPeriod = {
           endedTick: tick.index,
-          required01: definition.slaUptime01,
+          required01,
           availability01: availability,
           penalty: 0,
         };

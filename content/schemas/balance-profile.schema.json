@@ -143,7 +143,8 @@
         "rackCost",
         "demandIndex",
         "offerCountIndex",
-        "costIndex"
+        "costIndex",
+        "slaSlackIndex"
       ],
       "description": "How the industry moves across the campaign window, as multipliers on the base values at anchor years. Every curve is 1.0 in 2025, the year the rest of this profile was tuned for, so history scales around the existing balance rather than replacing it. Without these a thirty-year campaign is one year repeated and no contract price can be right at both ends of it.",
       "properties": {
@@ -314,6 +315,30 @@
             }
           },
           "description": "General price level for labour and services - staff, insurance, transit, maintenance, construction, land and research - against 2025. Hardware is NOT scaled by this: it has its own rackCost curve, because a rack cost about the same in nominal dollars in 2006 as it does now while everything around it got dearer."
+        },
+        "slaSlackIndex": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "year",
+              "value"
+            ],
+            "properties": {
+              "year": {
+                "type": "integer",
+                "minimum": 1990,
+                "maximum": 2100
+              },
+              "value": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          },
+          "description": "Multiplier on the DOWNTIME an era's contracts tolerate, against 2025. Three nines was a premium claim in 2006 and a baseline by the late 2010s, so a 99.9% archetype is offered at 99.4% in 2006 and at its full strictness later. Without this the earliest campaign is unwinnable by physics: desert air cooling of that era cannot hold three nines through a 47 C summer, so every contract worth having is correctly refused and there is nothing the player can do about it."
         }
       }
     },

@@ -15,17 +15,27 @@ import { allAutopilot } from '../src/sim/operator.js';
 import { applyAction, enumerateActions } from '../src/sim/player.js';
 import { commissioningSchedule, projectCapacity, workloadHeadroom } from '../src/sim/planning.js';
 import { REPORTING_SLA, peakShape, requiredHeadroom } from '../src/sim/capacity.js';
+import { groupRackOutput } from '../src/sim/era.js';
 
 let registry: ContentRegistry;
 beforeAll(() => {
   registry = importContent('content').registry;
 });
 
-function manualEngine(seed = 'planning'): SimulationEngine {
+function manualEngine(seed = 'planning', scenarioId = 'scenario.dry_grid'): SimulationEngine {
   return new SimulationEngine(registry, {
-    scenarioId: 'scenario.dry_grid', campaignSeed: seed, autopilot: allAutopilot(false),
+    scenarioId, campaignSeed: seed, autopilot: allAutopilot(false),
   });
 }
+
+/**
+ * A campaign late enough for accelerator work to exist.
+ *
+ * The dry-grid site opens in 2006, when AI training was not a workload anyone
+ * sold, so a test about what a CPU fleet cannot serve has to be run in a
+ * decade where the thing it cannot serve has been invented.
+ */
+const acceleratorEra = (seed: string) => manualEngine(seed, 'scenario.fossil_grid');
 
 /** Measures the live fleet the same way the projection models it. */
 function measure(engine: SimulationEngine): { mw: number; racks: number; slots: number } {
@@ -36,8 +46,9 @@ function measure(engine: SimulationEngine): { mw: number; racks: number; slots: 
   for (const hall of halls) {
     for (const group of hall.rackGroups) {
       racks += group.count;
-      kw += group.count * engine.context.balance.baseRackPowerKw
-        * registry.hardware(group.hardwareId, group.instanceId).powerFactor;
+      // Through the vintage, as everything else does: a 2006 rack draws
+      // 45% of what the balance profile's 2025 baseline says.
+      kw += group.count * groupRackOutput(engine.context, group).powerKw;
     }
   }
   return {
@@ -49,7 +60,7 @@ function measure(engine: SimulationEngine): { mw: number; racks: number; slots: 
 
 describe('headroom', () => {
   it('reports capacity per workload rather than one fungible total', () => {
-    const rows = workloadHeadroom(manualEngine().context);
+    const rows = workloadHeadroom(acceleratorEra('per-workload').context);
     expect(rows.length).toBeGreaterThan(3);
     // A CPU-and-disk opening fleet serves general work and cannot touch AI
     // training, which needs accelerators.
@@ -60,7 +71,7 @@ describe('headroom', () => {
   });
 
   it('names the technology that would open a workload it cannot serve', () => {
-    const rows = workloadHeadroom(manualEngine().context);
+    const rows = workloadHeadroom(acceleratorEra('unlocked-by').context);
     const training = rows.find((row) => row.workloadId === 'workload.ai_training');
     expect(training?.unlockedBy).toBeTruthy();
     expect(training?.unlockedBy).toMatch(/GPU|Accelerator/i);
@@ -86,8 +97,9 @@ describe('headroom', () => {
     // consumes N at the workload's peak hour, plus the spare its availability
     // needs to absorb arrival noise - which is the whole reason a fit check
     // built on a flat 1:1 assumption promised capacity that was not there.
-    const definition = registry.contract(engine.state.contracts[0]!.definitionId, 'test');
-    const spare = requiredHeadroom(definition.slaUptime01);
+    // The availability this contract actually promised, which its decade
+    // negotiated down from the archetype's modern figure.
+    const spare = requiredHeadroom(engine.state.contracts[0]!.slaUptime01);
 
     expect(now.reservedUnits - was.reservedUnits)
       .toBeCloseTo(action.computeUnits * spare, 4);
@@ -247,8 +259,8 @@ describe('the schedule', () => {
     // may exceed the raw compute the fleet holds; a sum would be nonsense.
     const rawUnits = engine.state.facilities.flatMap((f) => f.halls)
       .flatMap((h) => h.rackGroups)
-      .reduce((total, group) => total + group.count * engine.context.balance.baseRackComputeUnits
-        * registry.hardware(group.hardwareId, group.instanceId).computeFactor, 0);
+      .reduce((total, group) => total
+        + group.count * groupRackOutput(engine.context, group).computeUnits, 0);
     const summed = rows.reduce((total, row) => total + row.servableUnits, 0);
     expect(summed).toBeGreaterThan(rawUnits);
   });

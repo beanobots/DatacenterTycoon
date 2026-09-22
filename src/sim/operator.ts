@@ -12,7 +12,7 @@
  */
 
 import type { SimulationTick } from '../core/clock.js';
-import { clamp01 } from '../core/math.js';
+import { clamp, clamp01 } from '../core/math.js';
 import type { ISimulationSystem, SimulationContext } from './context.js';
 import { canStartResearch, researchCostUsd, startResearch } from './systems/research.js';
 import { CRITICAL_TRUST } from './systems/community.js';
@@ -69,11 +69,13 @@ export const STRATEGIES: Record<StrategyName, StrategyWeights> = {
 /** Largest hall shell the operator will build in one commitment. */
 const MAX_OPENING_HALL_RACKS = 220;
 /** Smallest hall worth building; below this the fixed costs dominate. */
-const MIN_OPENING_HALL_RACKS = 60;
+const MIN_OPENING_HALL_RACKS = 48;
 /** Share of the free balance a single hall commitment may consume. */
 const MAX_HALL_SHARE_OF_BUDGET = 0.6;
 /** The opening hall. Small enough to leave capital for racks and contracts. */
 const OPENING_HALL_RACKS = 120;
+/** Share of the opening hall that comes with racks already in it. */
+const OPENING_FILL_SHARE = 0.65;
 /** Racks ordered in any one month. Procurement is not instantaneous. */
 const RACK_ORDER_LIMIT = 60;
 /** Share of an over-age rack group retired each month. */
@@ -111,6 +113,12 @@ const RETROFIT_PREMIUM = 1.25;
 const COOLING_DESIGN_MARGIN = 1.25;
 /** Share of a month's free capital the heuristic will commit to R&D. */
 const RESEARCH_BUDGET_SHARE = 0.25;
+/**
+ * Share of the revenue run-rate that may be committed to R&D at once. Real
+ * operators spend single-digit percentages of turnover on it; this is generous
+ * because research here is the whole technology tree, not a lab.
+ */
+const RESEARCH_REVENUE_SHARE = 0.18;
 /** Share of a workload's servable capacity the operator will commit. */
 const WORKLOAD_CAPACITY_MARGIN = 0.85;
 /** Debt an operator can carry, as a multiple of annual revenue at full standing. */
@@ -165,24 +173,52 @@ export class OperatorSystem implements ISimulationSystem {
     return this.strategy;
   }
 
+  /**
+   * How big the first hall should be, given the decade it opens in.
+   *
+   * The market's size is the product of how much work one contract represents
+   * and how many contracts reach the table - both 1.0 in 2025 and both far
+   * below it in 2006. Building the 2025 hall in 2006 leaves most of the room
+   * empty for a decade while its cooling plant is paid for every month.
+   */
+  private openingHallRacks(context: SimulationContext): number {
+    const era = eraFactors(context);
+    const market = era.demandIndex * era.offerCountIndex;
+    return Math.round(clamp(
+      OPENING_HALL_RACKS * market,
+      MIN_OPENING_HALL_RACKS,
+      MAX_OPENING_HALL_RACKS,
+    ));
+  }
+
   initialize(context: SimulationContext): void {
     // Opening move: one hall, the best cooling available at the start, enough
     // racks to serve the first contracts, and a grid connection with diesel
     // standby. Everything after this is decided month by month.
-    this.buildHall(context, 0, OPENING_HALL_RACKS);
+    // Sized to the market of its own decade. A 2006 operation that opens with
+    // a 120-rack hall has built a room for work that will not exist for
+    // fifteen years, and spends those years paying to cool it: that single
+    // mismatch was the whole reason the earliest campaign could not be won.
+    const openingRacks = this.openingHallRacks(context);
+    this.buildHall(context, 0, openingRacks);
     const facility = context.state.facilities[0];
     if (!facility) return;
     const hall = facility.halls[0];
     if (hall) {
       hall.constructionProgress01 = 1;
       hall.installedTick = 0;
-      this.installRacks(context, hall, this.chooseHardware(context), Math.floor(OPENING_HALL_RACKS * 0.5));
+      // Filled further than half: the opening hall has to be able to serve a
+      // first contract on day one, and in an early decade half of a small
+      // hall is not enough capacity for even the smallest offer the market
+      // will make.
+      this.installRacks(context, hall, this.chooseHardware(context),
+        Math.floor(openingRacks * OPENING_FILL_SHARE));
     }
     // Size the opening interconnection to the first hall, not to the region's
     // whole capacity: an interconnection agreement is paid for by the megawatt,
     // and 60 MW of it serving a 1 MW hall is the most expensive idle asset an
     // operator can own. `investInPower` grows it as the load does.
-    const openingMw = Math.max(0.5, (hall?.rackCapacity ?? OPENING_HALL_RACKS)
+    const openingMw = Math.max(0.5, (hall?.rackCapacity ?? openingRacks)
       * context.balance.baseRackPowerKw * eraFactors(context).rackPowerKw / 1000 * 1.8);
     this.buildPower(context, 'power.grid', Math.min(openingMw, context.region.grid.capacityMw), true);
     this.buildPower(context, 'power.diesel_backup', Math.max(1, openingMw * 0.3), true);
@@ -339,6 +375,7 @@ export class OperatorSystem implements ISimulationSystem {
       computeUnits: offer.computeUnits,
       pricePerComputeUnitHour: offer.pricePerComputeUnitHour,
       termMonths: offer.termMonths,
+      slaUptime01: offer.slaUptime01,
       startTick: state.meta.tickIndex,
       endTick: state.meta.tickIndex + context.clock.ticksForDays(offer.termMonths * 30.44),
       demandedUnitHours: 0, servedUnitHours: 0,
@@ -384,13 +421,69 @@ export class OperatorSystem implements ISimulationSystem {
    * keep funded, since a stalled project holds specialists without producing
    * anything.
    */
+  /**
+   * Daily research spend the operator can still take on.
+   *
+   * A share of the recent revenue run-rate, less what projects already running
+   * are drawing. The allowance floor lets a company with no book at all get
+   * its first cheap project going, which is how a campaign starts.
+   */
+  private spareResearchSpendPerDay(context: SimulationContext): number {
+    // An operator can always afford to run ONE project - a company with no
+    // book yet still has an engineering budget, and gating the first project
+    // on revenue it has not earned means it never gets started. What the
+    // revenue test limits is the SECOND and the third, which is where the
+    // money actually goes: the unpaced heuristic filled its whole specialist
+    // bench in month one and spent the capital it needed to build with.
+    if (context.state.research.active.length === 0) return Number.POSITIVE_INFINITY;
+
+    const annualRevenue = this.revenueRunRate(context);
+    const allowance = annualRevenue * RESEARCH_REVENUE_SHARE / 365;
+    let committed = 0;
+    for (const project of context.state.research.active) {
+      const technology = context.registry.technology(project.technologyId, 'operator');
+      const days = Math.max(1, technology.research.durationDays
+        / Math.max(0.1, context.modifiers.value('research.speed', 1)));
+      committed += project.budgetUsd / days;
+    }
+    return Math.max(0, allowance - committed);
+  }
+
+  /** Annualised revenue from the year so far, or the contract book before that. */
+  private revenueRunRate(context: SimulationContext): number {
+    const year = context.state.year;
+    const months = year.totalTicks * context.state.meta.minutesPerTick / (60 * 24 * 30.44);
+    if (months >= 1 && year.revenue > 0) return year.revenue / months * 12;
+
+    // Early in a campaign year there is no run-rate yet, so price the book.
+    let annual = 0;
+    for (const contract of context.state.contracts) {
+      const definition = context.registry.contract(contract.definitionId, contract.instanceId);
+      const workload = context.registry.workload(definition.workloadId, definition.id);
+      annual += contract.computeUnits * contract.pricePerComputeUnitHour
+        * workload.meanUtilization01 * 8766;
+    }
+    return annual;
+  }
+
   private chooseResearch(context: SimulationContext): void {
     for (;;) {
       const budget = this.discretionaryBudget(context);
+      // R&D is paced against what the business EARNS, not against the cash it
+      // happens to be holding. Judged on cash alone, an operator opening with
+      // capital fills its whole specialist bench in month one and spends the
+      // money it needed to build with: the 2006 campaign burned $7.1M on
+      // research in a year it turned over $0.9M, and never recovered.
+      const spareDaily = this.spareResearchSpendPerDay(context);
       const available = [...context.registry.all('technologies').values()]
         .filter((tech) => canStartResearch(context, tech.id))
         // Only take on what a year of free capital could actually fund.
         .filter((tech) => researchCostUsd(context, tech) <= budget * RESEARCH_BUDGET_SHARE * 12)
+        .filter((tech) => {
+          const days = Math.max(1, tech.research.durationDays
+            / Math.max(0.1, context.modifiers.value('research.speed', 1)));
+          return researchCostUsd(context, tech) / days <= spareDaily;
+        })
         .sort((a, b) => {
           const priorityA = this.strategy.researchPriority.indexOf(a.branch);
           const priorityB = this.strategy.researchPriority.indexOf(b.branch);
@@ -440,6 +533,7 @@ export class OperatorSystem implements ISimulationSystem {
         computeUnits: offer.computeUnits,
         pricePerComputeUnitHour: offer.pricePerComputeUnitHour,
         termMonths: offer.termMonths,
+        slaUptime01: offer.slaUptime01,
         startTick: tick,
         endTick: tick + context.clock.ticksForDays(offer.termMonths * 30.44),
         demandedUnitHours: 0, servedUnitHours: 0,
@@ -473,7 +567,7 @@ export class OperatorSystem implements ISimulationSystem {
         ? contract.lifetimeServedUnitHours / contract.lifetimeDemandedUnitHours
         : 1;
       const renewChance = clamp01(
-        definition.renewalProbability01 * (availability >= definition.slaUptime01 ? 1 : 0.35),
+        definition.renewalProbability01 * (availability >= contract.slaUptime01 ? 1 : 0.35),
       );
       if (stream.chance(renewChance)) {
         contract.endTick = tick + context.clock.ticksForDays(contract.termMonths * 30.44);
@@ -1465,7 +1559,18 @@ export class OperatorSystem implements ISimulationSystem {
     // Before any month has run, fall back to a floor derived from the opening
     // balance so the first build is bounded too.
     const monthlyCost = Math.max(projectedMonthlyCost, context.scenario.startingCash * 0.01);
-    const reserve = monthlyCost * this.strategy.reserveMonths;
+
+    // Running costs are not the only thing the balance has to cover. Hardware
+    // wears out on a schedule the operator can see coming, and an operator
+    // that spends down to its operating reserve cannot buy the replacements
+    // when they fall due - it then watches its own fleet evaporate, which is
+    // a slow loss with no decision in it. Replacement capital is held back
+    // alongside the running costs.
+    const hardware = this.chooseHardware(context);
+    const rackCost = context.balance.baseRackPurchaseCost * hardware.purchaseFactor
+      * context.modifiers.value('hardware.purchaseCost', 1);
+    const replacementReserve = this.racksNearingRetirement(context) * rackCost;
+    const reserve = monthlyCost * this.strategy.reserveMonths + replacementReserve;
 
     // Appetite scales how much of the free balance is committed in a month, not
     // how much may ever be invested. Truncating every month's investment to a

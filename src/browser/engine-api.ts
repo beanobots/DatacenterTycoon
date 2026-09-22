@@ -706,7 +706,7 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
           workload: registry.workload(definition.workloadId, definition.id).name,
           monthsLeft: ticksLeft * engine.state.meta.minutesPerTick / (60 * 24 * 30.44),
           availability01: last ? last.availability01 : null,
-          required01: definition.slaUptime01,
+          required01: contract.slaUptime01,
           penalty: last ? last.penalty : 0,
           // The book is where a player looks when the alert has scrolled away,
           // so the reason travels with the row rather than only with the event.

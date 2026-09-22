@@ -96,6 +96,25 @@ export interface EraFactors {
    * revenue the era had already scaled down.
    */
   readonly costIndex: number;
+  /** Multiplier on the downtime an era's contracts tolerate; see below. */
+  readonly slaSlackIndex: number;
+}
+
+/**
+ * Most downtime any era's contract will tolerate.
+ *
+ * The slack multiplier alone is nonsense at the loose end - six times the
+ * downtime of a 98% archetype is 88%, which nobody would sign. This is the
+ * floor that keeps an early-era book believable.
+ */
+export const MAX_ERA_DOWNTIME = 0.025;
+
+/** The availability an archetype is offered at, in a given year. */
+export function eraSlaUptime01(
+  balance: BalanceProfileDefinition, baseUptime01: number, year: number,
+): number {
+  const slack = interpolate(balance.era.slaSlackIndex, year);
+  return Math.max(1 - MAX_ERA_DOWNTIME, 1 - (1 - baseUptime01) * slack);
 }
 
 /** Where the campaign currently sits on each curve. */
@@ -113,6 +132,7 @@ export function eraFactorsAt(balance: BalanceProfileDefinition, year: number): E
     demandIndex: interpolate(era.demandIndex, year),
     offerCountIndex: interpolate(era.offerCountIndex, year),
     costIndex: interpolate(era.costIndex, year),
+    slaSlackIndex: interpolate(era.slaSlackIndex, year),
   };
 }
 

@@ -166,7 +166,7 @@ export function liveBook(context: SimulationContext): BookedDemand[] {
     return {
       workloadId: definition.workloadId,
       contractedUnits: contract.computeUnits,
-      sla01: definition.slaUptime01,
+      sla01: contract.slaUptime01,
       id: contract.instanceId,
     };
   });

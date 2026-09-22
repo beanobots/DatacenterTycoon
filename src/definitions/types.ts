@@ -549,6 +549,7 @@ export interface BalanceProfileDefinition extends DefinitionBase {
     readonly demandIndex: ReadonlyArray<{ readonly year: number; readonly value: number }>;
     readonly offerCountIndex: ReadonlyArray<{ readonly year: number; readonly value: number }>;
     readonly costIndex: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly slaSlackIndex: ReadonlyArray<{ readonly year: number; readonly value: number }>;
   };
 }
 

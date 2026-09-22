@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -227,6 +227,25 @@ const MIGRATIONS: readonly Migration[] = [
       for (const entry of active) {
         const project = entry as Record<string, unknown>;
         if (project.budgetUsd === undefined) project.budgetUsd = null;
+      }
+    },
+  },
+  {
+    from: 10, to: 11, id: '010-negotiated-sla',
+    apply: (save) => {
+      // Availability is now negotiated per offer and carried by the contract
+      // signed from it, because expectations rose across the campaign window.
+      // A version-10 save holds contracts that were judged against their
+      // archetype, so the archetype's figure is the honest value for them -
+      // and it lives in the content, not the save, so restoreSave fills it.
+      const state = save.state;
+      for (const key of ['contracts', 'contractOffers'] as const) {
+        const list = state[key];
+        if (!Array.isArray(list)) continue;
+        for (const entry of list) {
+          const row = entry as Record<string, unknown>;
+          if (row.slaUptime01 === undefined) row.slaUptime01 = null;
+        }
       }
     },
   },

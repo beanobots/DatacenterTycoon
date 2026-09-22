@@ -193,6 +193,16 @@ export interface ContractOfferState {
   readonly instanceId: string;
   readonly definitionId: string;
   readonly computeUnits: number;
+  /**
+   * The availability THIS offer asks for, which is not the archetype's.
+   *
+   * Expectations rose with the industry: three nines was a premium claim in
+   * 2006 and a baseline by the late 2010s. It is negotiated per offer, so it
+   * has to travel with the offer and then with the contract signed from it -
+   * reading it back off the definition would quietly re-promise 2025 terms on
+   * a deal struck in 2008.
+   */
+  readonly slaUptime01: number;
   readonly pricePerComputeUnitHour: number;
   readonly termMonths: number;
   readonly offeredTick: number;
@@ -241,6 +251,8 @@ export interface ActiveContractState {
   readonly computeUnits: number;
   readonly pricePerComputeUnitHour: number;
   readonly termMonths: number;
+  /** The availability promised when this was signed; see ContractOfferState. */
+  readonly slaUptime01: number;
   startTick: number;
   endTick: number;
   /** Compute-unit-hours demanded this SLA period. */

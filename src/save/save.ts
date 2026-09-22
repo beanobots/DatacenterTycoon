@@ -112,6 +112,17 @@ export function restoreSave(save: SaveFile, registry: ContentRegistry): LoadResu
   }
   const migrated = migrate(save);
 
+  // Migration 010 marks contracts and offers whose promised availability the
+  // save never stored; like the research budget below, the figure lives in the
+  // content and so can only be filled in here.
+  for (const row of [...migrated.save.state.contracts ?? [],
+    ...migrated.save.state.contractOffers ?? []]) {
+    const loose = row as unknown as { slaUptime01: number | null; definitionId: string };
+    if (loose.slaUptime01 === null || loose.slaUptime01 === undefined) {
+      loose.slaUptime01 = registry.all('contracts').get(loose.definitionId)?.slaUptime01 ?? 0.99;
+    }
+  }
+
   // Migration 009 marks research projects whose budget the save never stored;
   // the figure comes from the content, which only exists here.
   for (const project of migrated.save.state.research?.active ?? []) {

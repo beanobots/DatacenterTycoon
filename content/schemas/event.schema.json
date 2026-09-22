@@ -3,32 +3,115 @@
   "$id": "https://datacentertycoon.dev/schemas/event.schema.json",
   "title": "Event definition",
   "type": "object",
-  "required": ["id", "schemaVersion", "name", "eventClass", "trigger", "durationDays", "durationVarianceDays", "effects", "immediateCash", "immediateTrust", "immediateReputation", "mitigation"],
+  "required": [
+    "id",
+    "schemaVersion",
+    "name",
+    "eventClass",
+    "trigger",
+    "durationDays",
+    "durationVarianceDays",
+    "effects",
+    "immediateCash",
+    "immediateTrust",
+    "immediateReputation",
+    "mitigation"
+  ],
   "properties": {
-    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
-    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
-    "name": { "type": "string", "minLength": 1 },
-    "description": { "type": "string" },
-    "eventClass": { "enum": ["operational", "environmental", "commercial", "political", "opportunity"] },
+    "id": {
+      "$ref": "common.schema.json#/$defs/permanentId"
+    },
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "eventClass": {
+      "enum": [
+        "operational",
+        "environmental",
+        "commercial",
+        "political",
+        "opportunity"
+      ]
+    },
     "trigger": {
       "type": "object",
-      "required": ["dailyProbability", "minimumYear", "cooldownDays"],
+      "required": [
+        "dailyProbability",
+        "minimumYear",
+        "cooldownDays"
+      ],
       "properties": {
-        "dailyProbability": { "$ref": "common.schema.json#/$defs/unitInterval" },
-        "minimumYear": { "type": "integer", "minimum": 1900 },
-        "hazardKey": { "enum": ["heatWave", "drought", "flood", "storm", "wildfire", "earthquake", "seaLevel"] },
-        "requiresCondition": { "$ref": "common.schema.json#/$defs/condition" },
-        "cooldownDays": { "type": "integer", "minimum": 0 }
+        "dailyProbability": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "minimumYear": {
+          "type": "integer",
+          "minimum": 1900
+        },
+        "hazardKey": {
+          "enum": [
+            "heatWave",
+            "drought",
+            "flood",
+            "storm",
+            "wildfire",
+            "earthquake",
+            "seaLevel"
+          ]
+        },
+        "requiresCondition": {
+          "$ref": "common.schema.json#/$defs/condition"
+        },
+        "cooldownDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scheduledDate": {
+          "type": "string",
+          "description": "Fires once when the simulation passes this date, ignoring dailyProbability. For events that are history rather than hazard: the 2008 crash did not have a daily chance of happening.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
       },
       "additionalProperties": false
     },
-    "durationDays": { "type": "integer", "minimum": 0 },
-    "durationVarianceDays": { "type": "integer", "minimum": 0 },
-    "effects": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/modifier" } },
-    "immediateCash": { "type": "number" },
-    "immediateTrust": { "type": "number", "minimum": -100, "maximum": 100 },
-    "immediateReputation": { "type": "number", "minimum": -100, "maximum": 100 },
-    "mitigation": { "type": "string", "minLength": 1 }
+    "durationDays": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "durationVarianceDays": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/modifier"
+      }
+    },
+    "immediateCash": {
+      "type": "number"
+    },
+    "immediateTrust": {
+      "type": "number",
+      "minimum": -100,
+      "maximum": 100
+    },
+    "immediateReputation": {
+      "type": "number",
+      "minimum": -100,
+      "maximum": 100
+    },
+    "mitigation": {
+      "type": "string",
+      "minLength": 1
+    }
   },
   "additionalProperties": false
 }

@@ -213,7 +213,7 @@ function slaCompliance(context: SimulationContext): number {
     const availability = contract.lifetimeDemandedUnitHours > 0
       ? contract.lifetimeServedUnitHours / contract.lifetimeDemandedUnitHours
       : 1;
-    if (availability >= definition.slaUptime01) met += 1;
+    if (availability >= contract.slaUptime01) met += 1;
   }
   return met / contracts.length;
 }

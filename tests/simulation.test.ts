@@ -8,12 +8,14 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { importContent } from '../src/content/importer.js';
 import type { ContentRegistry } from '../src/content/registry.js';
+import type { BalanceProfileDefinition } from '../src/definitions/types.js';
 import { SimulationEngine } from '../src/sim/engine.js';
 import { allAutopilot } from '../src/sim/operator.js';
 import { applyAction, enumerateActions } from '../src/sim/player.js';
 import { canStartResearch, researchBlocker } from '../src/sim/systems/research.js';
 import {
-  currentRackOutput, groupRackOutput, rackOutputAt, regionalCarbonAt, regionalPriceAt,
+  MAX_ERA_DOWNTIME, currentRackOutput, eraSlaUptime01, groupRackOutput, rackOutputAt,
+  regionalCarbonAt, regionalPriceAt,
 } from '../src/sim/era.js';
 import {
   DEFAULT_SAVE_DIAGNOSTICS, createSave, loadSave, serializeSave,
@@ -27,8 +29,10 @@ import { buildAnnualReport, type AnnualReport } from '../src/sim/report.js';
 import { createAccumulator } from '../src/state/types.js';
 
 let registry: ContentRegistry;
+let balance: BalanceProfileDefinition;
 beforeAll(() => {
   registry = importContent('content').registry;
+  balance = registry.balanceProfile('balance.default', 'test');
 });
 
 const engineFor = (seed = 'test', scenarioId = 'scenario.dry_grid') =>
@@ -252,7 +256,7 @@ describe('save and load', () => {
     expect(migrated.applied).toEqual([
       '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
       '004-annual-reports-in-state', '005-sla-shortfall-attribution',
-      '006-hall-peak-throttle', '007-instance-counter-in-state', '008-rack-vintage', '009-research-budget',
+      '006-hall-peak-throttle', '007-instance-counter-in-state', '008-rack-vintage', '009-research-budget', '010-negotiated-sla',
     ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
 
@@ -680,5 +684,85 @@ describe('the campaign sits in history', () => {
       engine.runYears(2);
       expect(engine.annualReports.length).toBe(3);
     }
+  });
+});
+
+describe('history that the player meets', () => {
+  it('fires each dated shock once, on its date', () => {
+    const engine = new SimulationEngine(registry, {
+      scenarioId: 'scenario.dry_grid', campaignSeed: 'shocks', strategy: 'balanced',
+    });
+    const expected: Record<string, string> = {
+      'event.crash_2008': '2008-09-15',
+      'event.thai_flood_2011': '2011-10-10',
+      'event.chip_shortage_2021': '2021-03-01',
+      'event.energy_crisis_2022': '2022-02-24',
+    };
+    const startedOn = new Map<string, string>();
+    for (let y = 0; y < 20; y += 1) {
+      engine.runYears(1);
+      for (const active of engine.state.activeEvents) {
+        if (!(active.definitionId in expected) || startedOn.has(active.definitionId)) continue;
+        const when = new Date(Date.parse(engine.state.meta.startDateIso)
+          + active.startTick * engine.state.meta.minutesPerTick * 60_000);
+        startedOn.set(active.definitionId, when.toISOString().slice(0, 10));
+      }
+    }
+    for (const [id, date] of Object.entries(expected)) {
+      expect(startedOn.get(id), id).toBe(date);
+    }
+    // Once, not on a cooldown that could bring it round again.
+    for (const id of Object.keys(expected)) {
+      expect(engine.state.eventCooldowns[id]).toBe(Number.MAX_SAFE_INTEGER);
+    }
+  });
+
+  it('negotiates an availability the decade would have accepted', () => {
+    // Three nines was a premium claim in 2006 and a baseline by the late
+    // 2010s. Offering 2025 terms in 2006 makes the desert site unwinnable,
+    // because air cooling of that era cannot hold them through the summer.
+    const early = eraSlaUptime01(balance, 0.999, 2006);
+    const late = eraSlaUptime01(balance, 0.999, 2025);
+    expect(early).toBeLessThan(late);
+    expect(early).toBeGreaterThan(0.98);
+    expect(late).toBeCloseTo(0.999, 5);
+
+    // And it never gets silly at the loose end: six times the downtime of a
+    // 98% archetype would be 88%, which nobody would sign.
+    expect(eraSlaUptime01(balance, 0.98, 2006)).toBeGreaterThanOrEqual(1 - MAX_ERA_DOWNTIME - 1e-9);
+  });
+
+  it('holds a contract to what it promised, not to today’s expectations', () => {
+    const engine = new SimulationEngine(registry, {
+      scenarioId: 'scenario.dry_grid', campaignSeed: 'promise', strategy: 'balanced',
+    });
+    engine.runYears(1);
+    const contract = engine.state.contracts[0];
+    expect(contract).toBeDefined();
+
+    const definition = registry.contract(contract!.definitionId, 'test');
+    // The promise travels with the contract; reading it back off the archetype
+    // would re-promise modern terms on a deal struck in 2006.
+    expect(contract!.slaUptime01).toBeLessThanOrEqual(definition.slaUptime01);
+    expect(contract!.slaUptime01).toBeGreaterThan(0.9);
+  });
+
+  it('sizes the opening hall to the market of its decade', () => {
+    const early = new SimulationEngine(registry, {
+      scenarioId: 'scenario.dry_grid', campaignSeed: 'sizing',
+    });
+    const late = new SimulationEngine(registry, {
+      scenarioId: 'scenario.fossil_grid', campaignSeed: 'sizing',
+    });
+    const capacityOf = (engine: SimulationEngine) => engine.state.facilities
+      .flatMap((f) => f.halls).reduce((n, hall) => n + hall.rackCapacity, 0);
+
+    // A 2006 operation that opens with a 2020-sized hall spends fifteen years
+    // paying to cool an empty room.
+    expect(capacityOf(early)).toBeLessThan(capacityOf(late));
+    // But large enough to trade on day one: half of a tiny hall cannot serve
+    // even the smallest offer its own decade makes.
+    expect(early.state.contracts.length + early.state.contractOffers.length)
+      .toBeGreaterThan(0);
   });
 });

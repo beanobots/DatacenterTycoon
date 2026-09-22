@@ -1,0 +1,33 @@
+{
+  "id": "event.energy_crisis_2022",
+  "schemaVersion": 2,
+  "name": "The 2022 Energy Crisis",
+  "description": "Wholesale power triples across the industrialised world. Efficiency stops being an environmental line and becomes a survival one, and every megawatt a data centre draws is suddenly political.",
+  "eventClass": "political",
+  "trigger": {
+    "dailyProbability": 0,
+    "minimumYear": 1995,
+    "cooldownDays": 3650,
+    "scheduledDate": "2022-02-24"
+  },
+  "durationDays": 640,
+  "durationVarianceDays": 90,
+  "effects": [
+    {
+      "target": "community.trustGain",
+      "operation": "multiply",
+      "value": 0.7,
+      "priority": 25
+    },
+    {
+      "target": "policy.carbonPrice",
+      "operation": "multiply",
+      "value": 1.4,
+      "priority": 25
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": -6,
+  "immediateReputation": 0,
+  "mitigation": "The tariff is already in your energy bill. What this adds is attention: efficiency and demand response now pay twice, in power and in standing."
+}
