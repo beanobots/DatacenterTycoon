@@ -119,6 +119,57 @@ same constants the systems advance by, so the forecast and the outcome cannot
 drift. Headroom is reported per workload and never summed: the same rack serves
 several workloads, so a total would promise capacity that does not exist.
 
+**The campaign sits in history, 2006 to 2036.** Each site opens in its own
+decade and all four run to 2036: the desert grid in 2006, when land was cheap
+and nobody asked about water; urban colocation in 2012, in the middle of the
+colo boom; the Arctic site in 2016, when the industry worked out that the
+cheapest cooling is weather; the coal-belt site in 2020, with sixteen years to
+decarbonise an operation built on it.
+
+Every one of the 69 technologies carries the year it became something an
+operator could actually buy - aisle containment 2006, air economisation 2008,
+direct-to-chip 2012, single-phase immersion 2014, lithium UPS 2016, two-phase
+immersion 2018, carbon-aware scheduling 2020, small modular reactors 2029. The
+dependency tree is binding on top of that, so nothing arrives before what it is
+built on; where the two disagreed the tree won and the drift is documented in
+the content. Researching immersion cooling in 2006 is refused with the year,
+not with a generic error.
+
+**Hardware carries its vintage.** `src/sim/era.ts` holds the curves the decades
+move along: compute per rack, revenue per compute-unit, rack power draw, rack
+cost, real demand growth, market reach and the general price level - all
+anchored at 1.0 in 2025, the year the rest of the balance profile was tuned
+for. A 2006 rack does about 2% of a 2025 rack's work, draws 2.7 kW and costs
+about the same money; a 2036 rack does 450 times that work and draws 10.8 kW.
+
+What a rack delivers and what it draws are fixed at the year it was BOUGHT, not
+read from the current year. Applying the curves fleet-wide instead looked
+reasonable and destroyed the game: a 2006 hall quietly gained compute and
+quadrupled its power draw as the decades passed, the cooling blew out, and
+every campaign collapsed around 2030 for no reason the player could see.
+Research modifiers still apply to the whole fleet, because virtualization
+genuinely does make installed machines do more - the distinction is between a
+choice you made and time passing.
+
+Contract sizes move along the same compute curve, so a contract needs roughly
+the same number of racks in any decade, plus a demand curve on top for the
+industry genuinely getting bigger. Without that second curve an operator's
+fleet SHRINKS as hardware improves: the same customers fit on fewer machines
+every year.
+
+**Grids decarbonise on their own schedule.** Each region carries dated
+trajectories for carbon intensity and energy price rather than an annual drift
+rate. A compounding rate can only ever draw a smooth exponential, which cannot
+represent a coal grid's decarbonisation curve or the 2021-23 energy crisis. The
+coal belt runs 820 kg/MWh in 2006 and 300 in 2036; the Nordic site is already
+at 62 and ends at 18.
+
+**Four shocks are history rather than hazard** and fire on their dates: the
+2008 financial crisis, the 2011 Thai hard-drive flood, the 2021 semiconductor
+shortage and the 2022 energy crisis. The energy crisis deliberately carries no
+price effect of its own - that is already in the regional trajectory, and
+charging it twice would be a lie about the same event.
+
 **One capacity calculation, used everywhere.** `src/sim/capacity.ts` places the
 contract book on the fleet the same way the allocation step places it, and
 reports what is left. Everything that answers "will this fit" goes through it:

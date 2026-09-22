@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.advanced_carbon_accounting",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Advanced Carbon Accounting",
   "description": "Embodied, construction and supply-chain carbon accounting.",
   "branch": "environment",
@@ -27,5 +27,6 @@
       "scope3_ledger"
     ]
   },
-  "tradeOff": "Scope 3 makes the embodied carbon of every purchase visible."
+  "tradeOff": "Scope 3 makes the embodied carbon of every purchase visible.",
+  "availableFromYear": 2019
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.network.optical_network",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Optical Switching",
   "description": "Optical circuit switching between halls and sites.",
   "branch": "network",
@@ -33,5 +33,6 @@
       "optical_switching"
     ]
   },
-  "tradeOff": "A specialist operating discipline for a fabric few staff have run before."
+  "tradeOff": "A specialist operating discipline for a fabric few staff have run before.",
+  "availableFromYear": 2022
 }

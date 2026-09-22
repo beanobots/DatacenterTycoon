@@ -1,6 +1,6 @@
 {
   "id": "technology.operations.forecasting",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Demand and Weather Forecasting",
   "description": "Short-horizon forecasting of price, weather and demand.",
   "branch": "operations",
@@ -27,5 +27,6 @@
       "forecasting"
     ]
   },
-  "tradeOff": "Acting on a forecast means being wrong sometimes."
+  "tradeOff": "Acting on a forecast means being wrong sometimes.",
+  "availableFromYear": 2015
 }

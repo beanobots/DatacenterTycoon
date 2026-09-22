@@ -215,6 +215,39 @@
   .sub-head { display: flex; align-items: center; gap: 8px; margin: 14px 0 -2px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
   .sub-head::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
   .sub-head .n { order: 3; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+  /* --- hall floorplan ------------------------------------------------- */
+  #floorplans { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .hallplan { padding: 13px 15px 15px; }
+  .hallplan-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+  .hallplan-head .nm { font-size: 13px; font-weight: 600; }
+  .hallplan-head .cool { font-size: 11.5px; color: var(--ink-2); }
+  .hallplan-head .fill { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+  .hallplan-sub { font-size: 11px; color: var(--ink-3); margin-bottom: 9px; }
+  .hallplan-group { margin-top: 8px; }
+  .hallplan-group .gl {
+    display: flex; gap: 6px; align-items: baseline;
+    font-size: 10.5px; color: var(--ink-2); margin-bottom: 3px;
+  }
+  .hallplan-group .gl .age { font-family: var(--mono); color: var(--ink-3); }
+  .racks { display: flex; flex-wrap: wrap; gap: 2px; }
+  .rack {
+    width: 11px; height: 14px; border-radius: 2px;
+    background: var(--accent); border: 1px solid transparent;
+  }
+  /* Worn kit reads warm, failed kit reads as an alarm, empty slots read as
+     absence rather than as a state - the three things a glance should separate. */
+  .rack.worn { background: color-mix(in srgb, var(--heat) 70%, var(--accent)); }
+  .rack.old { background: var(--heat); }
+  .rack.failed { background: var(--critical); }
+  .rack.empty { background: transparent; border: 1px dashed var(--rule-strong); }
+  .hallplan-legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 11px;
+    font-size: 10.5px; color: var(--ink-3);
+  }
+  .hallplan-legend span { display: flex; align-items: center; gap: 4px; }
+  .hallplan-legend i { width: 9px; height: 11px; border-radius: 2px; display: block; }
+  @media (max-width: 560px) { .rack { width: 9px; height: 12px; } }
+
   .fleet-col .why { font-size: 11px; line-height: 1.45; color: var(--ink-2); margin: -4px 0 2px; padding-left: 10px; border-left: 2px solid var(--rule-strong); }
   .row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed var(--rule); }
   .row:last-child { border-bottom: 0; }
@@ -445,12 +478,7 @@
         </div>
         <div class="field">
           <label for="years">Campaign length</label>
-          <select id="years">
-            <option value="5">5 years</option>
-            <option value="8" selected>8 years</option>
-            <option value="12">12 years</option>
-            <option value="15">15 years</option>
-          </select>
+          <select id="years"></select>
         </div>
         <div class="field">
           <label for="seed">Seed</label>
@@ -501,7 +529,9 @@
       </div>
 
       <div id="tab-site">
-        <div class="two-col">
+        <div class="sec-head"><h2>The floor</h2><span class="hint" id="floor-hint"></span></div>
+        <div id="floorplans"></div>
+        <div class="two-col" style="margin-top:18px">
           <div class="fleet" id="fleet" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"></div>
           <div class="card list" id="objectives"></div>
         </div>
@@ -526,7 +556,7 @@
               <div class="horizon" id="horizon"></div>
             </div>
             <div class="card panel" style="margin-top:10px;padding:14px 16px">
-              <div class="legend" id="plan-legend"></div>
+              <div class="legend" id="hallplan-legend"></div>
               <div id="plan-chart"></div>
             </div>
             <div class="card scroll-x" style="margin-top:10px">
@@ -750,6 +780,32 @@
   function setHover(index) {
     state.hover = index;
     panelUpdaters.forEach(function (fn) { fn(index); });
+  }
+
+  /**
+   * Campaign lengths offered for the chosen site, defaulting to its own.
+   *
+   * Each site opens in a different decade and runs to 2036, so a fixed list of
+   * lengths is wrong for all of them: the default has to be the scenario's own
+   * duration, and the shorter options are for players who want a taste of the
+   * era rather than the whole arc.
+   */
+  function fillYears() {
+    var scenario = currentScenario();
+    var host = $('years');
+    var full = scenario ? scenario.durationYears : 8;
+    var choices = [];
+    [5, 10, 15, 20, 25, 30].forEach(function (n) { if (n < full) choices.push(n); });
+    choices.push(full);
+    host.textContent = '';
+    choices.forEach(function (n) {
+      var option = el('option', null, n === full
+        ? n + ' years \u00b7 to ' + ((scenario ? scenario.startYear : 0) + n)
+        : n + ' years');
+      option.value = String(n);
+      if (n === full) option.selected = true;
+      host.appendChild(option);
+    });
   }
 
   function currentScenario() {
@@ -1205,7 +1261,7 @@
     var months = state.projection;
     if (months.length < 2 || !state.chartWorkload) {
       host.appendChild(el('div', 'empty', 'Sell something, or install racks, and the headroom curve appears here.'));
-      $('plan-legend').textContent = '';
+      $('hallplan-legend').textContent = '';
       return;
     }
 
@@ -1302,7 +1358,7 @@
 
     host.appendChild(svg);
 
-    var legend = $('plan-legend');
+    var legend = $('hallplan-legend');
     legend.textContent = '';
     var name = 'this workload';
     for (var i = 0; i < state.headroom.length; i += 1) {
@@ -1439,6 +1495,117 @@
   }
 
   // ---------- site / report / log ---------------------------------------
+  /**
+   * Each hall drawn as its floor: one cell per rack slot, grouped by the batch
+   * it was installed in.
+   *
+   * The grouping is what makes the mix legible - a hall is rarely one kind of
+   * machine - and the colour is condition, because that is what the player can
+   * still do something about. Empty slots are drawn rather than omitted: the
+   * gap between what a hall holds and what is in it is the decision the room
+   * is asking you to make.
+   */
+  function renderFloorplans() {
+    var host = $('floorplans');
+    host.textContent = '';
+    var fleet = state.fleet;
+    if (!fleet || fleet.halls.length === 0) {
+      $('floor-hint').textContent = '';
+      host.appendChild(el('div', 'card empty', 'No halls yet.'));
+      return;
+    }
+
+    var totalRacks = 0, totalSlots = 0;
+    fleet.halls.forEach(function (h) { totalRacks += h.racks; totalSlots += h.capacity; });
+    $('floor-hint').textContent = fleet.halls.length + ' hall' + (fleet.halls.length === 1 ? '' : 's')
+      + ' \u00b7 ' + totalRacks.toLocaleString() + ' of ' + totalSlots.toLocaleString() + ' slots filled';
+
+    fleet.halls.forEach(function (hall) { host.appendChild(hallPlan(hall)); });
+  }
+
+  /** Condition band for a rack cell: healthy, worn, or near the end. */
+  function rackClass(condition01) {
+    if (condition01 >= 0.8) return 'rack';
+    if (condition01 >= 0.55) return 'rack worn';
+    return 'rack old';
+  }
+
+  function hallPlan(hall) {
+    var card = el('div', 'card hallplan');
+
+    var head = el('div', 'hallplan-head');
+    head.appendChild(el('span', 'nm', hall.id));
+    head.appendChild(el('span', 'cool', hall.cooling));
+    head.appendChild(el('span', 'fill', hall.racks + '/' + hall.capacity));
+    card.appendChild(head);
+
+    var bits = [];
+    if (hall.underConstruction) bits.push('under construction');
+    else {
+      bits.push(hall.inletTempC.toFixed(0) + '\u00b0C inlet');
+      if (hall.throttle01 > 0.02) bits.push('throttling ' + pct(hall.throttle01, 0));
+      if (hall.thermalCeilingC !== null && hall.hoursAboveCeiling >= 1) {
+        bits.push('cooling runs out above ' + hall.thermalCeilingC.toFixed(0) + '\u00b0C, '
+          + Math.round(hall.hoursAboveCeiling) + ' h/yr over');
+      }
+      bits.push('condition ' + pct(hall.condition01, 0));
+    }
+    card.appendChild(el('div', 'hallplan-sub', bits.join(' \u00b7 ')));
+
+    var used = 0;
+    (hall.groups || []).forEach(function (group) {
+      used += group.count;
+      var block = el('div', 'hallplan-group');
+      var label = el('div', 'gl');
+      label.appendChild(el('span', null, group.count + ' \u00d7 ' + group.hardware));
+      label.appendChild(el('span', 'age', group.ageYears.toFixed(1) + 'y of '
+        + group.lifeYears + ' \u00b7 ' + group.kwPerRack.toFixed(1) + ' kW'));
+      block.appendChild(label);
+
+      var row = el('div', 'racks');
+      // Failed racks are drawn first within their group so a run of red reads
+      // as one problem rather than as speckle across the whole floor.
+      for (var i = 0; i < group.count; i++) {
+        var failed = i < group.failed;
+        var cell = el('span', failed ? 'rack failed' : rackClass(group.condition01));
+        cell.title = group.hardware + ' \u00b7 bought ' + Math.floor(group.vintageYear)
+          + ' \u00b7 ' + group.kwPerRack.toFixed(1) + ' kW'
+          + (failed ? ' \u00b7 failed, awaiting repair'
+            : ' \u00b7 condition ' + pct(group.condition01, 0));
+        row.appendChild(cell);
+      }
+      block.appendChild(row);
+      card.appendChild(block);
+    });
+
+    var free = Math.max(0, hall.capacity - used);
+    if (free > 0) {
+      var block2 = el('div', 'hallplan-group');
+      block2.appendChild(el('div', 'gl', free + ' empty slot' + (free === 1 ? '' : 's')));
+      var row2 = el('div', 'racks');
+      for (var j = 0; j < free; j++) {
+        var slot = el('span', 'rack empty');
+        slot.title = 'Empty rack slot';
+        row2.appendChild(slot);
+      }
+      block2.appendChild(row2);
+      card.appendChild(block2);
+    }
+
+    var legend = el('div', 'hallplan-legend');
+    [['rack', 'healthy'], ['rack worn', 'worn'], ['rack old', 'near end of life'],
+      ['rack failed', 'failed'], ['rack empty', 'empty slot']].forEach(function (pair) {
+      var item = el('span');
+      var swatch = document.createElement('i');
+      swatch.className = pair[0];
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(pair[1]));
+      legend.appendChild(item);
+    });
+    card.appendChild(legend);
+    return card;
+  }
+
   function renderFleet() {
     var host = $('fleet');
     host.textContent = '';
@@ -1460,17 +1627,13 @@
       host.appendChild(col);
     }
 
+    // The floorplan above carries each hall's cooling, thermal ceiling and
+    // condition, so this column is a tally and stops repeating it.
     column('Halls', fleet.halls.map(function (h) {
-      // The thermal ceiling is shown even when the hall is cool right now: it
-      // is what decides which SLAs can be sold against this hall, and the
-      // hours-a-year figure is directly comparable to one.
       var note = h.underConstruction ? 'building'
         : h.throttle01 > 0.02 ? 'throttling ' + pct(h.throttle01, 0)
-        : h.thermalCeilingC !== null && h.hoursAboveCeiling >= 1
-          ? h.inletTempC.toFixed(0) + '\u00b0C \u00b7 caps at '
-            + h.thermalCeilingC.toFixed(0) + '\u00b0C, ' + Math.round(h.hoursAboveCeiling) + ' h/yr over'
         : h.inletTempC.toFixed(0) + '\u00b0C';
-      return [h.id + ' \u00b7 ' + h.cooling, h.racks + '/' + h.capacity + ' \u00b7 ' + note, true];
+      return [h.id, h.racks + '/' + h.capacity + ' \u00b7 ' + note];
     }), 'No halls.');
     column('Fleet', fleet.hardware.map(function (h) { return [h.name, h.racks + ' racks']; }), 'No racks installed.');
     column('Power', fleet.power.map(function (p) {
@@ -2023,6 +2186,7 @@
     renderHud();
     renderDeck();
     renderFleet();
+    renderFloorplans();
     renderObjectives();
     renderTable();
     renderDrawer();
@@ -2122,7 +2286,8 @@
     $('game-sec').hidden = false;
     $('turnbar').hidden = false;
 
-    var start = new Date(run.dashboard() ? Date.UTC(2025, 0, 1) : Date.now());
+    // From the run, not from a constant: each site opens in its own decade.
+    var start = new Date(run.dateIso());
     $('clock-date').textContent = MONTHS[start.getUTCMonth()] + ' ' + start.getUTCFullYear();
     $('clock-sub').textContent = 'Month 1 of ' + (years * 12) + ' \u00b7 ' + (manual ? 'you decide' : 'autopilot');
     renderAlerts();
@@ -2157,7 +2322,11 @@
     });
     scenarioSelect.value = 'scenario.dry_grid';
     if (!scenarioSelect.value) scenarioSelect.selectedIndex = 0;
-    scenarioSelect.addEventListener('change', renderSetupTags);
+    scenarioSelect.addEventListener('change', function () {
+      renderSetupTags();
+      fillYears();
+    });
+    fillYears();
 
     $('begin').addEventListener('click', begin);
     $('save').addEventListener('click', saveCampaign);

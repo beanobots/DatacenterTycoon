@@ -1,6 +1,6 @@
 {
   "id": "technology.operations.predictive_monitoring",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Predictive Monitoring",
   "description": "Failure prediction from vibration, thermal and power signatures. Chapter 8: -20% failure rate, -10% maintenance cost.",
   "branch": "operations",
@@ -51,5 +51,6 @@
       "predictive_maintenance"
     ]
   },
-  "tradeOff": "Sensor and cyber overhead: more estate to patch and defend."
+  "tradeOff": "Sensor and cyber overhead: more estate to patch and defend.",
+  "availableFromYear": 2013
 }

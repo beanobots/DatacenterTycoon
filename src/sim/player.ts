@@ -15,11 +15,12 @@
 import type { SimulationContext } from './context.js';
 import type { DecisionCategory, OperatorSystem } from './operator.js';
 import {
-  freeSpecialists, researchBlocker, startResearch, totalSpecialists,
+  freeSpecialists, researchBlocker, researchCostUsd, startResearch, totalSpecialists,
 } from './systems/research.js';
 import { installedItMw } from './report.js';
 import { probeCapacity, requiredHeadroom } from './capacity.js';
 import { thermalOutlook } from './thermal-outlook.js';
+import { currentRackOutput, groupRackOutput } from './era.js';
 import type { HallState } from '../state/types.js';
 
 export interface PlayerActionBase {
@@ -49,6 +50,8 @@ export interface ResearchAction extends PlayerActionBase {
   readonly specialists: number;
   readonly freeSpecialists: number;
   readonly totalSpecialists: number;
+  /** Calendar year it becomes researchable; may be in the future. */
+  readonly availableFromYear: number;
 }
 
 export interface ContractAction extends PlayerActionBase {
@@ -174,6 +177,12 @@ const HALL_SIZES = [60, 120, 220];
 export const RACK_ORDER_SIZES = [10, 25, 50];
 /** Hall token meaning "wherever there is room", the old placement behaviour. */
 export const ANY_HALL = 'any';
+/**
+ * How far ahead an unavailable technology is still worth listing. Three years
+ * is about one build cycle: long enough to be a reason to wait, short enough
+ * that the list stays a menu rather than a catalogue.
+ */
+const RESEARCH_PREVIEW_YEARS = 3;
 /** Power block sizes offered, MW. */
 const POWER_SIZES = [2, 5];
 
@@ -218,8 +227,17 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       .filter((id) => !context.state.research.completed.includes(id));
     if (missing.length > 0) continue;
 
+    // A technology the decade has not reached yet is shown while it is close,
+    // so the player can plan around it, and hidden while it is distant. The
+    // whole 2030s catalogue listed in 2006 is noise, but "immersion cooling
+    // arrives in 2014" is a reason to wait rather than build.
+    const yearsAway = technology.availableFromYear - context.state.meta.campaignYear;
+    if (yearsAway > RESEARCH_PREVIEW_YEARS) continue;
+
     const days = Math.max(1, Math.round(technology.research.durationDays / speed));
-    const costPerDay = technology.research.costUsd / days;
+    // Quoted in the money of the year it would be run in, not in 2025 dollars.
+    const budgetUsd = researchCostUsd(context, technology);
+    const costPerDay = budgetUsd / days;
     const blocker = researchBlocker(context, technology.id);
 
     actions.push({
@@ -228,10 +246,14 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       category: 'research',
       label: technology.name,
       detail: `${technology.description ?? ''} Tier ${technology.tier} ${technology.branch}. `
-        + `${money(technology.research.costUsd)} funded over ${days} days `
-        + `(${money(costPerDay)}/day), ${technology.research.requiredSpecialists} specialists.`,
+        + `${money(budgetUsd)} funded over ${days} days `
+        + `(${money(costPerDay)}/day), ${technology.research.requiredSpecialists} specialists.`
+        + (yearsAway > 0
+          ? ` Arrives ${technology.availableFromYear}, in ${yearsAway} year`
+            + `${yearsAway === 1 ? '' : 's'}.`
+          : ''),
       tradeOff: technology.tradeOff,
-      cost: technology.research.costUsd,
+      cost: budgetUsd,
       // Research is funded day by day, so what matters is whether the daily
       // draw is sustainable, not whether the whole budget is on the balance.
       affordable: context.state.company.cash > costPerDay * 30,
@@ -239,12 +261,13 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       technologyId: technology.id,
       branch: technology.branch,
       tier: technology.tier,
-      costUsd: technology.research.costUsd,
+      costUsd: budgetUsd,
       costPerDay,
       durationDays: days,
       specialists: technology.research.requiredSpecialists,
       freeSpecialists: free,
       totalSpecialists: bench,
+      availableFromYear: technology.availableFromYear,
     });
   }
 
@@ -425,8 +448,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
 
   for (const hardwareId of [...new Set(unlockedHardware)]) {
     const hardware = context.registry.hardware(hardwareId, 'player');
-    const rackKw = context.balance.baseRackPowerKw * hardware.powerFactor
-      * context.modifiers.value('hardware.powerDraw', 1);
+    const rackKw = currentRackOutput(context, hardware).powerKw;
     const costPerRack = operator.rackPrice(context, hardware);
 
     // Every hall is listed, so the player can see where this hardware can go
@@ -463,7 +485,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       category: 'capacity',
       label: hardware.name,
       detail: `${money(costPerRack)} per rack, ${rackKw.toFixed(1)} kW each, `
-        + `${Math.round(context.balance.baseRackComputeUnits * hardware.computeFactor)} compute units. `
+        + `${Math.round(currentRackOutput(context, hardware).computeUnits).toLocaleString()} compute units. `
         + `${hardware.lifeYears}-year life.`,
       tradeOff: hardware.refurbished
         ? 'A fifth of the embodied carbon, and it fails more and draws more for the same work.'
@@ -481,7 +503,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       rackKw,
       spaceAvailable: space,
       maxAffordable: Math.floor(budget / Math.max(1, costPerRack)),
-      computePerRack: context.balance.baseRackComputeUnits * hardware.computeFactor,
+      computePerRack: currentRackOutput(context, hardware).computeUnits,
       halls: hallSlots,
     });
   }
@@ -506,8 +528,8 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
         detail: `In ${hallName(hall)}, ${ageYears.toFixed(1)} years old, `
           + `condition ${Math.round(group.condition01 * 100)}%. `
           + `Returns ${money(resale)} and ${group.count} rack slots.`,
-        tradeOff: `Loses ${Math.round(group.count * context.balance.baseRackComputeUnits
-          * hardware.computeFactor).toLocaleString()} compute units immediately. `
+        tradeOff: `Loses ${Math.round(group.count
+          * groupRackOutput(context, group).computeUnits).toLocaleString()} compute units immediately. `
           + 'Anything sold against them breaches until the replacements are in.',
         // Retiring pays rather than costs, so nothing gates it on the budget.
         cost: 0,

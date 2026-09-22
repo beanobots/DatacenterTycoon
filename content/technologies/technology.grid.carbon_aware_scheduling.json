@@ -1,6 +1,6 @@
 {
   "id": "technology.grid.carbon_aware_scheduling",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Carbon-Aware Scheduling",
   "description": "Shifts flexible load toward low-carbon hours. Chapter 8: -25% operational carbon potential.",
   "branch": "grid",
@@ -28,5 +28,6 @@
       "carbon_aware"
     ]
   },
-  "tradeOff": "Deadline risk and customer satisfaction risk on every job you move."
+  "tradeOff": "Deadline risk and customer satisfaction risk on every job you move.",
+  "availableFromYear": 2020
 }

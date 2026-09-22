@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.carbon_removal",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Carbon Removal",
   "description": "Contracted durable carbon removal against residual emissions.",
   "branch": "environment",
@@ -33,5 +33,6 @@
       "carbon_removal"
     ]
   },
-  "tradeOff": "+10% operating cost, and offsets alone cannot carry the environmental score."
+  "tradeOff": "+10% operating cost, and offsets alone cannot carry the environmental score.",
+  "availableFromYear": 2021
 }

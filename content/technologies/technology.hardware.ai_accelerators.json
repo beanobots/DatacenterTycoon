@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.ai_accelerators",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "AI Accelerators",
   "description": "Purpose-built inference and training silicon. Chapter 8: +75% supported AI performance, +25% efficiency.",
   "branch": "hardware",
@@ -20,5 +20,6 @@
       "hardware.asic.gen1"
     ]
   },
-  "tradeOff": "+35% CapEx and near-total inflexibility off supported workloads."
+  "tradeOff": "+35% CapEx and near-total inflexibility off supported workloads.",
+  "availableFromYear": 2017
 }

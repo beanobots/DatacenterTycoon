@@ -1,6 +1,6 @@
 {
   "id": "technology.power.grid_connection",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Grid Connection",
   "description": "An interconnection agreement and diesel standby plant.",
   "branch": "power",
@@ -19,5 +19,6 @@
       "power.diesel_backup"
     ]
   },
-  "tradeOff": "None. This is where every operator starts."
+  "tradeOff": "None. This is where every operator starts.",
+  "availableFromYear": 1995
 }

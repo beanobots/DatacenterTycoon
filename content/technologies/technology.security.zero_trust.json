@@ -1,6 +1,6 @@
 {
   "id": "technology.security.zero_trust",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Zero Trust Architecture",
   "description": "Identity-based segmentation with no implicit internal trust.",
   "branch": "security",
@@ -36,5 +36,6 @@
       "contract.government_residency"
     ]
   },
-  "tradeOff": "Every internal integration gets harder, permanently."
+  "tradeOff": "Every internal integration gets harder, permanently.",
+  "availableFromYear": 2014
 }

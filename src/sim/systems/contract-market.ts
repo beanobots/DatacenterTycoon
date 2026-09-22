@@ -13,8 +13,12 @@
 import type { SimulationTick } from '../../core/clock.js';
 import { clamp, clamp01 } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
+import { eraFactors } from '../era.js';
 
 /** How long an offer stays on the table. */
+/** Smallest offer worth making, in 2025 compute units; scaled by the era. */
+const MINIMUM_OFFER_UNITS = 200;
+
 const OFFER_LIFETIME_MONTHS = 3;
 /** Offers generated per month at maximum reputation. */
 const MAX_OFFERS_PER_MONTH = 4;
@@ -35,7 +39,10 @@ export class ContractMarketSystem implements ISimulationSystem {
     context.state.contractOffers = context.state.contractOffers.filter((o) => o.expiresTick > tick.index);
 
     const reputation = clamp01(context.state.company.reputation / 100);
-    const count = Math.max(1, Math.round(1 + reputation * (MAX_OFFERS_PER_MONTH - 1)));
+    // More customers exist in 2030 than in 2006, so standing is not the only
+    // thing that decides how much reaches the table.
+    const reach = eraFactors(context).offerCountIndex;
+    const count = Math.max(1, Math.round((1 + reputation * (MAX_OFFERS_PER_MONTH - 1)) * reach));
     this.generateOffers(context, tick.index, count);
   }
 
@@ -69,7 +76,22 @@ export class ContractMarketSystem implements ISimulationSystem {
       // standing: a known operator is asked to bid on bigger work.
       const sizeFactor = Math.exp(stream.normal(0, 0.35))
         * (0.6 + clamp01(state.company.reputation / 100) * 0.9);
-      const computeUnits = Math.max(200, Math.round(definition.computeUnits * sizeFactor));
+      // Contract sizes move with the decade for the same reason rack output
+      // does. An archetype written for 2025 asks for capacity a 2006 fleet
+      // could not reach in thirty years, and would be pocket change in 2036.
+      // Scaling size by the same curve as the hardware keeps "how many racks
+      // does this contract need" roughly era-independent, which is the only
+      // way one set of balance numbers can hold across the whole window.
+      const era = eraFactors(context);
+      // Two curves, doing different jobs. computePerRack converts the
+      // archetype into this decade's units so the number means the same
+      // thing; demandIndex is the real growth on top, in racks, which is what
+      // turns one hall into a campus over thirty years.
+      const scale = era.computePerRack * era.demandIndex;
+      const computeUnits = Math.max(
+        Math.round(MINIMUM_OFFER_UNITS * scale),
+        Math.round(definition.computeUnits * sizeFactor * scale),
+      );
 
       // Price moves with the market and with how much the customer needs this
       // particular operator: a price-sensitive workload bargains harder.
@@ -77,9 +99,14 @@ export class ContractMarketSystem implements ISimulationSystem {
       const negotiation = 1
         + (clamp01(state.company.reputation / 100) - 0.5) * 0.25 * (1 - workload.priceSensitivity01)
         + stream.normal(0, 0.05);
+      // Price per unit falls as fast as performance rises, so the money a
+      // contract is worth tracks the era's revenue-per-rack rather than
+      // multiplying out with it.
       const price = definition.pricePerComputeUnitHour
         * clamp(negotiation, 0.75, 1.35)
-        * state.world.market.contractPriceFactor;
+        * state.world.market.contractPriceFactor
+        * era.revenuePerComputeUnit
+        * context.balance.contractPriceScale;
 
       const termMonths = Math.max(6, Math.round(definition.termMonths * (0.75 + stream.float01() * 0.5)));
 

@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 10;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -179,6 +179,55 @@ const MIGRATIONS: readonly Migration[] = [
         }
       }
       meta.nextInstanceId = highest + 1;
+    },
+  },
+  {
+    from: 8, to: 9, id: '008-rack-vintage',
+    apply: (save) => {
+      // Hardware performance and power draw are now properties of the year a
+      // rack group was bought rather than of the current year. A version-8
+      // save has no vintage, so derive it from the tick the group was
+      // installed and the campaign's own start date.
+      const state = save.state;
+      const meta = state.meta as Record<string, unknown> | undefined;
+      const startIso = String(meta?.startDateIso ?? '2025-01-01T00:00:00.000Z');
+      const minutesPerTick = Number(meta?.minutesPerTick ?? 15);
+      const startYear = new Date(startIso).getUTCFullYear();
+
+      const facilities = state.facilities;
+      if (!Array.isArray(facilities)) return;
+      for (const facilityEntry of facilities) {
+        const halls = (facilityEntry as Record<string, unknown>).halls;
+        if (!Array.isArray(halls)) continue;
+        for (const hallEntry of halls) {
+          const groups = (hallEntry as Record<string, unknown>).rackGroups;
+          if (!Array.isArray(groups)) continue;
+          for (const groupEntry of groups) {
+            const group = groupEntry as Record<string, unknown>;
+            const installedTick = Number(group.installedTick ?? 0);
+            group.vintageYear = startYear + installedTick * minutesPerTick / (60 * 8766);
+          }
+        }
+      }
+    },
+  },
+  {
+    from: 9, to: 10, id: '009-research-budget',
+    apply: (save) => {
+      // A project's cost is now fixed at the year it started, so it cannot
+      // move under a campaign that is already running it. Version-9 saves
+      // carry no budget, and the right value is the technology's own cost -
+      // which lives in the content registry, not in the save. Migrations run
+      // on plain JSON with no registry, so this marks the projects and
+      // restoreSave fills them in. Setting a number here instead would have
+      // completed every project in flight the moment the save was opened.
+      const research = save.state.research as Record<string, unknown> | undefined;
+      const active = research?.active;
+      if (!Array.isArray(active)) return;
+      for (const entry of active) {
+        const project = entry as Record<string, unknown>;
+        if (project.budgetUsd === undefined) project.budgetUsd = null;
+      }
     },
   },
 ];

@@ -1,9 +1,9 @@
 {
   "id": "balance.default",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Default Balance Profile",
   "description": "Base units that the chapter 12 factors multiply. Prototype gameplay values per the chapter 12 preamble; tune through the golden scenarios rather than in code. baseRackPurchaseCost is the most sensitive single value here: it sets IT capital per MW (about $27M/MW at 6 kW per rack) and therefore the refresh burden a campaign has to carry every hardware generation.",
-  "baseRackPowerKw": 6.0,
+  "baseRackPowerKw": 6,
   "baseRackComputeUnits": 100,
   "baseRackPurchaseCost": 165000,
   "baseRackEmbodiedKgCo2e": 22000,
@@ -29,5 +29,206 @@
   "rackMassTonnes": 0.85,
   "heatSaleRevenuePerMwh": 22,
   "annualInsurance01": 0.006,
-  "researchStaffShare01": 0.6
+  "researchStaffShare01": 0.6,
+  "era": {
+    "computePerRack": [
+      {
+        "year": 2006,
+        "value": 0.02
+      },
+      {
+        "year": 2010,
+        "value": 0.045
+      },
+      {
+        "year": 2014,
+        "value": 0.11
+      },
+      {
+        "year": 2018,
+        "value": 0.25
+      },
+      {
+        "year": 2022,
+        "value": 0.57
+      },
+      {
+        "year": 2026,
+        "value": 1.15
+      },
+      {
+        "year": 2030,
+        "value": 2.15
+      },
+      {
+        "year": 2036,
+        "value": 4.5
+      }
+    ],
+    "revenuePerComputeUnit": [
+      {
+        "year": 2006,
+        "value": 26.5
+      },
+      {
+        "year": 2010,
+        "value": 11.9
+      },
+      {
+        "year": 2014,
+        "value": 5.82
+      },
+      {
+        "year": 2018,
+        "value": 2.91
+      },
+      {
+        "year": 2022,
+        "value": 1.46
+      },
+      {
+        "year": 2026,
+        "value": 0.847
+      },
+      {
+        "year": 2030,
+        "value": 0.529
+      },
+      {
+        "year": 2036,
+        "value": 0.291
+      }
+    ],
+    "rackPowerKw": [
+      {
+        "year": 2006,
+        "value": 0.45
+      },
+      {
+        "year": 2012,
+        "value": 0.6
+      },
+      {
+        "year": 2018,
+        "value": 0.78
+      },
+      {
+        "year": 2024,
+        "value": 0.96
+      },
+      {
+        "year": 2030,
+        "value": 1.35
+      },
+      {
+        "year": 2036,
+        "value": 1.8
+      }
+    ],
+    "rackCost": [
+      {
+        "year": 2006,
+        "value": 0.92
+      },
+      {
+        "year": 2012,
+        "value": 0.96
+      },
+      {
+        "year": 2020,
+        "value": 0.99
+      },
+      {
+        "year": 2026,
+        "value": 1.02
+      },
+      {
+        "year": 2036,
+        "value": 1.15
+      }
+    ],
+    "demandIndex": [
+      {
+        "year": 2006,
+        "value": 0.35
+      },
+      {
+        "year": 2012,
+        "value": 0.55
+      },
+      {
+        "year": 2018,
+        "value": 0.78
+      },
+      {
+        "year": 2025,
+        "value": 1
+      },
+      {
+        "year": 2030,
+        "value": 1.5
+      },
+      {
+        "year": 2036,
+        "value": 2.2
+      }
+    ],
+    "offerCountIndex": [
+      {
+        "year": 2006,
+        "value": 0.6
+      },
+      {
+        "year": 2012,
+        "value": 0.75
+      },
+      {
+        "year": 2018,
+        "value": 0.9
+      },
+      {
+        "year": 2025,
+        "value": 1
+      },
+      {
+        "year": 2030,
+        "value": 1.3
+      },
+      {
+        "year": 2036,
+        "value": 1.6
+      }
+    ],
+    "costIndex": [
+      {
+        "year": 2006,
+        "value": 0.65
+      },
+      {
+        "year": 2010,
+        "value": 0.72
+      },
+      {
+        "year": 2015,
+        "value": 0.79
+      },
+      {
+        "year": 2020,
+        "value": 0.87
+      },
+      {
+        "year": 2025,
+        "value": 1
+      },
+      {
+        "year": 2030,
+        "value": 1.13
+      },
+      {
+        "year": 2036,
+        "value": 1.28
+      }
+    ]
+  },
+  "contractPriceScale": 1.0
 }

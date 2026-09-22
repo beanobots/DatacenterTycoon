@@ -1,6 +1,6 @@
 {
   "id": "technology.power.hydro",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Hydro Procurement",
   "description": "Long-term hydro offtake where the geography supports it.",
   "branch": "power",
@@ -20,5 +20,6 @@
       "power.hydro_contract"
     ]
   },
-  "tradeOff": "Drought years cut delivery, and the ecological objections are not yours to answer."
+  "tradeOff": "Drought years cut delivery, and the ecological objections are not yours to answer.",
+  "availableFromYear": 2010
 }

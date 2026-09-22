@@ -1,6 +1,6 @@
 {
   "id": "technology.efficiency.high_efficiency_psu",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "High-Efficiency PSUs",
   "description": "Titanium-class power supplies. Chapter 8: -7% server power, -5% heat.",
   "branch": "efficiency",
@@ -35,5 +35,6 @@
     }
   ],
   "unlocks": {},
-  "tradeOff": "+4% hardware price on every rack bought from now on."
+  "tradeOff": "+4% hardware price on every rack bought from now on.",
+  "availableFromYear": 2007
 }

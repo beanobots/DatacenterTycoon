@@ -26,6 +26,7 @@
 import { clamp, clamp01, inverseNormal } from '../core/math.js';
 import type { SimulationContext } from './context.js';
 import { ARRIVAL_SIGMA } from './systems/workload.js';
+import { groupRackOutput } from './era.js';
 
 /**
  * Spare capacity a contract needs to hold its availability, as a multiplier on
@@ -133,7 +134,6 @@ export function probeCapacity(context: SimulationContext): CapacityProbe {
  */
 export function liveGroups(context: SimulationContext): CapacityGroup[] {
   const groups: CapacityGroup[] = [];
-  const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
 
   for (const facility of context.state.facilities) {
     for (const hall of facility.halls) {
@@ -146,12 +146,9 @@ export function liveGroups(context: SimulationContext): CapacityGroup[] {
       // weigh it, rather than hidden inside a number that silently refuses.
       const available = 1 - clamp01(Math.max(hall.throttle01, hall.peakThrottle01 ?? 0));
       for (const group of hall.rackGroups) {
-        const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
         const working = Math.max(0, group.count - group.failedCount);
         const units = working
-          * context.balance.baseRackComputeUnits
-          * hardware.computeFactor
-          * computeModifier
+          * groupRackOutput(context, group).computeUnits
           * (0.6 + 0.4 * clamp01(group.condition01))
           * available;
         if (units <= 0) continue;

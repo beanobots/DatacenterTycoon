@@ -11,6 +11,7 @@ import type { SimulationTick } from '../../core/clock.js';
 import { clamp } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
 import { accumulate, createAccumulator, totalCost, totalRevenue } from '../../state/types.js';
+import { eraFactors, groupRackOutput } from '../era.js';
 
 export class FinanceSystem implements ISimulationSystem {
   readonly name = 'finance';
@@ -80,7 +81,10 @@ export class FinanceSystem implements ISimulationSystem {
     state.company.staffCount += (required - state.company.staffCount) * clamp(hiringRate, 0.1, 1) * 0.35;
     state.company.staffCount = Math.max(6, state.company.staffCount);
 
-    const monthlySalary = context.balance.baseAnnualSalary * context.region.people.wageIndex / 12;
+    // Wages, like everything else people-shaped, belong to their decade.
+    const prices = eraFactors(context).costIndex;
+    const monthlySalary = context.balance.baseAnnualSalary * context.region.people.wageIndex
+      * prices / 12;
     state.hour.staffCost += state.company.staffCount * monthlySalary;
   }
 
@@ -91,17 +95,21 @@ export class FinanceSystem implements ISimulationSystem {
 
     // Scheduled maintenance as a share of asset value, on top of the repair
     // spend the maintenance system books.
+    const prices = eraFactors(context).costIndex;
     const maintenance = assetValue * context.balance.baseMaintenance01 / 12
-      * context.modifiers.value('facility.maintenanceCost', 1) * operatingCostModifier;
+      * context.modifiers.value('facility.maintenanceCost', 1) * operatingCostModifier * prices;
     state.hour.maintenanceCost += maintenance;
 
-    const insurance = assetValue * context.balance.annualInsurance01 / 12;
+    const insurance = assetValue * context.balance.annualInsurance01 / 12 * prices;
     state.hour.otherCost += insurance;
 
     // Network transit, billed on installed IT capacity.
     const itMw = this.installedItMw(context);
+    // Transit is the one line that got radically cheaper: bandwidth prices
+    // fell by orders of magnitude across this window, so it is priced against
+    // the era's compute rather than against the general price level.
     const transit = itMw * 400 * context.region.connectivity.transitCostPerGbpsMonth / 1000
-      * context.modifiers.value('network.transitCost', 1);
+      * context.modifiers.value('network.transitCost', 1) * prices;
     state.hour.otherCost += transit;
   }
 
@@ -158,8 +166,7 @@ export class FinanceSystem implements ISimulationSystem {
     for (const facility of context.state.facilities) {
       for (const hall of facility.halls) {
         for (const group of hall.rackGroups) {
-          const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-          kw += group.count * context.balance.baseRackPowerKw * hardware.powerFactor;
+          kw += group.count * groupRackOutput(context, group).powerKw;
         }
       }
     }

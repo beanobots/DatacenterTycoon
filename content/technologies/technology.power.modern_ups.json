@@ -1,6 +1,6 @@
 {
   "id": "technology.power.modern_ups",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Modern UPS",
   "description": "Line-interactive UPS with lithium strings. Chapter 8: -4% conversion loss, +15% battery life.",
   "branch": "power",
@@ -29,5 +29,6 @@
     }
   ],
   "unlocks": {},
-  "tradeOff": "Higher replacement cost when the units reach end of life."
+  "tradeOff": "Higher replacement cost when the units reach end of life.",
+  "availableFromYear": 2016
 }

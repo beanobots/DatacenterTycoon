@@ -1,6 +1,6 @@
 {
   "id": "technology.power.gas",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "On-Site Gas Generation",
   "description": "Combined-cycle generation behind the meter.",
   "branch": "power",
@@ -20,5 +20,6 @@
       "power.gas_ccgt"
     ]
   },
-  "tradeOff": "Direct emissions, fuel exposure, air quality and a stranded-asset risk."
+  "tradeOff": "Direct emissions, fuel exposure, air quality and a stranded-asset risk.",
+  "availableFromYear": 2010
 }

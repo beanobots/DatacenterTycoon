@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.direct_chip",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Direct-to-Chip Liquid Cooling",
   "description": "Cold plates on CPUs and accelerators. Chapter 8: -35% cooling power, 60-80kW racks.",
   "branch": "cooling",
@@ -37,5 +37,6 @@
       "hardware.gpu.gen2"
     ]
   },
-  "tradeOff": "+20% maintenance complexity and a leak-management regime."
+  "tradeOff": "+20% maintenance complexity and a leak-management regime.",
+  "availableFromYear": 2014
 }

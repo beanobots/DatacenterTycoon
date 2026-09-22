@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.biodiversity_survey",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Biodiversity Survey",
   "description": "Ecological baseline survey of the site and its surroundings.",
   "branch": "environment",
@@ -20,5 +20,6 @@
       "habitat_baseline"
     ]
   },
-  "tradeOff": "A baseline you will be measured against for the rest of the campaign."
+  "tradeOff": "A baseline you will be measured against for the rest of the campaign.",
+  "availableFromYear": 2012
 }

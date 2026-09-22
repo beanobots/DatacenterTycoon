@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.rear_door",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Rear-Door Heat Exchangers",
   "description": "Water-cooled heat exchangers mounted on the rack door.",
   "branch": "cooling",
@@ -20,5 +20,6 @@
       "cooling.rear_door"
     ]
   },
-  "tradeOff": "Plumbing and maintenance complexity in every rack row."
+  "tradeOff": "Plumbing and maintenance complexity in every rack row.",
+  "availableFromYear": 2008
 }

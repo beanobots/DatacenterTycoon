@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.flash_storage",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Flash Storage",
   "description": "All-flash arrays for latency-sensitive tenants.",
   "branch": "hardware",
@@ -20,5 +20,6 @@
       "hardware.storage.flash"
     ]
   },
-  "tradeOff": "Higher acquisition cost and embodied impact than spinning disk."
+  "tradeOff": "Higher acquisition cost and embodied impact than spinning disk.",
+  "availableFromYear": 2010
 }

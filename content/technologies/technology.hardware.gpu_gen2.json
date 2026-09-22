@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.gpu_gen2",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Second-Generation GPUs",
   "description": "Denser accelerator nodes that assume liquid cooling.",
   "branch": "hardware",
@@ -21,5 +21,6 @@
       "hardware.gpu.gen2"
     ]
   },
-  "tradeOff": "Air cooling is no longer an option for these racks."
+  "tradeOff": "Air cooling is no longer an option for these racks.",
+  "availableFromYear": 2018
 }

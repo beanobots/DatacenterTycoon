@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.cpu_servers",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "CPU Servers",
   "description": "Standard two-socket server racks, disk arrays and a tape library: the baseline fleet.",
   "branch": "hardware",
@@ -20,5 +20,6 @@
       "hardware.archive.tape"
     ]
   },
-  "tradeOff": "None. This is where every operator starts."
+  "tradeOff": "None. This is where every operator starts.",
+  "availableFromYear": 1995
 }

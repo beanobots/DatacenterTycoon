@@ -1,6 +1,6 @@
 {
   "id": "technology.operations.workload_scheduling",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Workload Scheduling",
   "description": "A deadline-aware scheduler over the flexible share of the fleet.",
   "branch": "operations",
@@ -27,5 +27,6 @@
       "scheduler"
     ]
   },
-  "tradeOff": "Deferred work is work a customer is waiting for."
+  "tradeOff": "Deferred work is work a customer is waiting for.",
+  "availableFromYear": 2011
 }

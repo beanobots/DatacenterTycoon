@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.ai_accelerators_gen2",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Second-Generation Accelerators",
   "description": "The densest commercial accelerator available.",
   "branch": "hardware",
@@ -21,5 +21,6 @@
       "hardware.asic.gen2"
     ]
   },
-  "tradeOff": "A deepening dependency on one vendor roadmap."
+  "tradeOff": "A deepening dependency on one vendor roadmap.",
+  "availableFromYear": 2022
 }

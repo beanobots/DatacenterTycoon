@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.immersion_two_phase",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Two-Phase Immersion",
   "description": "Boiling dielectric fluid. Chapter 8: -60% cooling power, up to 220kW racks.",
   "branch": "cooling",
@@ -27,5 +27,6 @@
       "cooling.immersion_two_phase"
     ]
   },
-  "tradeOff": "Fluid loss, regulatory exposure and the highest technical complexity in the game."
+  "tradeOff": "Fluid loss, regulatory exposure and the highest technical complexity in the game.",
+  "availableFromYear": 2018
 }

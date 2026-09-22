@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.high_density_computing",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "High-Density Computing",
   "description": "Rack, busbar and airflow engineering for high-power rows.",
   "branch": "hardware",
@@ -28,5 +28,6 @@
       "high_density_layout"
     ]
   },
-  "tradeOff": "Every kilowatt of density added is a kilowatt cooling has to answer for."
+  "tradeOff": "Every kilowatt of density added is a kilowatt cooling has to answer for.",
+  "availableFromYear": 2010
 }

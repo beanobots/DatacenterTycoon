@@ -14,6 +14,7 @@ import type {
 } from '../definitions/types.js';
 import type { GameState } from '../state/types.js';
 import { ModifierStack } from './modifiers.js';
+import { eraFactors } from './era.js';
 
 /**
  * Values derived during a tick and consumed by later systems in the same tick.
@@ -113,6 +114,22 @@ export interface SimulationContext {
  */
 export function rebuildModifiers(context: SimulationContext): void {
   const stack = new ModifierStack();
+
+  // History goes on first, at a priority below anything the player can do, so
+  // research and events compose on top of the era rather than fighting it.
+  // Routing it through the modifier stack rather than through every call site
+  // means allocation, IT power, pricing and the capacity probe all pick up the
+  // decade for free - and the player can see it in the breakdown next to the
+  // technologies they researched.
+  //
+  // Only what a purchase COSTS goes here. Compute and power draw are fixed by
+  // the vintage of each rack group, not by the current year - see the note on
+  // RackGroupState.vintageYear for what putting them here did instead.
+  const era = eraFactors(context);
+  stack.add('era', [
+    { target: 'hardware.purchaseCost', operation: 'multiply', value: era.rackCost, priority: -100 },
+  ]);
+
   for (const techId of context.state.research.completed) {
     const tech = context.registry.all('technologies').get(techId);
     if (tech) stack.add(tech.id, tech.effects);

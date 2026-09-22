@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.circular_hardware",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Circular Hardware",
   "description": "Design-for-repair procurement with resale and recycling routes. Chapter 8: -40% e-waste, improved resale.",
   "branch": "environment",
@@ -40,5 +40,6 @@
       "circular_supply"
     ]
   },
-  "tradeOff": "Sorting and process complexity across every procurement and disposal decision."
+  "tradeOff": "Sorting and process complexity across every procurement and disposal decision.",
+  "availableFromYear": 2020
 }

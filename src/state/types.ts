@@ -99,6 +99,18 @@ export interface RackGroupState {
   condition01: number;
   /** Tick the group was commissioned. */
   installedTick: number;
+  /**
+   * Calendar year this hardware was bought, which fixes what it can do for
+   * the rest of its life.
+   *
+   * A 2006 rack does not get faster because it is now 2020, and - the part
+   * that actually broke a campaign - it does not start drawing four times the
+   * power either. Applying the era curves globally did both: old halls quietly
+   * became uncoolable and the operation collapsed around 2030. Performance and
+   * draw are properties of the metal, so they are read from the curves at the
+   * year the metal was bought.
+   */
+  vintageYear: number;
   /** Racks currently out of service awaiting repair. */
   failedCount: number;
   /** Cumulative energy served, MWh. For depreciation and refresh decisions. */
@@ -258,6 +270,14 @@ export interface ActiveContractState {
 /** One research project under way. */
 export interface ActiveResearchState {
   readonly technologyId: string;
+  /**
+   * The project's total cost, fixed at the year it was started.
+   *
+   * Snapshotted rather than read live: technology costs are written in 2025
+   * dollars and scaled to the era, so reading the scaled figure each day would
+   * move the finish line under a project already running.
+   */
+  readonly budgetUsd: number;
   /** Dollars already spent on it. */
   fundedUsd: number;
   /** Specialists it occupies while it runs. */

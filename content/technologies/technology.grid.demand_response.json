@@ -1,6 +1,6 @@
 {
   "id": "technology.grid.demand_response",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Demand Response",
   "description": "Contracted load reduction sold into the grid operator.",
   "branch": "grid",
@@ -28,5 +28,6 @@
       "demand_response"
     ]
   },
-  "tradeOff": "Committing to curtail means curtailing when called, not when convenient."
+  "tradeOff": "Committing to curtail means curtailing when called, not when convenient.",
+  "availableFromYear": 2015
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.efficiency.virtualization",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Virtualization",
   "description": "Consolidates workloads onto fewer physical servers. Chapter 8: +25% compute per installed fleet.",
   "branch": "efficiency",
@@ -33,5 +33,6 @@
       "consolidation"
     ]
   },
-  "tradeOff": "+10% software complexity, which shows up as maintenance load."
+  "tradeOff": "+10% software complexity, which shows up as maintenance load.",
+  "availableFromYear": 2005
 }

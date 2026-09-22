@@ -112,6 +112,16 @@ export function restoreSave(save: SaveFile, registry: ContentRegistry): LoadResu
   }
   const migrated = migrate(save);
 
+  // Migration 009 marks research projects whose budget the save never stored;
+  // the figure comes from the content, which only exists here.
+  for (const project of migrated.save.state.research?.active ?? []) {
+    const loose = project as unknown as { budgetUsd: number | null };
+    if (loose.budgetUsd === null || loose.budgetUsd === undefined) {
+      const technology = registry.all('technologies').get(project.technologyId);
+      loose.budgetUsd = technology?.research.costUsd ?? 0;
+    }
+  }
+
   const engine = new SimulationEngine(registry, {
     scenarioId: migrated.save.scenarioId,
     campaignSeed: migrated.save.campaignSeed,

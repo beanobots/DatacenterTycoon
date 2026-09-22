@@ -115,8 +115,6 @@ export class AccountingSystem implements ISimulationSystem {
       const served = scratch.servedByContract.get(contract.instanceId) ?? 0;
       const demanded = scratch.demandByContract.get(contract.instanceId) ?? 0;
       if (demanded <= 0 && served <= 0) continue;
-      const definition = context.registry.contract(contract.definitionId, contract.instanceId);
-
       const servedUnitHours = served * tick.hours;
       const demandedUnitHours = demanded * tick.hours;
       contract.servedUnitHours += servedUnitHours;

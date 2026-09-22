@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.chilled_water",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Chilled Water Plant",
   "description": "Central chiller plant with cooling towers and a distribution loop.",
   "branch": "cooling",
@@ -20,5 +20,6 @@
       "cooling.chilled_water"
     ]
   },
-  "tradeOff": "Plant CapEx, pumps, compressors and a standing water demand."
+  "tradeOff": "Plant CapEx, pumps, compressors and a standing water demand.",
+  "availableFromYear": 2006
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.megaproject.regenerative_campus",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Regenerative Campus",
   "description": "Water-positive, carbon-negative, zero-landfill campus operation.",
   "branch": "megaproject",
@@ -55,5 +55,6 @@
       "regenerative"
     ]
   },
-  "tradeOff": "The largest capital and coordination burden in the game, across every environmental system at once."
+  "tradeOff": "The largest capital and coordination burden in the game, across every environmental system at once.",
+  "availableFromYear": 2028
 }

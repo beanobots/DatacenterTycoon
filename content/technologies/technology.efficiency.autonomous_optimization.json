@@ -1,6 +1,6 @@
 {
   "id": "technology.efficiency.autonomous_optimization",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Autonomous Optimization",
   "description": "Closed-loop control of cooling setpoints, fan curves and placement.",
   "branch": "efficiency",
@@ -40,5 +40,6 @@
       "autonomous_control"
     ]
   },
-  "tradeOff": "The control loop becomes something staff supervise rather than understand."
+  "tradeOff": "The control loop becomes something staff supervise rather than understand.",
+  "availableFromYear": 2020
 }

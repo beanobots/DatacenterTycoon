@@ -19,6 +19,7 @@
 import type { SimulationContext } from './context.js';
 import { HALL_BUILD_WEEKS } from './systems/construction.js';
 import { probeCapacity, probeFleet, type BookedDemand } from './capacity.js';
+import { currentRackOutput, groupRackOutput } from './era.js';
 import { RETIREMENT_SHARE_PER_MONTH } from './operator.js';
 import type { HallState, RackGroupState } from '../state/types.js';
 
@@ -131,15 +132,14 @@ export function workloadHeadroom(context: SimulationContext): WorkloadHeadroom[]
 
     // The best rack the operator could buy today for this workload, so the
     // headroom figure comes with a way to raise it.
-    const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
     let bestHardware: string | null = null;
     let unitsPerAddedRack = 0;
     const unlocked = ['hardware.cpu.gen1', ...context.state.research.unlockedHardware];
     for (const hardwareId of [...new Set(unlocked)]) {
       const hardware = context.registry.hardware(hardwareId, 'planning');
       if (!workload.compatibleFamilies.includes(hardware.family)) continue;
-      const units = context.balance.baseRackComputeUnits * hardware.computeFactor
-        * computeModifier * (hardware.workloadAffinity[workload.id] ?? 0);
+      const units = currentRackOutput(context, hardware).computeUnits
+        * (hardware.workloadAffinity[workload.id] ?? 0);
       if (units > unitsPerAddedRack) {
         unitsPerAddedRack = units;
         bestHardware = hardware.name;
@@ -304,24 +304,19 @@ export function projectCapacity(context: SimulationContext, horizonMonths: numbe
     const live = groups.filter((group) => group.count > 0);
     const rackCount = live.reduce((total, group) => total + group.count, 0);
 
-    const powerModifier = context.modifiers.value('hardware.powerDraw', 1);
     let kw = 0;
     for (const group of live) {
-      const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-      kw += group.count * context.balance.baseRackPowerKw * hardware.powerFactor * powerModifier;
+      kw += group.count * groupRackOutput(context, group).powerKw;
     }
 
     // The forecast places this projected book on this projected fleet with the
     // same allocation the live advice uses, so a month predicted to have room
     // and a month that turns out to have room are the same calculation.
-    const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
     const probe = probeFleet(context, live.map((group) => {
-      const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
       return {
         groupId: group.instanceId,
         hardwareId: group.hardwareId,
-        units: group.count * context.balance.baseRackComputeUnits
-          * hardware.computeFactor * computeModifier,
+        units: group.count * groupRackOutput(context, group).computeUnits,
       };
     }), book);
 

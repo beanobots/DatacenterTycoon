@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.air",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Air Cooling",
   "description": "Computer-room air handling: the assumed starting capability.",
   "branch": "cooling",
@@ -18,5 +18,6 @@
       "cooling.basic_air"
     ]
   },
-  "tradeOff": "None. This is where every operator starts."
+  "tradeOff": "None. This is where every operator starts.",
+  "availableFromYear": 1995
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.power.solar",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Solar Deployment",
   "description": "Rooftop and ground-mount photovoltaics. Chapter 8: renewable reputation.",
   "branch": "power",
@@ -28,5 +28,6 @@
       "power.solar_ground"
     ]
   },
-  "tradeOff": "Intermittency and land: the ground array competes with every other use of the site."
+  "tradeOff": "Intermittency and land: the ground array competes with every other use of the site.",
+  "availableFromYear": 2011
 }

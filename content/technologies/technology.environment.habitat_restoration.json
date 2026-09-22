@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.habitat_restoration",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Habitat Restoration",
   "description": "Native planting, wetlands and wildlife corridors on owned land.",
   "branch": "environment",
@@ -33,5 +33,6 @@
       "restoration"
     ]
   },
-  "tradeOff": "Uses land that would otherwise be expansion. Chapter 8: +30 biodiversity, +15 support."
+  "tradeOff": "Uses land that would otherwise be expansion. Chapter 8: +30 biodiversity, +15 support.",
+  "availableFromYear": 2021
 }

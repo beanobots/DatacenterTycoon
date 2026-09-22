@@ -83,3 +83,20 @@ when it is an additive share.
 Targets marked *Reserved* are defined and carried by content but not yet read by
 a system. They validate and resolve; they simply have no effect until the system
 that owns them is built.
+
+
+## The `era` source
+
+`rebuildModifiers` adds one source called `era`, at priority -100 so everything
+else composes on top of it. It contributes only `hardware.purchaseCost`.
+
+It deliberately does NOT contribute `hardware.computePerRack` or
+`hardware.powerDraw`. Those are properties of the metal, fixed at the year a
+rack group was bought and read through `groupRackOutput`; putting them here
+applies them to the whole fleet, which makes a 2006 hall gain compute and
+quadruple its power draw as the decades pass. See the note on
+`RackGroupState.vintageYear`.
+
+A research or event modifier on those two targets still applies fleet-wide, and
+should: a technology that improves what installed machines do is a choice the
+player made, not time passing.

@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.quantum",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Experimental Computing",
   "description": "A quantum research rig operated alongside the production fleet.",
   "branch": "hardware",
@@ -34,5 +34,6 @@
       "hardware.experimental.quantum"
     ]
   },
-  "tradeOff": "A research asset that will not pay for itself on commercial workloads."
+  "tradeOff": "A research asset that will not pay for itself on commercial workloads.",
+  "availableFromYear": 2030
 }

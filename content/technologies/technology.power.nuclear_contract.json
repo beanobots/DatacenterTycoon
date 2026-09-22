@@ -1,6 +1,6 @@
 {
   "id": "technology.power.nuclear_contract",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Utility Nuclear Contract",
   "description": "Firm low-carbon supply from a utility reactor. Chapter 8: firm low-carbon supply.",
   "branch": "power",
@@ -20,5 +20,6 @@
       "power.nuclear_contract"
     ]
   },
-  "tradeOff": "A premium long-term commitment and a public-opinion risk you cannot hedge."
+  "tradeOff": "A premium long-term commitment and a public-opinion risk you cannot hedge.",
+  "availableFromYear": 2023
 }

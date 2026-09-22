@@ -1,6 +1,6 @@
 {
   "id": "technology.network.photonic",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Photonic Interconnect",
   "description": "Co-packaged optics across the compute fabric.",
   "branch": "network",
@@ -34,5 +34,6 @@
       "photonic_fabric"
     ]
   },
-  "tradeOff": "Bleeding-edge supply chain with no second source."
+  "tradeOff": "Bleeding-edge supply chain with no second source.",
+  "availableFromYear": 2027
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.operations.advanced_monitoring",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Advanced Monitoring",
   "description": "Hall-level analytics tying thermal, power and workload telemetry together.",
   "branch": "operations",
@@ -33,5 +33,6 @@
       "hall_analytics"
     ]
   },
-  "tradeOff": "Another integration surface to keep current."
+  "tradeOff": "Another integration surface to keep current.",
+  "availableFromYear": 2014
 }

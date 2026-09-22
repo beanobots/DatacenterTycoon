@@ -71,10 +71,10 @@ export interface GridProfile {
   readonly hourlyOutageProbability: number;
   /** Mean outage length, hours. */
   readonly meanOutageHours: number;
-  /** Annual real price drift, e.g. 0.01 for +1%/year. */
-  readonly annualPriceDrift: number;
-  /** Annual change in grid carbon intensity, e.g. -0.03 for -3%/year. */
-  readonly annualCarbonDrift: number;
+  // Price and carbon no longer drift at an annual rate. Each region carries a
+  // dated trajectory instead - see `RegionDefinition.trajectory` - because a
+  // compounding rate can only draw a smooth exponential, and the decades this
+  // game spans were not smooth.
 }
 
 export interface WaterProfile {
@@ -157,6 +157,11 @@ export interface RegionDefinition extends DefinitionBase {
   readonly policy: PolicyProfile;
   /** Capacity factor by power source ID, 0-1. Solar in a desert beats solar in the north. */
   readonly resourceQuality: Readonly<Record<string, number>>;
+  /** Historical and projected grid conditions, at anchor years. */
+  readonly trajectory: {
+    readonly gridCarbonKgPerMwh: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly energyPricePerMwh: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -375,6 +380,8 @@ export interface TechnologyDefinition extends DefinitionBase {
   readonly unlocks: TechnologyUnlocks;
   /** Plain-language trade-off, shown in the research UI and reports. */
   readonly tradeOff: string;
+  /** Calendar year this technology first becomes researchable. */
+  readonly availableFromYear: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -386,6 +393,12 @@ export type EventClass = 'operational' | 'environmental' | 'commercial' | 'polit
 export interface EventTrigger {
   /** Base probability per day of firing when conditions hold. */
   readonly dailyProbability: number;
+  /**
+   * Fires once when the simulation passes this date, ignoring probability.
+   * For events that are history rather than hazard: the 2008 crash did not
+   * have a daily chance of happening.
+   */
+  readonly scheduledDate?: string;
   readonly minimumYear: number;
   /** Hazard key from the region's hazard profile that scales the probability. */
   readonly hazardKey?: keyof HazardProfile;
@@ -521,6 +534,22 @@ export interface BalanceProfileDefinition extends DefinitionBase {
   readonly heatSaleRevenuePerMwh: number;
   /** Insurance, annual share of asset value. */
   readonly annualInsurance01: number;
+  /**
+   * How the industry moves across the campaign window, as multipliers on the
+   * base values above. Every curve is 1.0 in 2025, the year the rest of this
+   * profile is tuned for.
+   */
+  /** Global level for what compute sells for; archetypes hold the ratios. */
+  readonly contractPriceScale: number;
+  readonly era: {
+    readonly computePerRack: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly revenuePerComputeUnit: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly rackPowerKw: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly rackCost: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly demandIndex: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly offerCountIndex: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+    readonly costIndex: ReadonlyArray<{ readonly year: number; readonly value: number }>;
+  };
 }
 
 // ---------------------------------------------------------------------------

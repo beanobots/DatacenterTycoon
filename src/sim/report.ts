@@ -11,6 +11,7 @@ import { round, safeDivide } from '../core/math.js';
 import type { PeriodAccumulator } from '../state/types.js';
 import { totalCost, totalRevenue } from '../state/types.js';
 import type { SimulationContext } from './context.js';
+import { groupRackOutput } from './era.js';
 
 export interface AnnualReport {
   readonly year: number;
@@ -184,8 +185,7 @@ export function installedItMw(context: SimulationContext): number {
     for (const hall of facility.halls) {
       if (hall.constructionProgress01 < 1) continue;
       for (const group of hall.rackGroups) {
-        const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-        kw += group.count * context.balance.baseRackPowerKw * hardware.powerFactor;
+        kw += group.count * groupRackOutput(context, group).powerKw;
       }
     }
   }

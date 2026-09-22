@@ -1,6 +1,6 @@
 {
   "id": "technology.power.hydrogen",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Hydrogen-Ready Generation",
   "description": "Firm backup generation running on hydrogen or a blend.",
   "branch": "power",
@@ -21,5 +21,6 @@
       "power.hydrogen_generator"
     ]
   },
-  "tradeOff": "Fuel sourcing decides whether this is clean at all; storage and conversion lose energy either way."
+  "tradeOff": "Fuel sourcing decides whether this is clean at all; storage and conversion lose energy either way.",
+  "availableFromYear": 2022
 }

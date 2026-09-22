@@ -1,6 +1,6 @@
 {
   "id": "technology.efficiency.energy_analytics",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Energy Analytics",
   "description": "Sub-metered energy accounting across IT, cooling and losses.",
   "branch": "efficiency",
@@ -27,5 +27,6 @@
       "energy_reporting"
     ]
   },
-  "tradeOff": "Reporting obligations you cannot walk back once published."
+  "tradeOff": "Reporting obligations you cannot walk back once published.",
+  "availableFromYear": 2008
 }

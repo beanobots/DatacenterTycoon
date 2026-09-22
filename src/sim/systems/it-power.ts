@@ -10,6 +10,7 @@
 import type { SimulationTick } from '../../core/clock.js';
 import { assertFinite, clamp01 } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
+import { groupRackOutput } from '../era.js';
 
 /**
  * Share of full power a rack draws at zero utilisation. Real servers are far
@@ -24,8 +25,6 @@ export class ItPowerSystem implements ISimulationSystem {
   readonly order = 50;
 
   tick(_tick: SimulationTick, context: SimulationContext): void {
-    const balance = context.balance;
-    const powerModifier = context.modifiers.value('hardware.powerDraw', 1);
     const heatModifier = context.modifiers.value('hardware.heatOutput', 1);
 
     let serverKw = 0;
@@ -44,7 +43,7 @@ export class ItPowerSystem implements ISimulationSystem {
           // is the whole reason reserved capacity is cheap to host.
           const utilization = clamp01(context.scratch.activeUtilizationByGroup.get(group.instanceId) ?? 0);
           const loadShare = IDLE_POWER_SHARE + (1 - IDLE_POWER_SHARE) * utilization;
-          const ratedKw = workingRacks * balance.baseRackPowerKw * hardware.powerFactor * powerModifier;
+          const ratedKw = workingRacks * groupRackOutput(context, group).powerKw;
           const groupKw = ratedKw * loadShare;
 
           serverKw += groupKw;

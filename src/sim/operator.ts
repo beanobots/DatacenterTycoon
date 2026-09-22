@@ -14,10 +14,11 @@
 import type { SimulationTick } from '../core/clock.js';
 import { clamp01 } from '../core/math.js';
 import type { ISimulationSystem, SimulationContext } from './context.js';
-import { canStartResearch, startResearch } from './systems/research.js';
+import { canStartResearch, researchCostUsd, startResearch } from './systems/research.js';
 import { CRITICAL_TRUST } from './systems/community.js';
 import { installedItMw } from './report.js';
 import { probeCapacity } from './capacity.js';
+import { currentRackOutput, eraFactors, fractionalYear, groupRackOutput } from './era.js';
 import { thermalOutlook } from './thermal-outlook.js';
 import type { CoolingTechnologyDefinition, HardwareDefinition } from '../definitions/types.js';
 import { emptyShortfall } from '../state/types.js';
@@ -73,8 +74,6 @@ const MIN_OPENING_HALL_RACKS = 60;
 const MAX_HALL_SHARE_OF_BUDGET = 0.6;
 /** The opening hall. Small enough to leave capital for racks and contracts. */
 const OPENING_HALL_RACKS = 120;
-/** Capacity held above committed demand, so an SLA has somewhere to fail over. */
-const CAPACITY_HEADROOM = 1.15;
 /** Racks ordered in any one month. Procurement is not instantaneous. */
 const RACK_ORDER_LIMIT = 60;
 /** Share of an over-age rack group retired each month. */
@@ -87,6 +86,14 @@ export const RETIREMENT_SHARE_PER_MONTH = 0.25;
 const EXIT_REPUTATION_CLASS: Record<string, number> = {
   low: 0.6, medium: 1.0, high: 1.5, extreme: 2.4,
 };
+
+/**
+ * Share of visible unserved demand the operator will build for before it has
+ * won the work. Building for all of it fills the site with empty hall;
+ * building for none of it is the trap that stopped the operator growing at
+ * all once it learned not to oversell.
+ */
+const SPECULATIVE_BUILD_SHARE = 0.6;
 
 /** Share of a power asset's original capital recovered on decommissioning. */
 const POWER_SALVAGE_SHARE = 0.18;
@@ -175,8 +182,8 @@ export class OperatorSystem implements ISimulationSystem {
     // whole capacity: an interconnection agreement is paid for by the megawatt,
     // and 60 MW of it serving a 1 MW hall is the most expensive idle asset an
     // operator can own. `investInPower` grows it as the load does.
-    const openingMw = Math.max(2, (hall?.rackCapacity ?? OPENING_HALL_RACKS)
-      * context.balance.baseRackPowerKw / 1000 * 1.8);
+    const openingMw = Math.max(0.5, (hall?.rackCapacity ?? OPENING_HALL_RACKS)
+      * context.balance.baseRackPowerKw * eraFactors(context).rackPowerKw / 1000 * 1.8);
     this.buildPower(context, 'power.grid', Math.min(openingMw, context.region.grid.capacityMw), true);
     this.buildPower(context, 'power.diesel_backup', Math.max(1, openingMw * 0.3), true);
 
@@ -383,7 +390,7 @@ export class OperatorSystem implements ISimulationSystem {
       const available = [...context.registry.all('technologies').values()]
         .filter((tech) => canStartResearch(context, tech.id))
         // Only take on what a year of free capital could actually fund.
-        .filter((tech) => tech.research.costUsd <= budget * RESEARCH_BUDGET_SHARE * 12)
+        .filter((tech) => researchCostUsd(context, tech) <= budget * RESEARCH_BUDGET_SHARE * 12)
         .sort((a, b) => {
           const priorityA = this.strategy.researchPriority.indexOf(a.branch);
           const priorityB = this.strategy.researchPriority.indexOf(b.branch);
@@ -479,6 +486,28 @@ export class OperatorSystem implements ISimulationSystem {
     });
   }
 
+  /**
+   * Contracted units of work currently offered for this workload that the
+   * fleet has no room for.
+   *
+   * Measured against the same capacity probe the signing decision uses, so
+   * the operator builds for demand it would actually be able to win rather
+   * than for every line on the market.
+   */
+  private unservedOpportunity(context: SimulationContext, workloadId: string): number {
+    const state = context.state;
+    const free = probeCapacity(context).forWorkload(workloadId).freeContractUnits;
+    let wanted = 0;
+    for (const offer of state.contractOffers) {
+      const definition = context.registry.contract(offer.definitionId, offer.instanceId);
+      if (definition.workloadId !== workloadId) continue;
+      if (definition.minimumReputation > state.company.reputation) continue;
+      if (!definition.requiredTechnologies.every((id) => state.research.completed.includes(id))) continue;
+      wanted += offer.computeUnits;
+    }
+    return Math.max(0, wanted - free);
+  }
+
   /** True when some installed hardware family can serve this workload. */
   private canServe(context: SimulationContext, workloadId: string): boolean {
     const workload = context.registry.workload(workloadId);
@@ -499,8 +528,7 @@ export class OperatorSystem implements ISimulationSystem {
     for (const facility of context.state.facilities) {
       for (const hall of facility.halls) {
         for (const group of hall.rackGroups) {
-          const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-          installed += group.count * context.balance.baseRackComputeUnits * hardware.computeFactor;
+          installed += group.count * groupRackOutput(context, group).computeUnits;
         }
       }
     }
@@ -535,18 +563,35 @@ export class OperatorSystem implements ISimulationSystem {
 
     const rackCost = context.balance.baseRackPurchaseCost * hardware.purchaseFactor
       * context.modifiers.value('hardware.purchaseCost', 1);
-    const unitsPerRack = context.balance.baseRackComputeUnits * hardware.computeFactor
-      * context.modifiers.value('hardware.computePerRack', 1) * affinity;
+    const unitsPerRack = currentRackOutput(context, hardware).computeUnits * affinity;
     if (unitsPerRack <= 0) return;
 
     const deficit = this.reservedUnits(context, target) / WORKLOAD_CAPACITY_MARGIN
       - this.servableUnits(context, target);
+
+    // Work on the table that the fleet cannot take.
+    //
+    // Without this the operator never grows. The deficit above is measured
+    // against what it has already SOLD, and it will not sell beyond what it
+    // can serve - so the deficit sits at zero for ever and the only racks it
+    // ever buys are replacements for the ones wearing out. Real growth comes
+    // from building for demand you have not signed yet, which is the whole
+    // bet a data centre operator makes.
+    const opportunity = this.unservedOpportunity(context, target);
     // Replacement is not netted against the deficit. The deficit is measured
     // for ONE workload, so a surplus there would otherwise cancel the whole
     // fleet's replacement need and the operator would watch its racks retire
     // without ordering any.
     const replacement = this.racksNearingRetirement(context);
-    const racksWanted = Math.max(Math.ceil(deficit / unitsPerRack), Math.ceil(replacement));
+    // Only a share of the visible opportunity, and weighted by appetite: an
+    // operator that builds for every offer it can see builds a lot of empty
+    // hall.
+    const speculative = opportunity * SPECULATIVE_BUILD_SHARE
+      * (0.5 + this.strategy.capexAppetite01);
+    const racksWanted = Math.max(
+      Math.ceil((deficit + speculative) / unitsPerRack),
+      Math.ceil(replacement),
+    );
     if (racksWanted <= 0) return;
 
     // Fill existing halls first: racks are cheaper than shells, they commission
@@ -641,9 +686,7 @@ export class OperatorSystem implements ISimulationSystem {
         // plant in the catalogue to cool racks that never needed it.
         const throttling = hall.throttle01 > 0.02;
         const energyGain = current.energyFactor / best.energyFactor;
-        const plannedRackKw = context.balance.baseRackPowerKw
-          * this.chooseHardware(context).powerFactor
-          * context.modifiers.value('hardware.powerDraw', 1);
+        const plannedRackKw = currentRackOutput(context, this.chooseHardware(context)).powerKw;
         const densityNeeded = plannedRackKw > current.densityKwPerRack;
         // A hall that runs out of cooling for part of the year caps what the
         // whole fleet can promise, and it does that whether or not it happens
@@ -690,9 +733,12 @@ export class OperatorSystem implements ISimulationSystem {
    */
   private designRackKw(context: SimulationContext, cooling: CoolingTechnologyDefinition): number {
     const hardware = this.chooseHardware(context);
-    const rackKw = context.balance.baseRackPowerKw * hardware.powerFactor
-      * context.modifiers.value('hardware.powerDraw', 1);
-    return Math.min(cooling.densityKwPerRack, Math.max(rackKw, context.balance.baseRackPowerKw));
+    const rackKw = currentRackOutput(context, hardware).powerKw;
+    // The floor is a rack of this era, not of 2025: a hall built in 2006 is
+    // not plumbed for a load that will not exist for twenty years.
+    const floorKw = context.balance.baseRackPowerKw
+      * eraFactors(context).rackPowerKw;
+    return Math.min(cooling.densityKwPerRack, Math.max(rackKw, floorKw));
   }
 
   private hallCost(context: SimulationContext, racks: number, cooling?: CoolingTechnologyDefinition): number {
@@ -757,13 +803,10 @@ export class OperatorSystem implements ISimulationSystem {
    */
   private requiredCoolingKw(context: SimulationContext, hall: HallState): number {
     const cooling = context.registry.cooling(hall.coolingId, hall.instanceId);
-    const powerModifier = context.modifiers.value('hardware.powerDraw', 1);
     let installedKw = 0;
     let installedRacks = 0;
     for (const group of hall.rackGroups) {
-      const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-      const rackKw = Math.min(cooling.densityKwPerRack,
-        context.balance.baseRackPowerKw * hardware.powerFactor * powerModifier);
+      const rackKw = Math.min(cooling.densityKwPerRack, groupRackOutput(context, group).powerKw);
       installedKw += group.count * rackKw;
       installedRacks += group.count;
     }
@@ -815,6 +858,7 @@ export class OperatorSystem implements ISimulationSystem {
       count,
       condition01: 1,
       installedTick: state.meta.tickIndex,
+      vintageYear: fractionalYear(context),
       failedCount: 0,
       lifetimeItMwh: 0,
     });
@@ -1309,7 +1353,6 @@ export class OperatorSystem implements ISimulationSystem {
   /** Compute units the installed fleet can deliver for one workload. */
   private servableUnits(context: SimulationContext, workloadId: string): number {
     const workload = context.registry.workload(workloadId, 'operator');
-    const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
     let units = 0;
     for (const facility of context.state.facilities) {
       for (const hall of facility.halls) {
@@ -1317,8 +1360,7 @@ export class OperatorSystem implements ISimulationSystem {
           const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
           if (!workload.compatibleFamilies.includes(hardware.family)) continue;
           const affinity = hardware.workloadAffinity[workloadId] ?? 0;
-          units += group.count * context.balance.baseRackComputeUnits
-            * hardware.computeFactor * computeModifier * affinity;
+          units += group.count * groupRackOutput(context, group).computeUnits * affinity;
         }
       }
     }
@@ -1336,8 +1378,6 @@ export class OperatorSystem implements ISimulationSystem {
     const coolingDensity = this.chooseCooling(context).densityKwPerRack
       * context.modifiers.value('cooling.densityKwPerRack', 1);
     const energyPrice = context.region.grid.basePricePerMwh * context.state.world.market.priceDriftFactor;
-    const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
-    const powerModifier = context.modifiers.value('hardware.powerDraw', 1);
     const purchaseModifier = context.modifiers.value('hardware.purchaseCost', 1);
 
     const unlocked = ['hardware.cpu.gen1', ...context.state.research.unlockedHardware];
@@ -1350,11 +1390,12 @@ export class OperatorSystem implements ISimulationSystem {
         const affinity = hardware.workloadAffinity[workloadId] ?? 0;
         if (affinity <= 0) return { hardware, score: Number.NEGATIVE_INFINITY };
 
-        const unitsPerRack = balance.baseRackComputeUnits * hardware.computeFactor * computeModifier * affinity;
+        const output = currentRackOutput(context, hardware);
+        const unitsPerRack = output.computeUnits * affinity;
         const annualRevenue = unitsPerRack * price * 8766;
 
         const purchase = balance.baseRackPurchaseCost * hardware.purchaseFactor * purchaseModifier;
-        const rackKw = balance.baseRackPowerKw * hardware.powerFactor * powerModifier;
+        const rackKw = output.powerKw;
         // Energy at an assumed PUE of 1.4 and the workload's mean utilisation,
         // since reserved capacity that is idle still draws its idle share.
         const dutyCycle = 0.45 + 0.55 * workload.meanUtilization01;

@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.refurbishment",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Refurbishment Program",
   "description": "In-house test, repair and re-deployment of retired servers.",
   "branch": "environment",
@@ -27,5 +27,6 @@
       "hardware.cpu.refurbished"
     ]
   },
-  "tradeOff": "Second-life hardware fails more often and draws more power for the same work."
+  "tradeOff": "Second-life hardware fails more often and draws more power for the same work.",
+  "availableFromYear": 2010
 }

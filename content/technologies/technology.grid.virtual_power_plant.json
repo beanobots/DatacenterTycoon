@@ -1,6 +1,6 @@
 {
   "id": "technology.grid.virtual_power_plant",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Virtual Power Plant",
   "description": "Aggregated storage and flexible load bid as a grid resource. Chapter 8: grid-service revenue, trust bonus.",
   "branch": "grid",
@@ -41,5 +41,6 @@
       "vpp"
     ]
   },
-  "tradeOff": "Operational complexity: the facility now has grid obligations as well as customer ones."
+  "tradeOff": "Operational complexity: the facility now has grid obligations as well as customer ones.",
+  "availableFromYear": 2022
 }

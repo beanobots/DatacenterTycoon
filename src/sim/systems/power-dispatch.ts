@@ -20,6 +20,7 @@ import { assertFinite, clamp, clamp01 } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
 import type { PowerAssetState } from '../../state/types.js';
 import { evaluateCooling } from '../cooling-model.js';
+import { groupRackOutput } from '../era.js';
 
 /**
  * Floor on the maintenance term of the cooling capacity formula. Neglect and
@@ -181,9 +182,8 @@ export class PowerDispatchSystem implements ISimulationSystem {
         if (hall.constructionProgress01 < 1) continue;
         let kw = 0;
         for (const group of hall.rackGroups) {
-          const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
           kw += Math.max(0, group.count - group.failedCount)
-            * context.balance.baseRackPowerKw * hardware.powerFactor;
+            * groupRackOutput(context, group).powerKw;
         }
         hallKw.set(hall.instanceId, kw);
         total += kw;

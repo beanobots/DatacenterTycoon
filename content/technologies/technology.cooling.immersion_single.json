@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.immersion_single",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Single-Phase Immersion",
   "description": "Racks submerged in dielectric fluid. Chapter 8: -50% cooling power, 120-140kW racks.",
   "branch": "cooling",
@@ -33,5 +33,6 @@
       "cooling.immersion_single"
     ]
   },
-  "tradeOff": "+40% CapEx and a servicing model your staff have to be retrained for."
+  "tradeOff": "+40% CapEx and a servicing model your staff have to be retrained for.",
+  "availableFromYear": 2014
 }

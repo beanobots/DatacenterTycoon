@@ -1,6 +1,6 @@
 {
   "id": "region.nordic_cold",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Nordic Cold Coast",
   "description": "A cold northern site on a low-carbon hydro grid. Free cooling most of the year, abundant water, a district-heat customer next door, and a long haul to the demand centres.",
   "archetype": "cold",
@@ -122,9 +122,7 @@
       1.031
     ],
     "hourlyOutageProbability": 0.00012,
-    "meanOutageHours": 1.8,
-    "annualPriceDrift": 0.008,
-    "annualCarbonDrift": -0.02
+    "meanOutageHours": 1.8
   },
   "water": {
     "annualWithdrawalLimitM3": 3000000,
@@ -183,5 +181,79 @@
     "power.smr": 0.93,
     "power.grid": 1,
     "power.battery": 1
+  },
+  "trajectory": {
+    "gridCarbonKgPerMwh": [
+      {
+        "year": 2006,
+        "value": 62
+      },
+      {
+        "year": 2010,
+        "value": 56
+      },
+      {
+        "year": 2015,
+        "value": 47
+      },
+      {
+        "year": 2020,
+        "value": 41
+      },
+      {
+        "year": 2025,
+        "value": 38
+      },
+      {
+        "year": 2030,
+        "value": 26
+      },
+      {
+        "year": 2036,
+        "value": 18
+      }
+    ],
+    "energyPricePerMwh": [
+      {
+        "year": 2006,
+        "value": 36
+      },
+      {
+        "year": 2008,
+        "value": 48
+      },
+      {
+        "year": 2012,
+        "value": 34
+      },
+      {
+        "year": 2016,
+        "value": 30
+      },
+      {
+        "year": 2020,
+        "value": 29
+      },
+      {
+        "year": 2022,
+        "value": 92
+      },
+      {
+        "year": 2024,
+        "value": 52
+      },
+      {
+        "year": 2025,
+        "value": 44
+      },
+      {
+        "year": 2030,
+        "value": 46
+      },
+      {
+        "year": 2036,
+        "value": 50
+      }
+    ]
   }
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.waste_tracking",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Waste Tracking",
   "description": "Mass-balance tracking of every waste stream.",
   "branch": "environment",
@@ -27,5 +27,6 @@
       "waste_ledger"
     ]
   },
-  "tradeOff": "Chain-of-custody paperwork on every pallet that leaves the site."
+  "tradeOff": "Chain-of-custody paperwork on every pallet that leaves the site.",
+  "availableFromYear": 2007
 }

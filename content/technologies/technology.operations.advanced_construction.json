@@ -1,6 +1,6 @@
 {
   "id": "technology.operations.advanced_construction",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Advanced Construction",
   "description": "Prefabricated modular halls and plant skids.",
   "branch": "operations",
@@ -33,5 +33,6 @@
       "modular_build"
     ]
   },
-  "tradeOff": "Modular standardisation limits how far any one hall can be optimised."
+  "tradeOff": "Modular standardisation limits how far any one hall can be optimised.",
+  "availableFromYear": 2016
 }

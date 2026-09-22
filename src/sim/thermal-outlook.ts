@@ -19,6 +19,7 @@ import { evaluateCooling } from './cooling-model.js';
 import { PEAK_HOUR, wetBulbC } from './systems/weather.js';
 import type { SimulationContext } from './context.js';
 import type { HallState } from '../state/types.js';
+import { groupRackOutput } from './era.js';
 
 /**
  * Warm-day allowance on the hottest month's mean, in standard deviations of
@@ -81,45 +82,13 @@ function designDay(context: SimulationContext): DesignDay {
   };
 }
 
-/**
- * The share of its load this hall would shed on the design day, 0-1.
- *
- * Runs the real cooling model against the hall's own installed density, so a
- * hall that has been retrofitted stops being penalised the moment the plant can
- * carry the heat.
- */
-function designDayThrottle(context: SimulationContext, hall: HallState): number {
-  if (hall.constructionProgress01 < 1) return 0;
-
-  const powerModifier = context.modifiers.value('hardware.powerDraw', 1);
-  let itKw = 0;
-  for (const group of hall.rackGroups) {
-    const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-    itKw += group.count * context.balance.baseRackPowerKw * hardware.powerFactor * powerModifier;
-  }
-  if (itKw <= 0) return 0;
-
-  const facility = context.state.facilities
-    .find((candidate) => candidate.halls.some((h) => h.instanceId === hall.instanceId));
-  const complexity = Math.max(1, context.modifiers.value('facility.maintenanceComplexity', 1));
-  const maintenance01 = clamp(
-    clamp01(1 - (facility?.maintenanceBacklog ?? 0) * 0.02) / complexity,
-    MIN_MAINTENANCE_QUALITY, 1,
-  );
-
-  const conditions = designDay(context);
-  return throttleFor(context, hall, conditions.dryBulbC, conditions.wetBulbC);
-}
-
 /** Load a hall sheds at given conditions, through the real cooling model. */
 function throttleFor(
   context: SimulationContext, hall: HallState, dryBulbC: number, wetBulbC_: number,
 ): number {
-  const powerModifier = context.modifiers.value('hardware.powerDraw', 1);
   let itKw = 0;
   for (const group of hall.rackGroups) {
-    const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
-    itKw += group.count * context.balance.baseRackPowerKw * hardware.powerFactor * powerModifier;
+    itKw += group.count * groupRackOutput(context, group).powerKw;
   }
   if (itKw <= 0) return 0;
 

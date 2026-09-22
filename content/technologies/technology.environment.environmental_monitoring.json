@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.environmental_monitoring",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Environmental Monitoring",
   "description": "Water, noise, discharge and air-quality instrumentation.",
   "branch": "environment",
@@ -20,5 +20,6 @@
       "env_telemetry"
     ]
   },
-  "tradeOff": "Measuring an impact starts the clock on being asked about it."
+  "tradeOff": "Measuring an impact starts the clock on being asked about it.",
+  "availableFromYear": 2006
 }

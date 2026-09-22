@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.carbon_reporting",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Carbon Reporting",
   "description": "Hourly carbon accounting across scope 1 and 2.",
   "branch": "environment",
@@ -27,5 +27,6 @@
       "carbon_ledger"
     ]
   },
-  "tradeOff": "Publishing the number makes it something you can be held to."
+  "tradeOff": "Publishing the number makes it something you can be held to.",
+  "availableFromYear": 2010
 }

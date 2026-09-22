@@ -1,6 +1,6 @@
 {
   "id": "technology.operations.rack_monitoring",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Rack Monitoring",
   "description": "Per-rack power and inlet-temperature telemetry.",
   "branch": "operations",
@@ -27,5 +27,6 @@
       "telemetry"
     ]
   },
-  "tradeOff": "Sensor estate to maintain and secure."
+  "tradeOff": "Sensor estate to maintain and secure.",
+  "availableFromYear": 2006
 }

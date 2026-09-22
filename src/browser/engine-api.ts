@@ -19,6 +19,7 @@ import {
 import { freeSpecialists, totalSpecialists } from '../sim/systems/research.js';
 import { SHORTFALL_LABEL, SHORTFALL_REMEDY } from '../sim/systems/sla.js';
 import { thermalOutlook } from '../sim/thermal-outlook.js';
+import { fractionalYear, groupRackOutput } from '../sim/era.js';
 import { createSave, restoreSave, type SaveFile } from '../save/save.js';
 import {
   commissioningSchedule, projectCapacity, workloadHeadroom,
@@ -39,6 +40,8 @@ export interface ScenarioSummary {
   readonly regionName: string;
   readonly archetype: string;
   readonly durationYears: number;
+  /** Calendar year the campaign opens in; each site has its own era. */
+  readonly startYear: number;
   readonly difficulty: string;
   readonly targetCapacityMw: number;
   readonly minimumAvailability01: number;
@@ -93,6 +96,7 @@ function describeScenarios(): ScenarioSummary[] {
       regionName: region.name,
       archetype: region.archetype,
       durationYears: scenario.durationYears,
+      startYear: new Date(scenario.startDate).getUTCFullYear(),
       difficulty: scenario.difficulty,
       targetCapacityMw: scenario.targetCapacityMw,
       minimumAvailability01: scenario.minimumAvailability01,
@@ -199,6 +203,8 @@ export interface Dashboard {
 
 export interface CampaignRun {
   readonly totalYears: number;
+  /** Simulated date right now, ISO. The page must not assume a start year. */
+  dateIso(): string;
   readonly totalTicks: number;
   remainingTicks(): number;
   /** Advances one simulated month and reports what happened. */
@@ -258,6 +264,23 @@ export interface FleetSummary {
     readonly thermalCeilingC: number | null;
     /** Hours a year this site spends above that. */
     readonly hoursAboveCeiling: number;
+    /**
+     * Every rack group on this hall's floor, in install order, so the page can
+     * draw the room rather than summarise it.
+     */
+    readonly groups: ReadonlyArray<{
+      readonly id: string;
+      readonly hardware: string;
+      readonly family: string;
+      readonly count: number;
+      readonly failed: number;
+      readonly condition01: number;
+      /** Year this hardware was bought; old kit is the thing to look for. */
+      readonly vintageYear: number;
+      readonly ageYears: number;
+      readonly lifeYears: number;
+      readonly kwPerRack: number;
+    }>;
   }>;
   readonly hardware: ReadonlyArray<{ readonly name: string; readonly racks: number }>;
   readonly power: ReadonlyArray<{ readonly name: string; readonly capacityMw: number; readonly clean: boolean }>;
@@ -507,9 +530,18 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
   return {
     totalYears: years,
     totalTicks,
+    dateIso: () => engine.state.meta.gameTimeIso,
     remainingTicks: () => Math.max(0, totalTicks - ticksRun),
     advanceMonth: () => advance(ticksPerMonth),
-    advanceYear: () => advance(ticksPerYear),
+    // To the calendar boundary, not a fixed 365.25 days: in a leap year the
+    // fixed count stops a day short and the player's year-end report does not
+    // arrive until the turn after.
+    advanceYear: () => {
+      const from = new Date(engine.state.meta.gameTimeIso);
+      const target = Date.UTC(from.getUTCFullYear() + 1, 0, 1);
+      const days = (target - from.getTime()) / (1000 * 60 * 60 * 24);
+      return advance(Math.max(1, Math.round(engine.clock.ticksForDays(days))));
+    },
     actions: () => enumerateActions(context, operator),
     act: (actionId, quantity) => applyAction(context, operator, actionId, quantity),
     autopilot: () => operator.autopilotState(),
@@ -549,8 +581,7 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
         itCapacityMw: halls.reduce((mw, hall) => {
           if (hall.constructionProgress01 < 1) return mw;
           return mw + hall.rackGroups.reduce((kw, group) => kw + group.count
-            * context.balance.baseRackPowerKw
-            * registry.hardware(group.hardwareId, group.instanceId).powerFactor, 0) / 1000;
+            * groupRackOutput(context, group).powerKw, 0) / 1000;
         }, 0),
         rackCount: halls.reduce((total, hall) =>
           total + hall.rackGroups.reduce((n, group) => n + group.count, 0), 0),
@@ -607,8 +638,7 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
           itCapacityMw: engine.state.facilities.flatMap((f) => f.halls)
             .filter((hall) => hall.constructionProgress01 >= 1)
             .reduce((mw, hall) => mw + hall.rackGroups.reduce((kw, group) => kw + group.count
-              * context.balance.baseRackPowerKw
-              * registry.hardware(group.hardwareId, group.instanceId).powerFactor, 0) / 1000, 0),
+              * groupRackOutput(context, group).powerKw, 0) / 1000, 0),
           cash: engine.state.company.cash,
           contracts: engine.state.contracts.length,
           rating: latest ? latest.rating : null,
@@ -619,6 +649,7 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
       };
     },
     fleet(): FleetSummary {
+      const now = fractionalYear(context);
       const hardware = new Map<string, number>();
       const halls = [];
       for (const facility of engine.state.facilities) {
@@ -639,6 +670,22 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
             throttle01: hall.throttle01,
             condition01: hall.condition01,
             underConstruction: hall.constructionProgress01 < 1,
+            groups: hall.rackGroups.map((group) => {
+              const definition = registry.hardware(group.hardwareId, group.instanceId);
+              const vintage = group.vintageYear ?? now;
+              return {
+                id: group.instanceId,
+                hardware: definition.name,
+                family: definition.family,
+                count: group.count,
+                failed: group.failedCount,
+                condition01: group.condition01,
+                vintageYear: vintage,
+                ageYears: Math.max(0, now - vintage),
+                lifeYears: definition.lifeYears,
+                kwPerRack: groupRackOutput(context, group).powerKw,
+              };
+            }),
             summerShed01: outlook.shedOnHotAfternoon01,
             thermalCeilingC: Number.isFinite(outlook.ceilingC) ? outlook.ceilingC : null,
             hoursAboveCeiling: outlook.hoursAbovePerYear,

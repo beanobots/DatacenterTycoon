@@ -1,6 +1,6 @@
 {
   "id": "region.desert_southwest",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Desert Southwest",
   "description": "A hot arid basin outside a growing desert city. Superb solar, severe water stress, gas-heavy evenings and an AI demand centre within reach.",
   "archetype": "desert",
@@ -122,9 +122,7 @@
       1.439
     ],
     "hourlyOutageProbability": 0.00035,
-    "meanOutageHours": 2.5,
-    "annualPriceDrift": 0.012,
-    "annualCarbonDrift": -0.028
+    "meanOutageHours": 2.5
   },
   "water": {
     "annualWithdrawalLimitM3": 420000,
@@ -183,5 +181,79 @@
     "power.smr": 0.92,
     "power.grid": 1,
     "power.battery": 1
+  },
+  "trajectory": {
+    "gridCarbonKgPerMwh": [
+      {
+        "year": 2006,
+        "value": 560
+      },
+      {
+        "year": 2010,
+        "value": 530
+      },
+      {
+        "year": 2015,
+        "value": 470
+      },
+      {
+        "year": 2020,
+        "value": 410
+      },
+      {
+        "year": 2025,
+        "value": 385
+      },
+      {
+        "year": 2030,
+        "value": 250
+      },
+      {
+        "year": 2036,
+        "value": 140
+      }
+    ],
+    "energyPricePerMwh": [
+      {
+        "year": 2006,
+        "value": 48
+      },
+      {
+        "year": 2008,
+        "value": 66
+      },
+      {
+        "year": 2012,
+        "value": 46
+      },
+      {
+        "year": 2016,
+        "value": 42
+      },
+      {
+        "year": 2020,
+        "value": 44
+      },
+      {
+        "year": 2022,
+        "value": 96
+      },
+      {
+        "year": 2024,
+        "value": 70
+      },
+      {
+        "year": 2025,
+        "value": 62
+      },
+      {
+        "year": 2030,
+        "value": 58
+      },
+      {
+        "year": 2036,
+        "value": 60
+      }
+    ]
   }
 }

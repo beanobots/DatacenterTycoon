@@ -1,6 +1,6 @@
 {
   "id": "technology.security.ai_response",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "AI Threat Response",
   "description": "Automated detection and containment of live intrusions.",
   "branch": "security",
@@ -28,5 +28,6 @@
       "auto_response"
     ]
   },
-  "tradeOff": "Automated containment will occasionally contain something that was working."
+  "tradeOff": "Automated containment will occasionally contain something that was working.",
+  "availableFromYear": 2019
 }

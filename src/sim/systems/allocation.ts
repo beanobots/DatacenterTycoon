@@ -21,6 +21,7 @@ import type { SimulationTick } from '../../core/clock.js';
 import { clamp01 } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
 import type { HallState, RackGroupState, ShortfallCause } from '../../state/types.js';
+import { groupRackOutput } from '../era.js';
 
 interface CapacitySlot {
   readonly groupId: string;
@@ -162,17 +163,15 @@ export class AllocationSystem implements ISimulationSystem {
   /** Compute units each rack group can deliver this tick. */
   private buildCapacity(context: SimulationContext): CapacitySlot[] {
     const slots: CapacitySlot[] = [];
-    const balance = context.balance;
-    const computeModifier = context.modifiers.value('hardware.computePerRack', 1);
 
     for (const facility of context.state.facilities) {
       for (const hall of facility.halls) {
         if (hall.constructionProgress01 < 1) continue;
         const available = 1 - clamp01(hall.throttle01);
         for (const group of hall.rackGroups) {
-          const hardware = context.registry.hardware(group.hardwareId, group.instanceId);
           const workingRacks = Math.max(0, group.count - group.failedCount);
-          const perRack = balance.baseRackComputeUnits * hardware.computeFactor * computeModifier;
+          // A rack delivers what it delivered when it was bought.
+          const perRack = groupRackOutput(context, group).computeUnits;
           const nominal = group.count * perRack;
           const afterFailures = workingRacks * perRack;
           // A degraded rack still runs, just not at full throughput.

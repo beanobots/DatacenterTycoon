@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.gpu_clusters",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "GPU Clusters",
   "description": "Accelerated compute for AI and scientific workloads. Chapter 8: AI contracts, high revenue.",
   "branch": "hardware",
@@ -23,5 +23,6 @@
       "contract.ai_lab_training"
     ]
   },
-  "tradeOff": "+40% power and +60% heat against the CPU baseline."
+  "tradeOff": "+40% power and +60% heat against the CPU baseline.",
+  "availableFromYear": 2011
 }

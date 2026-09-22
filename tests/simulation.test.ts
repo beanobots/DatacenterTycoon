@@ -11,6 +11,10 @@ import type { ContentRegistry } from '../src/content/registry.js';
 import { SimulationEngine } from '../src/sim/engine.js';
 import { allAutopilot } from '../src/sim/operator.js';
 import { applyAction, enumerateActions } from '../src/sim/player.js';
+import { canStartResearch, researchBlocker } from '../src/sim/systems/research.js';
+import {
+  currentRackOutput, groupRackOutput, rackOutputAt, regionalCarbonAt, regionalPriceAt,
+} from '../src/sim/era.js';
 import {
   DEFAULT_SAVE_DIAGNOSTICS, createSave, loadSave, serializeSave,
 } from '../src/save/save.js';
@@ -248,7 +252,7 @@ describe('save and load', () => {
     expect(migrated.applied).toEqual([
       '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
       '004-annual-reports-in-state', '005-sla-shortfall-attribution',
-      '006-hall-peak-throttle', '007-instance-counter-in-state',
+      '006-hall-peak-throttle', '007-instance-counter-in-state', '008-rack-vintage', '009-research-budget',
     ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
 
@@ -566,6 +570,115 @@ describe('explaining an SLA breach', () => {
     for (const contract of engine.state.contracts) {
       const booked = Object.values(contract.shortfall).reduce((a, b) => a + b, 0);
       expect(booked).toBeLessThanOrEqual(contract.demandedUnitHours + 1e-6);
+    }
+  });
+});
+
+describe('the campaign sits in history', () => {
+  /**
+   * A thirty-year campaign is only worth running if the decades differ. These
+   * check the three things that make them differ, and the one that made an
+   * early version collapse.
+   */
+  function engineFor(scenarioId: string, seed = 'era-test'): SimulationEngine {
+    return new SimulationEngine(registry, { scenarioId, campaignSeed: seed, strategy: 'balanced' });
+  }
+
+  it('opens each site in its own decade, all ending in 2036', () => {
+    for (const id of ['scenario.dry_grid', 'scenario.urban_colo',
+      'scenario.cold_cloud', 'scenario.fossil_grid']) {
+      const scenario = registry.scenario(id, 'test');
+      const startYear = new Date(scenario.startDate).getUTCFullYear();
+      expect(startYear).toBeGreaterThanOrEqual(2006);
+      expect(startYear + scenario.durationYears).toBe(2036);
+    }
+  });
+
+  it('refuses to research what has not been invented', () => {
+    const engine = engineFor('scenario.dry_grid');
+    expect(engine.state.meta.campaignYear).toBe(2006);
+
+    // Immersion cooling does not exist in 2006 and the reason says so.
+    const blocker = researchBlocker(engine.context, 'technology.cooling.immersion_single');
+    expect(blocker).toContain('Not invented yet');
+    expect(blocker).toContain('2014');
+    expect(canStartResearch(engine.context, 'technology.cooling.immersion_single')).toBe(false);
+  });
+
+  it('never lets a technology arrive before what it is built on', () => {
+    for (const technology of registry.all('technologies').values()) {
+      for (const id of technology.prerequisites) {
+        const prerequisite = registry.all('technologies').get(id);
+        if (!prerequisite) continue;
+        expect(prerequisite.availableFromYear).toBeLessThanOrEqual(technology.availableFromYear);
+      }
+    }
+  });
+
+  it('holds a rack to the performance and the draw of its own vintage', () => {
+    // The bug this guards: era curves were applied to the whole fleet, so a
+    // 2006 rack quietly gained compute AND quadrupled its power draw as the
+    // decades passed. The halls became uncoolable and the operation collapsed
+    // around 2030 for no reason the player could see.
+    const engine = engineFor('scenario.dry_grid', 'vintage');
+    engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    const group = engine.state.facilities.flatMap((f) => f.halls)
+      .flatMap((h) => h.rackGroups)[0];
+    expect(group).toBeDefined();
+    const hardware = registry.hardware(group!.hardwareId, 'test');
+    const vintage = group!.vintageYear;
+
+    engine.runYears(12);
+
+    // Research still improves what is on the floor - virtualization genuinely
+    // makes existing machines do more - so the guard is that the group tracks
+    // ITS OWN year, not that nothing ever changes.
+    const actual = groupRackOutput(engine.context, group!);
+    const atVintage = rackOutputAt(engine.context, hardware, vintage);
+    expect(actual.computeUnits).toBeCloseTo(atVintage.computeUnits, 6);
+    expect(actual.powerKw).toBeCloseTo(atVintage.powerKw, 6);
+
+    // And the decade has moved on around it: a rack bought now is far better,
+    // and draws far more, than the one bought twelve years ago.
+    const today = currentRackOutput(engine.context, hardware);
+    expect(today.computeUnits).toBeGreaterThan(actual.computeUnits * 3);
+    expect(today.powerKw).toBeGreaterThan(actual.powerKw);
+  });
+
+  it('gives a later rack more compute and more heat than an earlier one', () => {
+    const engine = engineFor('scenario.dry_grid', 'vintage-2');
+    const hardware = registry.hardware('hardware.cpu.gen1', 'test');
+    const early = rackOutputAt(engine.context, hardware, 2006);
+    const late = rackOutputAt(engine.context, hardware, 2030);
+
+    expect(late.computeUnits).toBeGreaterThan(early.computeUnits * 50);
+    expect(late.powerKw).toBeGreaterThan(early.powerKw * 2);
+  });
+
+  it('moves grid carbon along the region trajectory rather than a smooth curve', () => {
+    // The 2022 energy crisis is a spike, not an exponential, which is exactly
+    // what the old compounding drift rate could not represent.
+    const desert = registry.region('region.desert_southwest', 'test');
+    const price2020 = regionalPriceAt(desert, 2020);
+    const price2022 = regionalPriceAt(desert, 2022);
+    const price2025 = regionalPriceAt(desert, 2025);
+    expect(price2022).toBeGreaterThan(price2020 * 1.5);
+    expect(price2025).toBeLessThan(price2022);
+
+    const coal = registry.region('region.coal_belt', 'test');
+    expect(regionalCarbonAt(coal, 2006)).toBeGreaterThan(regionalCarbonAt(coal, 2036) * 2);
+  });
+
+  it('closes exactly one year per advance, even from a leap year', () => {
+    // A campaign starting in a leap year ran 365.25 days and stopped one day
+    // short of its first new year, so no annual report fired that turn.
+    for (const id of ['scenario.dry_grid', 'scenario.cold_cloud', 'scenario.fossil_grid']) {
+      const engine = engineFor(id, 'leap');
+      engine.runYears(1);
+      expect(engine.annualReports.length).toBe(1);
+      engine.runYears(2);
+      expect(engine.annualReports.length).toBe(3);
     }
   });
 });

@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.heat_recovery",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Heat Recovery",
   "description": "Heat exchangers and a district-heat or greenhouse connection. Chapter 8: heat-sale revenue, +community support.",
   "branch": "cooling",
@@ -39,5 +39,6 @@
       "heat_export"
     ]
   },
-  "tradeOff": "Worth nothing without a nearby heat customer and the pipes to reach them."
+  "tradeOff": "Worth nothing without a nearby heat customer and the pipes to reach them.",
+  "availableFromYear": 2011
 }

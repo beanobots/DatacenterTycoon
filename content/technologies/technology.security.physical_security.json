@@ -1,6 +1,6 @@
 {
   "id": "technology.security.physical_security",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Physical Security",
   "description": "Fencing, access control and a staffed gatehouse.",
   "branch": "security",
@@ -25,5 +25,6 @@
       "site_security"
     ]
   },
-  "tradeOff": "A standing payroll line that produces no revenue."
+  "tradeOff": "A standing payroll line that produces no revenue.",
+  "availableFromYear": 1995
 }

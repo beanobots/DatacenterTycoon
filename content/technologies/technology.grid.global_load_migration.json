@@ -1,6 +1,6 @@
 {
   "id": "technology.grid.global_load_migration",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Global Load Migration",
   "description": "Moves work between regions following clean supply. Chapter 8: -35% carbon potential, +10% revenue.",
   "branch": "grid",
@@ -34,5 +34,6 @@
       "load_migration"
     ]
   },
-  "tradeOff": "+15% network cost, and jurisdictional residency rules constrain where work can go."
+  "tradeOff": "+15% network cost, and jurisdictional residency rules constrain where work can go.",
+  "availableFromYear": 2022
 }

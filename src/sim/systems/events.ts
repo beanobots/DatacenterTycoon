@@ -49,11 +49,19 @@ export class EventSystem implements ISimulationSystem {
       if (context.state.activeEvents.some((a) => a.definitionId === eventId)) continue;
       if (!this.conditionHolds(definition, context)) continue;
 
-      const hazardScale = definition.trigger.hazardKey
-        ? context.region.hazards[definition.trigger.hazardKey]
-        : 1;
-      const probability = definition.trigger.dailyProbability * hazardScale;
-      if (probability <= 0 || !stream.chance(probability)) continue;
+      // History does not roll dice. A dated event fires the first day the
+      // campaign passes it and then never again; the cooldown set below is
+      // what remembers that, so this needs no extra state or migration.
+      const scheduled = definition.trigger.scheduledDate;
+      if (scheduled !== undefined) {
+        if (tick.gameTimeUtc.getTime() < Date.parse(scheduled)) continue;
+      } else {
+        const hazardScale = definition.trigger.hazardKey
+          ? context.region.hazards[definition.trigger.hazardKey]
+          : 1;
+        const probability = definition.trigger.dailyProbability * hazardScale;
+        if (probability <= 0 || !stream.chance(probability)) continue;
+      }
 
       const varianceDays = definition.durationVarianceDays > 0
         ? stream.int(-definition.durationVarianceDays, definition.durationVarianceDays)
@@ -67,9 +75,12 @@ export class EventSystem implements ISimulationSystem {
         startTick: tick.index,
         endTick: tick.index + context.clock.ticksForDays(durationDays),
       });
-      context.state.eventCooldowns[eventId] = tick.index + context.clock.ticksForDays(
-        definition.trigger.cooldownDays + durationDays,
-      );
+      // A dated shock happened once, so its cooldown is the rest of time.
+      context.state.eventCooldowns[eventId] = scheduled !== undefined
+        ? Number.MAX_SAFE_INTEGER
+        : tick.index + context.clock.ticksForDays(
+          definition.trigger.cooldownDays + durationDays,
+        );
 
       context.state.company.cash += definition.immediateCash;
       context.state.company.communityTrust = clamp(

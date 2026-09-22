@@ -1,6 +1,6 @@
 {
   "id": "technology.security.quantum_resistant",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Quantum-Resistant Encryption",
   "description": "Post-quantum cryptography across storage and transport.",
   "branch": "security",
@@ -33,5 +33,6 @@
       "pqc"
     ]
   },
-  "tradeOff": "A migration across every stored record and every protocol in use."
+  "tradeOff": "A migration across every stored record and every protocol in use.",
+  "availableFromYear": 2024
 }

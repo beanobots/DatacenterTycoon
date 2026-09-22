@@ -17,6 +17,8 @@ import type { SimulationTick } from '../../core/clock.js';
 import { clamp01 } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
 import { rebuildModifiers } from '../context.js';
+import { eraFactors } from '../era.js';
+import type { TechnologyDefinition } from '../../definitions/types.js';
 
 export class ResearchSystem implements ISimulationSystem {
   readonly name = 'research';
@@ -33,8 +35,8 @@ export class ResearchSystem implements ISimulationSystem {
     for (const project of state.research.active) {
       const technology = context.registry.technology(project.technologyId, 'research');
       const days = Math.max(1, technology.research.durationDays / speed);
-      const dailyCost = technology.research.costUsd / days;
-      const outstanding = technology.research.costUsd - project.fundedUsd;
+      const dailyCost = project.budgetUsd / days;
+      const outstanding = project.budgetUsd - project.fundedUsd;
       if (outstanding <= 0) {
         completed.push(project.technologyId);
         continue;
@@ -49,7 +51,7 @@ export class ResearchSystem implements ISimulationSystem {
       state.hour.otherCost += spend;
       project.fundedUsd += spend;
 
-      if (project.fundedUsd >= technology.research.costUsd - 1e-6) {
+      if (project.fundedUsd >= project.budgetUsd - 1e-6) {
         completed.push(project.technologyId);
       }
     }
@@ -105,6 +107,16 @@ export function freeSpecialists(context: SimulationContext): number {
 }
 
 /** Why a technology cannot be started, or null when it can. */
+/**
+ * What a project costs in the year it is run.
+ *
+ * Technology costs are written in 2025 dollars like everything else in the
+ * balance profile; a 2006 operator pays 2006 prices for the same engineers.
+ */
+export function researchCostUsd(context: SimulationContext, technology: TechnologyDefinition): number {
+  return technology.research.costUsd * eraFactors(context).costIndex;
+}
+
 export function researchBlocker(context: SimulationContext, technologyId: string): string | null {
   const state = context.state;
   if (state.research.completed.includes(technologyId)) return 'Already researched.';
@@ -113,6 +125,15 @@ export function researchBlocker(context: SimulationContext, technologyId: string
   }
   const technology = context.registry.all('technologies').get(technologyId);
   if (!technology) return 'Unknown technology.';
+
+  // A campaign that opens in 2006 cannot research immersion cooling, because
+  // nobody could. This is checked before prerequisites so the player is told
+  // the real reason - waiting for the decade - rather than being sent to
+  // research a chain that is itself unavailable.
+  if (technology.availableFromYear > state.meta.campaignYear) {
+    return `Not invented yet. ${technology.name} arrives in `
+      + `${technology.availableFromYear}; it is ${state.meta.campaignYear}.`;
+  }
 
   const missing = technology.prerequisites
     .filter((id) => !state.research.completed.includes(id))
@@ -141,8 +162,10 @@ export function canStartResearch(context: SimulationContext, technologyId: strin
 export function startResearch(context: SimulationContext, technologyId: string): boolean {
   if (!canStartResearch(context, technologyId)) return false;
   const technology = context.registry.technology(technologyId, 'research');
+  const budgetUsd = researchCostUsd(context, technology);
   context.state.research.active.push({
     technologyId,
+    budgetUsd,
     fundedUsd: 0,
     specialists: technology.research.requiredSpecialists,
     startedTick: context.state.meta.tickIndex,
@@ -150,7 +173,7 @@ export function startResearch(context: SimulationContext, technologyId: string):
   context.diagnostic('research.started', `Started ${technology.name}`, {
     tick: context.state.meta.tickIndex,
     technologyId,
-    costUsd: technology.research.costUsd,
+    costUsd: Math.round(budgetUsd),
     specialists: technology.research.requiredSpecialists,
   });
   return true;
@@ -162,5 +185,5 @@ export function researchProgress(context: SimulationContext, technologyId: strin
     .find((candidate) => candidate.technologyId === technologyId);
   if (!project) return 0;
   const technology = context.registry.technology(technologyId, 'research');
-  return clamp01(project.fundedUsd / Math.max(1, technology.research.costUsd));
+  return clamp01(project.fundedUsd / Math.max(1, project.budgetUsd));
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.grid.battery_storage",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Battery Storage",
   "description": "Grid-scale lithium storage. Chapter 8: +25% renewable utilization, fast backup.",
   "branch": "grid",
@@ -27,5 +27,6 @@
       "power.battery"
     ]
   },
-  "tradeOff": "Degradation, fire management and the embodied impact of the cells."
+  "tradeOff": "Degradation, fire management and the embodied impact of the cells.",
+  "availableFromYear": 2015
 }

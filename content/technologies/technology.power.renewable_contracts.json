@@ -1,6 +1,6 @@
 {
   "id": "technology.power.renewable_contracts",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Renewable Contracts",
   "description": "Power purchase agreements and the settlement machinery behind them.",
   "branch": "power",
@@ -20,5 +20,6 @@
       "ppa_market"
     ]
   },
-  "tradeOff": "Contract exposure to an output you do not control."
+  "tradeOff": "Contract exposure to an output you do not control.",
+  "availableFromYear": 2009
 }

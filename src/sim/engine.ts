@@ -159,6 +159,12 @@ export class SimulationEngine {
     this.context.state.meta.tickIndex = tick.index;
     this.context.state.meta.gameTimeIso = tick.gameTimeUtc.toISOString();
 
+    // The era contributes modifiers and it moves with the calendar, so the
+    // stack has to be rebuilt as time passes and not only when research
+    // completes or an event fires. Monthly is finer than the curves change
+    // and costs a walk of the completed technologies.
+    if (tick.cadence.month) rebuildModifiers(this.context);
+
     for (const system of this.systems) {
       system.tick(tick, this.context);
     }
@@ -180,9 +186,26 @@ export class SimulationEngine {
   }
 
   /** Advances `years` of simulated time. */
+  /**
+   * Advances whole calendar years, landing on the year boundary each time.
+   *
+   * Not 365.25 days times n: a campaign starting in a leap year ran one day
+   * short of its first new year, so no annual report fired that turn and the
+   * player got two the turn after. Annual scoring, the report table and every
+   * objective are keyed to the calendar, so this has to be too.
+   */
   runYears(years: number): number {
-    const ticksPerYear = this.clock.ticksForDays(365.25);
-    return this.advanceTicks(Math.round(ticksPerYear * years));
+    let advanced = 0;
+    for (let i = 0; i < years; i += 1) advanced += this.runToNextYear();
+    return advanced;
+  }
+
+  /** Ticks until the calendar year rolls over, so exactly one report closes. */
+  runToNextYear(): number {
+    const from = new Date(this.context.state.meta.gameTimeIso);
+    const target = Date.UTC(from.getUTCFullYear() + 1, 0, 1);
+    const days = (target - from.getTime()) / (1000 * 60 * 60 * 24);
+    return this.advanceTicks(Math.max(1, Math.round(this.clock.ticksForDays(days))));
   }
 
   /** Runs the scenario's full configured duration. */

@@ -1,6 +1,6 @@
 {
   "id": "technology.environment.water_recycling",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Water Recycling",
   "description": "On-site treatment and closed-loop reuse. Chapter 8: -30% freshwater demand.",
   "branch": "environment",
@@ -33,5 +33,6 @@
       "water_reuse"
     ]
   },
-  "tradeOff": "+5% operating cost for treatment and the plant to run it."
+  "tradeOff": "+5% operating cost for treatment and the plant to run it.",
+  "availableFromYear": 2013
 }

@@ -1,6 +1,6 @@
 {
   "id": "technology.power.advanced_power_markets",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Advanced Power Markets",
   "description": "Wholesale market participation, hedging and settlement.",
   "branch": "power",
@@ -21,5 +21,6 @@
       "wholesale_market"
     ]
   },
-  "tradeOff": "Market exposure cuts both ways in a price spike."
+  "tradeOff": "Market exposure cuts both ways in a price spike.",
+  "availableFromYear": 2014
 }

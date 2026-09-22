@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.cpu_gen2",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Second-Generation CPUs",
   "description": "Higher core counts per socket.",
   "branch": "hardware",
@@ -20,5 +20,6 @@
       "hardware.cpu.gen2"
     ]
   },
-  "tradeOff": "Retiring serviceable hardware early writes off its remaining book value."
+  "tradeOff": "Retiring serviceable hardware early writes off its remaining book value.",
+  "availableFromYear": 2008
 }

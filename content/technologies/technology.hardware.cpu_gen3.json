@@ -1,6 +1,6 @@
 {
   "id": "technology.hardware.cpu_gen3",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "High-Core CPUs",
   "description": "Dense consolidation hosts for virtualized estates.",
   "branch": "hardware",
@@ -20,5 +20,6 @@
       "hardware.cpu.gen3"
     ]
   },
-  "tradeOff": "Rack power rises past what basic air cooling can hold."
+  "tradeOff": "Rack power rises past what basic air cooling can hold.",
+  "availableFromYear": 2017
 }

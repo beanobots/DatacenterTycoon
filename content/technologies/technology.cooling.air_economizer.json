@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.air_economizer",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Air Economization",
   "description": "Outside-air free cooling with filtration and humidity control.",
   "branch": "cooling",
@@ -20,5 +20,6 @@
       "cooling.air_economizer"
     ]
   },
-  "tradeOff": "Weather, smoke, dust and humidity all close the dampers."
+  "tradeOff": "Weather, smoke, dust and humidity all close the dampers.",
+  "availableFromYear": 2008
 }

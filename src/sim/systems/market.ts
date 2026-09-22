@@ -11,6 +11,7 @@
 import type { SimulationTick } from '../../core/clock.js';
 import { clamp, sampleHourlyCurve, sampleMonthlyCurve } from '../../core/math.js';
 import type { ISimulationSystem, SimulationContext } from '../context.js';
+import { fractionalYear, regionalCarbonAt, regionalPriceAt } from '../era.js';
 
 export class MarketSystem implements ISimulationSystem {
   readonly name = 'market';
@@ -21,9 +22,22 @@ export class MarketSystem implements ISimulationSystem {
     const { grid } = context.region;
     const stream = context.streams.get('market');
 
-    if (tick.cadence.year) {
-      market.priceDriftFactor *= 1 + grid.annualPriceDrift;
-      market.carbonDriftFactor *= 1 + grid.annualCarbonDrift;
+    // The drift factors are now read off the region's historical trajectory
+    // rather than compounded from an annual rate. A compounding rate can only
+    // ever draw a smooth exponential, which cannot represent a coal grid's
+    // decarbonisation curve or the 2021-23 energy crisis - both of which are
+    // the point of running from 2006.
+    //
+    // They stay as factors against the region's base values so every consumer
+    // downstream, and every saved campaign, keeps working unchanged.
+    if (tick.cadence.day || market.priceDriftFactor === 1) {
+      const year = fractionalYear(context);
+      market.priceDriftFactor = grid.basePricePerMwh > 0
+        ? regionalPriceAt(context.region, year) / grid.basePricePerMwh
+        : 1;
+      market.carbonDriftFactor = grid.baseCarbonKgPerMwh > 0
+        ? regionalCarbonAt(context.region, year) / grid.baseCarbonKgPerMwh
+        : 1;
     }
 
     const hourFraction = tick.hourOfDay + tick.gameTimeUtc.getUTCMinutes() / 60;

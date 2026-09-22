@@ -1,6 +1,6 @@
 {
   "id": "technology.cooling.containment",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Hot/Cold Aisle Containment",
   "description": "Physical separation of hot and cold aisles. Chapter 8: -8% cooling power, +20% density, -10% cooling failures.",
   "branch": "cooling",
@@ -45,5 +45,6 @@
       "cooling.containment"
     ]
   },
-  "tradeOff": "+5% hall CapEx, and the benefit decays if the layout discipline slips."
+  "tradeOff": "+5% hall CapEx, and the benefit decays if the layout discipline slips.",
+  "availableFromYear": 2006
 }

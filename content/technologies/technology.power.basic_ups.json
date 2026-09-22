@@ -1,6 +1,6 @@
 {
   "id": "technology.power.basic_ups",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Basic UPS",
   "description": "Battery ride-through between a grid loss and the generators starting.",
   "branch": "power",
@@ -18,5 +18,6 @@
       "ride_through"
     ]
   },
-  "tradeOff": "Conversion losses on every watt that passes through it."
+  "tradeOff": "Conversion losses on every watt that passes through it.",
+  "availableFromYear": 1995
 }
