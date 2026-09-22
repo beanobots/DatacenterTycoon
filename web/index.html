@@ -556,7 +556,7 @@
               <div class="horizon" id="horizon"></div>
             </div>
             <div class="card panel" style="margin-top:10px;padding:14px 16px">
-              <div class="legend" id="hallplan-legend"></div>
+              <div class="legend" id="plan-legend"></div>
               <div id="plan-chart"></div>
             </div>
             <div class="card scroll-x" style="margin-top:10px">
@@ -1261,7 +1261,7 @@
     var months = state.projection;
     if (months.length < 2 || !state.chartWorkload) {
       host.appendChild(el('div', 'empty', 'Sell something, or install racks, and the headroom curve appears here.'));
-      $('hallplan-legend').textContent = '';
+      $('plan-legend').textContent = '';
       return;
     }
 
@@ -1358,7 +1358,7 @@
 
     host.appendChild(svg);
 
-    var legend = $('hallplan-legend');
+    var legend = $('plan-legend');
     legend.textContent = '';
     var name = 'this workload';
     for (var i = 0; i < state.headroom.length; i += 1) {
