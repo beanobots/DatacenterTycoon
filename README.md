@@ -282,8 +282,37 @@ criterion in chapter 14 that does not require a UI is covered by tests.
 every scenario across seeds and reports when a competent operator turns
 profitable and when it has paid off the loan it started with;
 `scripts/sweep.mjs` moves one balance number at a time against that target.
-Current state: seven of eight runs turn profitable, mean year 2.0, and every
-run survives its campaign. Three of the four sites finish A-rated.
+
+Current state, over sixteen runs (four scenarios, four seeds, full campaign
+length):
+
+| | measured | target |
+| --- | --- | --- |
+| Turns profitable | 13/16, mean year 2.2 | about year 3 |
+| Clears its debt | **0/16** | about year 10 |
+| Survives the campaign | 14/16 | - |
+| Reaches its MW objective | 0/16 | see below |
+
+Three of the four sites finish A-rated on every seed. Every failure in that
+table - both deaths, both runs that never turn profitable - is the desert
+site, described next.
+
+**Debt does not clear, on any site or any seed.** Half the design target is
+met and half is not, and it is worth naming which. Interest runs at 6.5% a
+year with a reputation risk premium, so an operator of middling standing pays
+roughly 7 to 8%. The quarterly minimum repayment is 2% of the balance, about
+8% a year - so the minimum almost exactly cancels the interest and the
+principal barely moves. Anything faster has to come from the surplus rule,
+which pays down 18% of whatever cash sits above a six-month operating
+reserve.
+
+That surplus is the problem: the operator's own capital budget keeps back the
+same six months of running cost and spends everything above it on racks, and
+it runs every month where debt service runs every quarter. The two compete
+for one pot and the operator always gets there first, so the surplus rule
+almost never fires. Fixing it means deciding how an operator should split
+free cash between growth and the loan - a design question about what the game
+should reward, not a bug with an obvious patch.
 
 **The desert site is still fragile and is the live balance problem.** It opens
 in 2006, which is the hardest position in the game: the fewest technologies,
