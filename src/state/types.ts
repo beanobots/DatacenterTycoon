@@ -404,6 +404,16 @@ export interface GameState {
   hour: PeriodAccumulator;
   month: PeriodAccumulator;
   year: PeriodAccumulator;
+  /**
+   * The month that just closed, kept whole after `month` is reset.
+   *
+   * A player looking at the console at a month boundary is looking at a month
+   * one tick old, so a cash-flow figure read from `month` would always be
+   * near zero. This is the last complete month, which is the figure anyone
+   * means by "how did last month go". All zeroes before the first month
+   * closes.
+   */
+  lastMonth: PeriodAccumulator;
   annualScores: AnnualScore[];
   /**
    * The reports those scores were computed from.

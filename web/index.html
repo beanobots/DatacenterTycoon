@@ -668,10 +668,12 @@
   // ---------- formatting -------------------------------------------------
   function money(v) {
     var abs = Math.abs(v);
-    if (abs >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
-    if (abs >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
-    if (abs >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'k';
-    return '$' + v.toFixed(0);
+    // The sign goes before the currency: "-$401k", not "$-401k".
+    var sign = v < 0 ? '-' : '';
+    if (abs >= 1e9) return sign + '$' + (abs / 1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return sign + '$' + (abs / 1e6).toFixed(1) + 'M';
+    if (abs >= 1e3) return sign + '$' + (abs / 1e3).toFixed(0) + 'k';
+    return sign + '$' + abs.toFixed(0);
   }
   function pct(v, d) { return (v * 100).toFixed(d === undefined ? 1 : d) + '%'; }
   function num(v, d) {
@@ -897,8 +899,9 @@
     var d = state.dashboard;
     if (!d) return;
 
-    function cell(key, value, sub, alarm) {
+    function cell(key, value, sub, alarm, title) {
       var node = el('div', 'cell' + (alarm ? ' alarm' : ''));
+      if (title) node.title = title;
       node.appendChild(el('div', 'k', key));
       node.appendChild(el('div', 'v', value));
       node.appendChild(el('div', 's', sub || ''));
@@ -906,19 +909,40 @@
     }
 
     cell('Cash', money(d.cash), money(d.budget) + ' free', d.cash <= 0);
+
+    // Cash beside cash flow, because a healthy balance and a business losing
+    // money every month look identical until the two are read together.
+    var cf = d.cashFlow;
+    cell('Cash flow',
+      cf ? (cf.net >= 0 ? '+' : '') + money(cf.net) : '\u2014',
+      cf ? money(cf.revenue) + ' in' : 'first month',
+      !!cf && cf.net < 0,
+      cf
+        ? 'Last full month: ' + money(cf.revenue) + ' earned, ' + money(cf.operatingCost)
+          + ' spent running the site'
+          + (cf.capex > 0 ? ', and ' + money(cf.capex) + ' of capital spending on top.' : '.')
+        : 'No month has closed yet.');
+
     cell('Debt', money(d.debt), '');
     cell('IT capacity', d.itCapacityMw.toFixed(2) + ' MW', d.rackCount + ' racks');
     cell('Contracts', String(d.contractCount), Math.round(d.committedUnits).toLocaleString() + ' CU sold');
     cell('Free to sell', Math.round(d.freeUnits).toLocaleString() + ' CU',
       d.bestFitWorkload ? 'most room: ' + d.bestFitWorkload : 'no capacity', d.freeUnits <= 0);
     cell('Reputation', Math.round(d.reputation) + '', 'trust ' + (d.trust > 0 ? '+' : '') + Math.round(d.trust));
-    var rd = d.projects.length === 0 ? 'idle'
-      : d.projects.length + ' running';
+
+    // Specialists folded into R&D rather than given a cell of their own: the
+    // row holds ten across, and an eleventh would leave the gap that the
+    // widths were chosen to close.
+    var rd = d.projects.length === 0 ? 'idle' : d.projects.length + ' running';
+    var free = d.freeSpecialists + '/' + d.totalSpecialists + ' free';
+    var shown = d.projects.slice(0, 2)
+      .map(function (p) { return Math.round(p.progress01 * 100) + '%'; }).join(' \u00b7 ');
     var rdSub = d.projects.length === 0
-      ? d.freeSpecialists + ' specialists free'
-      : d.projects.map(function (p) { return Math.round(p.progress01 * 100) + '%'; }).join(' \u00b7 ');
-    cell('R&D', rd, rdSub, d.projects.length === 0 && d.freeSpecialists > 0);
-    cell('Specialists', d.freeSpecialists + '/' + d.totalSpecialists, 'free to assign');
+      ? free
+      : shown + (d.projects.length > 2 ? ' +' + (d.projects.length - 2) : '') + ' \u00b7 ' + free;
+    cell('R&D', rd, rdSub, d.projects.length === 0 && d.freeSpecialists > 0,
+      d.freeSpecialists + ' of ' + d.totalSpecialists + ' specialists are free to assign.');
+
     cell('Hall inlet', d.worstInletC > 0 ? d.worstInletC.toFixed(0) + '\u00b0C' : '\u2014',
       d.throttling ? 'throttling' : 'ambient ' + d.ambientC.toFixed(0) + '\u00b0C', d.throttling);
     cell('Grid', d.gridAvailable ? 'up' : 'down',

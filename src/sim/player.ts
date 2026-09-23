@@ -173,8 +173,12 @@ export interface ActionResult {
 
 /** Hall sizes offered when building. Modular expansion, per chapter 4. */
 const HALL_SIZES = [60, 120, 220];
-/** Rack order sizes offered. */
-export const RACK_ORDER_SIZES = [10, 25, 50];
+/**
+ * Rack order sizes offered. Each divides the 60- and 120-rack halls exactly,
+ * so a hall can be filled in whole clicks rather than left with a remainder
+ * the player has to reach with "fill".
+ */
+export const RACK_ORDER_SIZES = [15, 30, 60];
 /** Hall token meaning "wherever there is room", the old placement behaviour. */
 export const ANY_HALL = 'any';
 /**
@@ -288,6 +292,9 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
     .sort((a, b) => b.outlook.share01 - a.outlook.share01);
   const thermalCeiling01 = 1 - (exposed[0]?.outlook.share01 ?? 0);
 
+  // Gathered rather than pushed straight onto the deck, so the board can be
+  // ordered before the player reads it.
+  const offers: ContractAction[] = [];
   for (const offer of context.state.contractOffers) {
     const definition = context.registry.contract(offer.definitionId, offer.instanceId);
     const workload = context.registry.workload(definition.workloadId, definition.id);
@@ -352,7 +359,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
     // breaches every summer.
     const fits = roomFor && thermalHolds;
 
-    actions.push({
+    offers.push({
       kind: 'contract.sign',
       id: `contract:${offer.instanceId}`,
       category: 'contracts',
@@ -403,6 +410,20 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       shortBy,
     });
   }
+
+  // The offer board is read top-down, so what can actually be signed belongs
+  // at the top. Beneath that it is ordered on the rate, not the headline
+  // value: a large contract at a poor rate ties up the same racks for longer
+  // and is the easier mistake to make. Blocked offers - reputation or
+  // technology short - sink below the rest whatever they pay, because nothing
+  // about the price makes them signable today.
+  const rate = (a: ContractAction) => a.annualRevenue / Math.max(1, a.computeUnits);
+  offers.sort((a, b) =>
+    Number(!!a.blocked) - Number(!!b.blocked)
+    || Number(b.fits) - Number(a.fits)
+    || rate(b) - rate(a)
+    || a.label.localeCompare(b.label));
+  actions.push(...offers);
 
   // --------------------------------------------------------- live contracts
   // A signed contract you cannot serve is the most expensive thing an operator

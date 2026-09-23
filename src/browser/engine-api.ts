@@ -26,7 +26,10 @@ import {
   type ProjectedMonth, type ScheduleEntry, type WorkloadHeadroom,
 } from '../sim/planning.js';
 import type { AnnualReport } from '../sim/report.js';
-import type { AnnualScore, DiagnosticEntry, ShortfallCause } from '../state/types.js';
+import {
+  totalCost, totalRevenue,
+  type AnnualScore, type DiagnosticEntry, type ShortfallCause,
+} from '../state/types.js';
 import { buildBrowserRegistry, type BundledContent } from './registry.js';
 import { CONTENT } from './content-data.js';
 
@@ -170,6 +173,19 @@ export interface Dashboard {
   readonly cash: number;
   readonly debt: number;
   readonly budget: number;
+  /**
+   * The last complete month's trading, which is what "how are we doing" means
+   * to a player standing at a month boundary. Null until the first month has
+   * closed, because a part-month extrapolated to a full one is a guess dressed
+   * as a reading.
+   */
+  readonly cashFlow: {
+    readonly revenue: number;
+    readonly operatingCost: number;
+    /** Revenue less operating cost. Capex is excluded; it is reported beside. */
+    readonly net: number;
+    readonly capex: number;
+  } | null;
   readonly reputation: number;
   readonly trust: number;
   /** Projects under way, each with its own funding progress. */
@@ -569,10 +585,19 @@ function wrapRun(engine: SimulationEngine, years: number, alreadyRunTicks = 0): 
       // sell next?".
       const headroomRows = [...workloadHeadroom(context)]
         .sort((a, b) => b.freeUnits - a.freeUnits);
+      const closed = state.lastMonth;
       return {
         cash: state.company.cash,
         debt: state.company.debt,
         budget: operator.budget(context),
+        cashFlow: closed.totalTicks > 0
+          ? {
+            revenue: totalRevenue(closed),
+            operatingCost: totalCost(closed),
+            net: totalRevenue(closed) - totalCost(closed),
+            capex: closed.capex,
+          }
+          : null,
         reputation: state.company.reputation,
         trust: state.company.communityTrust,
         projects,

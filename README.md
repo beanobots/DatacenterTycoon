@@ -56,6 +56,20 @@ simulation stops and hands you the decisions the autopilot would otherwise make:
 research, contracts, hardware, halls, cooling retrofits and power. Untick a
 category's autopilot to take it over, tick it to hand it back.
 
+The stat row across the top carries cash beside last month's cash flow, because
+a healthy balance and a business losing money every month look identical until
+the two are read together. The figure is the last COMPLETE month's revenue less
+its running cost, with capital spending reported separately in the cell's
+tooltip; it reads as a dash until the first month closes, rather than
+extrapolating a part-month into a whole one.
+
+The contract board is ordered rather than listed in market order: offers you
+can sign come first, offers that fit ahead of offers that do not, and within
+that by the rate per compute unit rather than headline value - a large contract
+at a poor rate ties up the same racks for longer and is the easier mistake to
+make. Offers blocked on reputation or an unresearched technology sink to the
+bottom whatever they pay.
+
 **Saving and resuming.** Save at any month boundary. A save carries the
 scenario, the campaign seed, the tick index, the content hash, the autopilot
 settings, the campaign length and the whole game state, so resuming replays the

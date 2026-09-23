@@ -113,6 +113,27 @@ describe('pipeline', () => {
     expect(report!.environment.facilityMwh).toBeGreaterThan(parts);
   });
 
+  it('closes the month accumulator each month instead of letting it run for the campaign', () => {
+    const engine = engineFor('month-accumulator');
+    engine.runYears(2);
+    const state = engine.state;
+
+    // The month in progress has to be shorter than a month, and the closed one
+    // has to be about a month. Before this, `month` was never cleared, so it
+    // held every hour since the campaign opened - two years of trading under a
+    // name that promised one month.
+    const ticksPerMonth = (30.44 * 24 * 60) / state.meta.minutesPerTick;
+    expect(state.month.totalTicks).toBeLessThanOrEqual(Math.ceil(ticksPerMonth));
+    expect(state.lastMonth.totalTicks).toBeGreaterThan(ticksPerMonth * 0.85);
+    expect(state.lastMonth.totalTicks).toBeLessThan(ticksPerMonth * 1.15);
+
+    // And it is a slice of the campaign, not the whole of it. Compared against
+    // the lifetime figure rather than the year, because a run that lands on a
+    // calendar boundary has just had its year accumulator cleared too.
+    expect(state.lastMonth.energyCost).toBeGreaterThan(0);
+    expect(state.lastMonth.energyCost).toBeLessThan(state.company.lifetimeCost);
+  });
+
   it('never resolves a definition lookup to undefined during a run', () => {
     const engine = engineFor('lookups');
     // Any failed lookup throws DefinitionLookupError, so completing the run is
@@ -257,6 +278,7 @@ describe('save and load', () => {
       '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
       '004-annual-reports-in-state', '005-sla-shortfall-attribution',
       '006-hall-peak-throttle', '007-instance-counter-in-state', '008-rack-vintage', '009-research-budget', '010-negotiated-sla',
+      '011-month-accumulator',
     ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
 
@@ -273,6 +295,18 @@ describe('save and load', () => {
     expect(migratedResearch.activeId).toBeUndefined();
     expect((migratedState.company as Record<string, unknown>).researchPoints).toBeUndefined();
     expect(Array.isArray(migratedState.annualReports)).toBe(true);
+
+    // The month accumulator used to run for the whole campaign, so a legacy
+    // save's figure is not a month. Both accumulators come back cleared, and
+    // keep the shape the save was written with rather than today's.
+    const migratedMonth = migratedState.month as Record<string, number>;
+    const migratedLastMonth = migratedState.lastMonth as Record<string, number>;
+    const runMonth = (current.state as unknown as { month: Record<string, unknown> }).month;
+    expect(Object.keys(migratedMonth).sort()).toEqual(Object.keys(runMonth).sort());
+    expect(migratedMonth.totalTicks).toBe(0);
+    expect(migratedMonth.revenue).toBe(0);
+    expect(migratedLastMonth.totalTicks).toBe(0);
+    expect(migratedLastMonth.energyCost).toBe(0);
   });
 
   it('restores a migrated save into a runnable campaign', () => {

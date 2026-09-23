@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -247,6 +247,38 @@ const MIGRATIONS: readonly Migration[] = [
           if (row.slaUptime01 === undefined) row.slaUptime01 = null;
         }
       }
+    },
+  },
+  {
+    from: 11, to: 12, id: '011-month-accumulator',
+    apply: (save) => {
+      // The month accumulator is now cleared at each month boundary, with the
+      // closed month kept beside it. A version-11 save's `month` holds every
+      // hour since the campaign began, so it is not a month and must not be
+      // presented as one: both are started fresh and the first closed month of
+      // the resumed campaign fills them honestly. Nothing is lost - the year
+      // accumulator and the annual reports carry the history.
+      //
+      // Zeroed in place rather than rebuilt from `createAccumulator`: a
+      // migration has to produce a version-12 save, and calling today's
+      // factory would produce whatever shape the accumulator has grown into
+      // by the time this runs, quietly stepping over the migrations in
+      // between.
+      const state = save.state as Record<string, unknown>;
+      const zeroed = (source: unknown): Record<string, unknown> => {
+        const out: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries((source ?? {}) as Record<string, unknown>)) {
+          out[key] = typeof value === 'number' ? 0 : {};
+        }
+        return out;
+      };
+      // Any of the three is the same shape, so a save missing one still
+      // yields a complete accumulator rather than an empty object that would
+      // turn every later addition into NaN.
+      const shape = [state.month, state.year, state.hour]
+        .find((candidate) => candidate && typeof candidate === 'object');
+      state.lastMonth = zeroed(shape);
+      state.month = zeroed(shape);
     },
   },
 ];

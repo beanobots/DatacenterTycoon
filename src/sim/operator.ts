@@ -1542,18 +1542,24 @@ export class OperatorSystem implements ISimulationSystem {
    * Cash beyond the strategy's reserve, capped by its appetite for any one
    * commitment.
    *
-   * The reserve is sized from the CURRENT month's run rate rather than from a
-   * lifetime average: at campaign start a lifetime average is zero, which would
-   * let the operator commit its entire opening balance in month one and then
-   * discover what the facility costs to run.
+   * The reserve is sized from RECENT running cost rather than from a lifetime
+   * average: at campaign start a lifetime average is zero, which would let the
+   * operator commit its entire opening balance in month one and then discover
+   * what the facility costs to run - and later on it understates a bill that
+   * has been growing all campaign.
+   *
+   * The last complete month is the best reading available. Decisions are taken
+   * at month boundaries, when the month in progress is a tick old and tells
+   * nothing, so that one is only a fallback for the opening month.
    */
   private availableBudget(context: SimulationContext): number {
     const state = context.state;
-    const ticksThisMonth = Math.max(1, state.month.totalTicks);
+    const recent = state.lastMonth.totalTicks > 0 ? state.lastMonth : state.month;
+    const ticksThisMonth = Math.max(1, recent.totalTicks);
     const ticksPerMonth = (30.44 * 24 * 60) / state.meta.minutesPerTick;
-    const monthCostSoFar = state.month.energyCost + state.month.waterCost + state.month.maintenanceCost
-      + state.month.staffCost + state.month.fuelCost + state.month.carbonCost
-      + state.month.penalties + state.month.otherCost;
+    const monthCostSoFar = recent.energyCost + recent.waterCost + recent.maintenanceCost
+      + recent.staffCost + recent.fuelCost + recent.carbonCost
+      + recent.penalties + recent.otherCost;
     const projectedMonthlyCost = monthCostSoFar * (ticksPerMonth / ticksThisMonth);
 
     // Before any month has run, fall back to a floor derived from the opening

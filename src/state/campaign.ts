@@ -99,6 +99,7 @@ export function createInitialState(
     hour: createAccumulator(),
     month: createAccumulator(),
     year: createAccumulator(),
+    lastMonth: createAccumulator(),
     annualScores: [],
     annualReports: [],
     randomStreams: RandomStreams.fromSeed(campaignSeed).toState(),

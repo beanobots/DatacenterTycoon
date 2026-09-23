@@ -467,6 +467,47 @@ describe('the fit claim on a contract offer', () => {
   });
 });
 
+describe('the order of the contract board', () => {
+  /**
+   * The board is read top-down, and an offer list in market order made the
+   * player scan every card to find the two or three worth signing.
+   */
+  const boardFor = (engine: SimulationEngine) =>
+    actionsFor(engine).filter((action) => action.kind === 'contract.sign');
+
+  it('puts what can be signed above what cannot, and the better rate above the worse', () => {
+    const engine = new SimulationEngine(registry, {
+      scenarioId: 'scenario.fossil_grid',
+      campaignSeed: 'board-order',
+      autopilot: { ...allAutopilot(true), contracts: false },
+    });
+    engine.runYears(3);
+
+    const board = boardFor(engine);
+    expect(board.length).toBeGreaterThan(1);
+
+    // Rank each card by the same three keys the board is sorted on, and check
+    // the sequence never improves as it goes down.
+    const rank = (action: (typeof board)[number]) => {
+      if (action.kind !== 'contract.sign') throw new Error('filtered above');
+      return {
+        signable: action.blocked ? 0 : 1,
+        fits: action.fits ? 1 : 0,
+        rate: action.annualRevenue / Math.max(1, action.computeUnits),
+      };
+    };
+    for (let i = 1; i < board.length; i++) {
+      const above = rank(board[i - 1]!);
+      const below = rank(board[i]!);
+      expect(above.signable).toBeGreaterThanOrEqual(below.signable);
+      if (above.signable !== below.signable) continue;
+      expect(above.fits).toBeGreaterThanOrEqual(below.fits);
+      if (above.fits !== below.fits) continue;
+      expect(above.rate).toBeGreaterThanOrEqual(below.rate);
+    }
+  });
+});
+
 describe('placing racks in a chosen hall', () => {
   it('offers every hall, and says why one cannot take this hardware', () => {
     const engine = manualEngine('hall-choice');

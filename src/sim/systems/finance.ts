@@ -38,6 +38,15 @@ export class FinanceSystem implements ISimulationSystem {
     }
 
     if (tick.cadence.month) {
+      // The month accumulator used to run for the whole campaign: nothing ever
+      // cleared it, so everything reading it - the operator's reserve, and any
+      // figure the console might show - was reading a lifetime average wearing
+      // a month's name. It is closed here, before this month's charges are
+      // raised, so `lastMonth` holds one complete month and `month` starts
+      // empty. Costs booked below belong to the month beginning now.
+      state.lastMonth = state.month;
+      state.month = createAccumulator();
+
       this.chargeStaff(context);
       this.chargeFixedCosts(context);
       this.updateCompanyLevel(context);
