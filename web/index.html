@@ -140,7 +140,7 @@
   .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
   .stat { background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .stat .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-  .stat .v { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; }
+  .stat .v { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
   .stat .v small { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 2px; }
   .stat .d { font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
 
@@ -171,7 +171,7 @@
 
   /* ---------- table ---------- */
   .scroll-x { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12.5px; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
   th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
   th {
     font-family: var(--sans); font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
@@ -304,10 +304,15 @@
   button.step.ghost:hover:not(:disabled) { background: var(--panel-sunk); filter: none; }
   button.step:disabled { opacity: .45; cursor: not-allowed; }
 
-  .hud { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+  /* Ten cells, so the column count is 2, 5 or 10 - anything else leaves a
+     part-empty last row, and the rule-coloured ground behind the grid shows
+     through it as a grey slab. auto-fit cannot promise a divisor. */
+  .hud { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+  @media (min-width: 560px) { .hud { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  @media (min-width: 1000px) { .hud { grid-template-columns: repeat(10, minmax(0, 1fr)); } }
   .hud .cell { background: var(--panel); padding: 10px 13px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .hud .cell .k { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-  .hud .cell .v { font-family: var(--mono); font-size: 17px; font-weight: 500; letter-spacing: -.01em; }
+  .hud .cell .v { font-family: var(--mono); font-size: 17px; font-weight: 500; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
   .hud .cell .s { font-size: 10.5px; color: var(--ink-3); font-family: var(--mono); }
   .hud .cell.alarm .v { color: var(--critical); }
 
@@ -332,6 +337,28 @@
     font-size: 11px; color: var(--ink-3); cursor: pointer; user-select: none;
   }
   .auto input { accent-color: var(--accent); width: 14px; height: 14px; }
+
+  /* One category at a time. Five stacked categories ran to several screens of
+     cards; the count on each tab is what the stack was really being scrolled
+     for - where the options are. */
+  .deck-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dtab {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 6px 12px;
+    border-radius: 999px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2);
+  }
+  .dtab:hover:not([aria-selected="true"]) { border-color: var(--accent); }
+  .dtab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dtab .n {
+    font-family: var(--mono); font-size: 10.5px; font-variant-numeric: tabular-nums;
+    padding: 1px 6px; border-radius: 999px;
+    background: var(--panel-sunk); color: var(--ink-2);
+  }
+  .dtab[aria-selected="true"] .n { background: rgba(255, 255, 255, .22); color: #fff; }
+  /* A category with nothing to take reads as quiet, not as an alarm. */
+  .dtab .n.none { color: var(--ink-3); }
+  .dtab[aria-selected="true"] .n.none { color: rgba(255, 255, 255, .7); }
 
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 10px; }
   .act {
@@ -626,7 +653,7 @@
     meta: null, scenarios: [], years: [], alerts: [], actions: [],
     dashboard: null, fleet: null, objectives: [], diagnostics: [],
     openYear: null, hover: null, filter: 'all', tab: 'site', finished: false, busy: false,
-    headroom: [], projection: [], schedule: [], horizon: 12, saves: [],
+    headroom: [], projection: [], schedule: [], horizon: 12, saves: [], deckTab: null,
     chartWorkload: null, projectionByWorkload: {}, chartGap: null,
   };
 
@@ -956,13 +983,54 @@
     $('deck-hint').textContent = state.finished ? 'Campaign complete'
       : takeable + ' of ' + state.actions.length + ' available now';
 
+    // Open on a category with something to do, so the first turn does not
+    // start on an empty tab.
+    var available = function (category) {
+      return (byCategory[category] || []).filter(function (a) {
+        return !a.blocked && a.affordable;
+      }).length;
+    };
+    if (DCT.decisionCategories.indexOf(state.deckTab) < 0) state.deckTab = null;
+    if (!state.deckTab) {
+      DCT.decisionCategories.forEach(function (category) {
+        if (!state.deckTab && !auto[category] && available(category) > 0) state.deckTab = category;
+      });
+      state.deckTab = state.deckTab || DCT.decisionCategories[0];
+    }
+
+    var tabs = el('div', 'deck-tabs');
+    tabs.setAttribute('role', 'tablist');
     DCT.decisionCategories.forEach(function (category) {
+      var button = el('button', 'dtab');
+      button.type = 'button';
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', state.deckTab === category ? 'true' : 'false');
+      button.appendChild(el('span', null, CATEGORY_LABELS[category]));
+      var count = available(category);
+      var badge = el('span', 'n' + (auto[category] || count === 0 ? ' none' : ''),
+        auto[category] ? 'auto' : String(count));
+      button.appendChild(badge);
+      button.addEventListener('click', function () {
+        state.deckTab = category;
+        renderDeck();
+      });
+      tabs.appendChild(button);
+    });
+    host.appendChild(tabs);
+
+    [state.deckTab].forEach(function (category) {
       var actions = byCategory[category] || [];
       var block = el('div', 'cat-block');
 
       var bar = el('div', 'cat-bar');
-      bar.appendChild(el('h3', null, CATEGORY_LABELS[category]));
-      bar.appendChild(el('span', 'count', auto[category] ? 'on autopilot' : actions.length + ' option' + (actions.length === 1 ? '' : 's')));
+      // The tab badge counts what can be TAKEN; this counts what exists. The
+      // two coincide often enough that showing a bare number twice reads as a
+      // repeat rather than as two different facts, so this one says which.
+      var ready = available(category);
+      bar.appendChild(el('span', 'count', auto[category] ? 'on autopilot'
+        : actions.length + ' option' + (actions.length === 1 ? '' : 's')
+          + (ready === actions.length ? ', all available now'
+            : ' \u00b7 ' + ready + ' available now')));
       var toggle = el('label', 'auto');
       var box = document.createElement('input');
       box.type = 'checkbox';
