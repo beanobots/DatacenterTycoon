@@ -1,0 +1,20 @@
+{
+  "id": "contract.inference_platform",
+  "schemaVersion": 1,
+  "name": "Inference Serving Platform",
+  "description": "Premium latency-bound serving that follows the working day and will not wait for a cheaper hour.",
+  "workloadId": "workload.ai_inference",
+  "computeUnits": 7200,
+  "termMonths": 24,
+  "pricePerComputeUnitHour": 0.1065,
+  "slaUptime01": 0.995,
+  "penaltyRate": 1.8,
+  "minimumReputation": 40,
+  "requiredTechnologies": [
+    "technology.hardware.ai_accelerators"
+  ],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 9,
+  "renewalProbability01": 0.6,
+  "availableFromYear": 2018
+}

@@ -1,0 +1,38 @@
+{
+  "id": "technology.operations.advanced_monitoring",
+  "schemaVersion": 3,
+  "name": "Advanced Monitoring",
+  "description": "Hall-level analytics tying thermal, power and workload telemetry together.",
+  "branch": "operations",
+  "tier": 2,
+  "research": {
+    "costUsd": 5000000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.operations.predictive_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "cooling.energyFactor",
+      "operation": "multiply",
+      "value": 0.97,
+      "priority": 10
+    },
+    {
+      "target": "facility.maintenanceCost",
+      "operation": "multiply",
+      "value": 0.95,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "hall_analytics"
+    ]
+  },
+  "tradeOff": "Another integration surface to keep current.",
+  "availableFromYear": 2014
+}

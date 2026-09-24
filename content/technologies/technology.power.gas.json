@@ -1,0 +1,25 @@
+{
+  "id": "technology.power.gas",
+  "schemaVersion": 3,
+  "name": "On-Site Gas Generation",
+  "description": "Combined-cycle generation behind the meter.",
+  "branch": "power",
+  "tier": 2,
+  "research": {
+    "costUsd": 5500000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.power.renewable_energy"
+  ],
+  "effects": [],
+  "unlocks": {
+    "power": [
+      "power.gas_ccgt"
+    ]
+  },
+  "tradeOff": "Direct emissions, fuel exposure, air quality and a stranded-asset risk.",
+  "availableFromYear": 2010
+}

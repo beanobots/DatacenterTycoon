@@ -1,0 +1,26 @@
+{
+  "id": "event.carbon_tax",
+  "schemaVersion": 1,
+  "name": "Carbon Tax Increase",
+  "description": "The jurisdiction doubles its carbon price. Every fossil megawatt-hour gets more expensive, permanently.",
+  "eventClass": "political",
+  "trigger": {
+    "dailyProbability": 0.0006,
+    "minimumYear": 2028,
+    "cooldownDays": 1825
+  },
+  "durationDays": 3650,
+  "durationVarianceDays": 0,
+  "effects": [
+    {
+      "target": "policy.carbonPrice",
+      "operation": "multiply",
+      "value": 2,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 2,
+  "immediateReputation": 0,
+  "mitigation": "Clean supply and carbon-aware scheduling turn this from a cost into an advantage over dirtier competitors."
+}

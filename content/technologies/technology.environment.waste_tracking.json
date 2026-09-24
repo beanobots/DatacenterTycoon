@@ -1,0 +1,32 @@
+{
+  "id": "technology.environment.waste_tracking",
+  "schemaVersion": 3,
+  "name": "Waste Tracking",
+  "description": "Mass-balance tracking of every waste stream.",
+  "branch": "environment",
+  "tier": 2,
+  "research": {
+    "costUsd": 3200000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.environment.environmental_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "waste.diversionRate",
+      "operation": "add",
+      "value": 0.15,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "waste_ledger"
+    ]
+  },
+  "tradeOff": "Chain-of-custody paperwork on every pallet that leaves the site.",
+  "availableFromYear": 2007
+}

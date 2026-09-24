@@ -1,0 +1,32 @@
+{
+  "id": "event.heat_network_offer",
+  "schemaVersion": 1,
+  "name": "District Heat Network Offer",
+  "description": "A neighbouring district-heat operator offers to buy recovered heat under a long-term agreement.",
+  "eventClass": "opportunity",
+  "trigger": {
+    "dailyProbability": 0.0008,
+    "minimumYear": 1995,
+    "cooldownDays": 1095
+  },
+  "durationDays": 365,
+  "durationVarianceDays": 60,
+  "effects": [
+    {
+      "target": "heat.reuseRevenue",
+      "operation": "multiply",
+      "value": 1.6,
+      "priority": 20
+    },
+    {
+      "target": "community.trustGain",
+      "operation": "add",
+      "value": 0.5,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 6,
+  "immediateReputation": 2,
+  "mitigation": "Requires heat recovery and a physical connection to the customer to be worth anything."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "technology.efficiency.energy_analytics",
+  "schemaVersion": 3,
+  "name": "Energy Analytics",
+  "description": "Sub-metered energy accounting across IT, cooling and losses.",
+  "branch": "efficiency",
+  "tier": 1,
+  "research": {
+    "costUsd": 1800000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.operations.rack_monitoring"
+  ],
+  "effects": [
+    {
+      "target": "facility.maintenanceCost",
+      "operation": "multiply",
+      "value": 0.98,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "energy_reporting"
+    ]
+  },
+  "tradeOff": "Reporting obligations you cannot walk back once published.",
+  "availableFromYear": 2008
+}

@@ -1,0 +1,30 @@
+{
+  "id": "hardware.cpu.gen3",
+  "schemaVersion": 1,
+  "name": "CPU Servers Gen 3",
+  "description": "High-core-count consolidation. Needs denser cooling than basic air comfortably provides.",
+  "researchId": "technology.hardware.cpu_gen3",
+  "family": "cpu",
+  "generation": 3,
+  "purchaseFactor": 1.55,
+  "computeFactor": 2.1,
+  "powerFactor": 1.35,
+  "heatFactor": 1.28,
+  "flexibility01": 0.95,
+  "embodiedFactor": 1.35,
+  "lifeYears": 7,
+  "workloadAffinity": {
+    "workload.streaming": 1.1,
+    "workload.finance": 1.1,
+    "workload.government": 1.1,
+    "workload.batch_science": 1,
+    "workload.disaster_recovery": 1,
+    "workload.archive": 0.7,
+    "workload.ai_inference": 0.6,
+    "workload.ai_training": 0.3
+  },
+  "requiredCoolingKwPerRack": 11,
+  "baseAnnualFailureRate": 0.036,
+  "refurbished": false,
+  "resaleValue01": 0.3
+}

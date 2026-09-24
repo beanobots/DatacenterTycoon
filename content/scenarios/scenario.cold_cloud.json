@@ -1,0 +1,71 @@
+{
+  "id": "scenario.cold_cloud",
+  "schemaVersion": 2,
+  "name": "Cold Cloud Facility",
+  "description": "2016-2036. Hyperscale in the Arctic, when the industry discovered that the cheapest cooling is weather. Free cooling and a near-zero-carbon grid, paid for with 42 ms of latency, winter storms and a build cost the climate inflates.",
+  "regionId": "region.nordic_cold",
+  "startDate": "2016-01-01",
+  "durationYears": 20,
+  "startingCash": 110000000,
+  "startingDebt": 38000000,
+  "startingReputation": 35,
+  "startingTechnologies": [
+    "technology.cooling.air",
+    "technology.hardware.cpu_servers",
+    "technology.power.grid_connection",
+    "technology.power.basic_ups",
+    "technology.security.physical_security"
+  ],
+  "scoreProfileId": "score.default",
+  "balanceProfileId": "balance.default",
+  "eventIds": [
+    "event.ai_demand_surge",
+    "event.battery_recall",
+    "event.brownfield_grant",
+    "event.carbon_tax",
+    "event.chip_shortage",
+    "event.chip_shortage_2021",
+    "event.customer_bankruptcy",
+    "event.diesel_restriction",
+    "event.drought_restriction",
+    "event.energy_crisis_2022",
+    "event.grid_outage",
+    "event.heat_network_offer",
+    "event.heat_wave",
+    "event.price_war",
+    "event.pump_failure",
+    "event.renewable_subsidy",
+    "event.transformer_shortage",
+    "event.university_partnership",
+    "event.water_tariff"
+  ],
+  "objectives": [
+    {
+      "id": "objective.pue",
+      "description": "Reach a PUE of 1.20 or better.",
+      "metric": "environment.pue",
+      "comparison": "lte",
+      "target": 1.2,
+      "byYear": 2033
+    },
+    {
+      "id": "objective.heat_reuse",
+      "description": "Export at least 15% of facility energy as useful heat.",
+      "metric": "environment.erf01",
+      "comparison": "gte",
+      "target": 0.15,
+      "byYear": 2035
+    },
+    {
+      "id": "objective.capacity",
+      "description": "Reach 20 MW of commissioned IT capacity.",
+      "metric": "capacity.itCapacityMw",
+      "comparison": "gte",
+      "target": 20,
+      "byYear": 2036
+    }
+  ],
+  "minimumAvailability01": 0.995,
+  "targetCapacityMw": 20,
+  "difficulty": "normal"
+}

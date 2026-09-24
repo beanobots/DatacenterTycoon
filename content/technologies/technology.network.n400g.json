@@ -1,0 +1,32 @@
+{
+  "id": "technology.network.n400g",
+  "schemaVersion": 3,
+  "name": "400G Networking",
+  "description": "400 gigabit fabric for accelerator clusters.",
+  "branch": "network",
+  "tier": 2,
+  "research": {
+    "costUsd": 4500000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.network.n100g"
+  ],
+  "effects": [
+    {
+      "target": "network.transitCost",
+      "operation": "multiply",
+      "value": 0.92,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "net_400g"
+    ]
+  },
+  "tradeOff": "Higher optics cost per port and a forklift upgrade of the spine.",
+  "availableFromYear": 2019
+}

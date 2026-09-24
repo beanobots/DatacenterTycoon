@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/technology.schema.json",
+  "title": "Technology definition",
+  "type": "object",
+  "required": [
+    "id",
+    "schemaVersion",
+    "name",
+    "branch",
+    "tier",
+    "research",
+    "prerequisites",
+    "effects",
+    "unlocks",
+    "tradeOff",
+    "availableFromYear"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/permanentId"
+    },
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "branch": {
+      "enum": [
+        "efficiency",
+        "cooling",
+        "power",
+        "hardware",
+        "network",
+        "grid",
+        "environment",
+        "security",
+        "operations",
+        "megaproject"
+      ]
+    },
+    "tier": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 6
+    },
+    "research": {
+      "type": "object",
+      "required": [
+        "costUsd",
+        "durationDays",
+        "requiredSpecialists"
+      ],
+      "properties": {
+        "costUsd": {
+          "$ref": "common.schema.json#/$defs/nonNegative",
+          "description": "R&D budget for the project, funded over durationDays."
+        },
+        "durationDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requiredSpecialists": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Specialists the project occupies while it runs."
+        },
+        "minimumCompanyLevel": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "prerequisites": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/permanentId"
+      }
+    },
+    "effects": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/modifier"
+      }
+    },
+    "unlocks": {
+      "type": "object",
+      "properties": {
+        "buildings": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/permanentId"
+          }
+        },
+        "cooling": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/permanentId"
+          }
+        },
+        "power": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/permanentId"
+          }
+        },
+        "hardware": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/permanentId"
+          }
+        },
+        "contracts": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/permanentId"
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tradeOff": {
+      "type": "string",
+      "minLength": 1
+    },
+    "availableFromYear": {
+      "type": "integer",
+      "minimum": 1990,
+      "maximum": 2100,
+      "description": "Calendar year this technology first becomes researchable. Historical: a campaign opening in 2006 cannot research immersion cooling because it did not exist."
+    }
+  },
+  "additionalProperties": false
+}

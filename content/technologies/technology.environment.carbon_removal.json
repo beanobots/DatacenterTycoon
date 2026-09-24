@@ -1,0 +1,38 @@
+{
+  "id": "technology.environment.carbon_removal",
+  "schemaVersion": 3,
+  "name": "Carbon Removal",
+  "description": "Contracted durable carbon removal against residual emissions.",
+  "branch": "environment",
+  "tier": 4,
+  "research": {
+    "costUsd": 20000000,
+    "durationDays": 420,
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
+  },
+  "prerequisites": [
+    "technology.environment.advanced_carbon_accounting"
+  ],
+  "effects": [
+    {
+      "target": "environment.offsetCapacity",
+      "operation": "add",
+      "value": 1,
+      "priority": 10
+    },
+    {
+      "target": "finance.operatingCost",
+      "operation": "multiply",
+      "value": 1.1,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "carbon_removal"
+    ]
+  },
+  "tradeOff": "+10% operating cost, and offsets alone cannot carry the environmental score.",
+  "availableFromYear": 2021
+}

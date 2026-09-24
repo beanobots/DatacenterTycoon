@@ -1,0 +1,26 @@
+{
+  "id": "event.university_partnership",
+  "schemaVersion": 1,
+  "name": "University Research Partnership",
+  "description": "A research institution offers a joint programme in exchange for compute allocation.",
+  "eventClass": "opportunity",
+  "trigger": {
+    "dailyProbability": 0.001,
+    "minimumYear": 1995,
+    "cooldownDays": 730
+  },
+  "durationDays": 730,
+  "durationVarianceDays": 180,
+  "effects": [
+    {
+      "target": "research.speed",
+      "operation": "multiply",
+      "value": 1.3,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 3,
+  "immediateReputation": 3,
+  "mitigation": "Costs staff time that would otherwise go to operations."
+}

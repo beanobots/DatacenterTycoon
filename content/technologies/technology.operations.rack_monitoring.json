@@ -1,0 +1,32 @@
+{
+  "id": "technology.operations.rack_monitoring",
+  "schemaVersion": 3,
+  "name": "Rack Monitoring",
+  "description": "Per-rack power and inlet-temperature telemetry.",
+  "branch": "operations",
+  "tier": 1,
+  "research": {
+    "costUsd": 1200000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.hardware.cpu_servers"
+  ],
+  "effects": [
+    {
+      "target": "facility.maintenanceCost",
+      "operation": "multiply",
+      "value": 0.96,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "telemetry"
+    ]
+  },
+  "tradeOff": "Sensor estate to maintain and secure.",
+  "availableFromYear": 2006
+}

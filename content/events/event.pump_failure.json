@@ -1,0 +1,32 @@
+{
+  "id": "event.pump_failure",
+  "schemaVersion": 1,
+  "name": "Cooling Pump Failure",
+  "description": "A primary circulation pump fails. Redundancy decides whether this is paperwork or an incident.",
+  "eventClass": "operational",
+  "trigger": {
+    "dailyProbability": 0.0016,
+    "minimumYear": 1995,
+    "cooldownDays": 30
+  },
+  "durationDays": 3,
+  "durationVarianceDays": 2,
+  "effects": [
+    {
+      "target": "cooling.capacity",
+      "operation": "multiply",
+      "value": 0.78,
+      "priority": 20
+    },
+    {
+      "target": "facility.maintenanceCost",
+      "operation": "multiply",
+      "value": 1.15,
+      "priority": 20
+    }
+  ],
+  "immediateCash": -120000,
+  "immediateTrust": 0,
+  "immediateReputation": 0,
+  "mitigation": "N+1 pump redundancy turns this into a maintenance ticket instead of a thermal event."
+}

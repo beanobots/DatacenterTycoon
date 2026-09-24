@@ -1,0 +1,259 @@
+{
+  "id": "region.coal_belt",
+  "schemaVersion": 2,
+  "name": "Industrial Coal Belt",
+  "description": "Cheap power on a fossil-heavy continental grid. Land and labour are inexpensive, carbon policy is tightening, and every megawatt-hour imported is a carbon line in the annual report.",
+  "archetype": "temperate",
+  "climate": {
+    "monthlyMeanTempC": [
+      -1,
+      0.809,
+      5.75,
+      12.5,
+      19.25,
+      24.191,
+      26,
+      24.191,
+      19.25,
+      12.5,
+      5.75,
+      0.809
+    ],
+    "monthlySwingC": [
+      11,
+      11,
+      11,
+      11,
+      11,
+      11,
+      11,
+      11,
+      11,
+      11,
+      11,
+      11
+    ],
+    "monthlyHumidity01": [
+      0.74,
+      0.733,
+      0.715,
+      0.69,
+      0.665,
+      0.647,
+      0.64,
+      0.647,
+      0.665,
+      0.69,
+      0.715,
+      0.733
+    ],
+    "dailyVariabilityC": 4.5,
+    "elevationM": 210,
+    "contamination01": 0.45
+  },
+  "grid": {
+    "capacityMw": 260,
+    "basePricePerMwh": 39,
+    "hourlyPriceShape": [
+      0.921,
+      0.798,
+      0.689,
+      0.6,
+      0.539,
+      0.51,
+      0.514,
+      0.551,
+      0.618,
+      0.712,
+      0.825,
+      0.95,
+      1.079,
+      1.202,
+      1.311,
+      1.4,
+      1.461,
+      1.49,
+      1.486,
+      1.449,
+      1.382,
+      1.288,
+      1.175,
+      1.05
+    ],
+    "monthlyPriceShape": [
+      1.15,
+      1.148,
+      1.143,
+      1.135,
+      1.128,
+      1.122,
+      1.12,
+      1.122,
+      1.127,
+      1.135,
+      1.143,
+      1.148
+    ],
+    "baseCarbonKgPerMwh": 640,
+    "hourlyCarbonShape": [
+      1.104,
+      1.067,
+      1.026,
+      0.983,
+      0.942,
+      0.904,
+      0.873,
+      0.85,
+      0.838,
+      0.836,
+      0.846,
+      0.867,
+      0.896,
+      0.932,
+      0.974,
+      1.017,
+      1.058,
+      1.096,
+      1.127,
+      1.15,
+      1.162,
+      1.164,
+      1.154,
+      1.133
+    ],
+    "hourlyOutageProbability": 0.0005,
+    "meanOutageHours": 3.2
+  },
+  "water": {
+    "annualWithdrawalLimitM3": 1400000,
+    "pricePerM3": 0.85,
+    "stress01": 0.25,
+    "reclaimedAvailability01": 0.4,
+    "reclaimedPricePerM3": 0.45,
+    "annualDroughtProbability": 0.08
+  },
+  "land": {
+    "pricePerHectare": 28000,
+    "availableHectares": 200,
+    "biodiversitySensitivity01": 0.3,
+    "brownfield": true,
+    "constructionCostFactor": 0.88
+  },
+  "connectivity": {
+    "latencyMsToDemandCentre": 22,
+    "fiberCapacityGbps": 5000,
+    "routeDiversity": 2,
+    "transitCostPerGbpsMonth": 45
+  },
+  "people": {
+    "laborSupply01": 0.62,
+    "wageIndex": 0.78,
+    "communitySensitivity01": 0.35,
+    "populationDensity": 320,
+    "startingTrust": 22
+  },
+  "hazards": {
+    "heatWave": 0.35,
+    "drought": 0.15,
+    "flood": 0.35,
+    "storm": 0.5,
+    "wildfire": 0.12,
+    "earthquake": 0.05,
+    "seaLevel": 0
+  },
+  "policy": {
+    "permitDays": 120,
+    "carbonPricePerTonne": 8,
+    "waterRestrictionFactor": 1.2,
+    "capitalIncentive01": 0.18,
+    "taxRate01": 0.19,
+    "reportingMandatory": false
+  },
+  "resourceQuality": {
+    "power.solar_rooftop": 0.17,
+    "power.solar_ground": 0.18,
+    "power.wind_contract": 0.38,
+    "power.hydro_contract": 0.28,
+    "power.gas_ccgt": 0.9,
+    "power.diesel_backup": 0.95,
+    "power.nuclear_contract": 0.9,
+    "power.hydrogen_generator": 0.8,
+    "power.smr": 0.92,
+    "power.grid": 1,
+    "power.battery": 1
+  },
+  "trajectory": {
+    "gridCarbonKgPerMwh": [
+      {
+        "year": 2006,
+        "value": 820
+      },
+      {
+        "year": 2010,
+        "value": 800
+      },
+      {
+        "year": 2015,
+        "value": 730
+      },
+      {
+        "year": 2020,
+        "value": 660
+      },
+      {
+        "year": 2025,
+        "value": 640
+      },
+      {
+        "year": 2030,
+        "value": 470
+      },
+      {
+        "year": 2036,
+        "value": 300
+      }
+    ],
+    "energyPricePerMwh": [
+      {
+        "year": 2006,
+        "value": 30
+      },
+      {
+        "year": 2008,
+        "value": 42
+      },
+      {
+        "year": 2012,
+        "value": 28
+      },
+      {
+        "year": 2016,
+        "value": 26
+      },
+      {
+        "year": 2020,
+        "value": 27
+      },
+      {
+        "year": 2022,
+        "value": 68
+      },
+      {
+        "year": 2024,
+        "value": 44
+      },
+      {
+        "year": 2025,
+        "value": 39
+      },
+      {
+        "year": 2030,
+        "value": 41
+      },
+      {
+        "year": 2036,
+        "value": 45
+      }
+    ]
+  }
+}

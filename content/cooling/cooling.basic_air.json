@@ -1,0 +1,21 @@
+{
+  "id": "cooling.basic_air",
+  "schemaVersion": 1,
+  "name": "Basic Room Air",
+  "description": "Computer-room air handlers with no containment. Cheap, forgiving, and the fan load rises steeply with density.",
+  "researchId": "technology.cooling.air",
+  "capexFactor": 1,
+  "maintenanceFactor": 1,
+  "energyFactor": 1,
+  "energyFactorBest": 0.92,
+  "energyFactorWorst": 1.35,
+  "waterFactor": 0,
+  "densityKwPerRack": 12,
+  "heatReuse01": 0.05,
+  "complexity01": 0.15,
+  "deratingStartC": 28,
+  "deratingEndC": 45,
+  "wetBulbSensitivity01": 0.15,
+  "contaminationSensitivity01": 0.1,
+  "baseAnnualFailureRate": 0.06
+}

@@ -1,0 +1,26 @@
+{
+  "id": "technology.megaproject.smr",
+  "schemaVersion": 3,
+  "name": "Small Modular Reactor",
+  "description": "A dedicated 100MW-class firm low-carbon asset. Chapter 8: dedicated firm supply.",
+  "branch": "megaproject",
+  "tier": 5,
+  "research": {
+    "costUsd": 30000000,
+    "durationDays": 540,
+    "requiredSpecialists": 10,
+    "minimumCompanyLevel": 4
+  },
+  "prerequisites": [
+    "technology.power.nuclear_contract",
+    "technology.operations.advanced_construction"
+  ],
+  "effects": [],
+  "unlocks": {
+    "power": [
+      "power.smr"
+    ]
+  },
+  "tradeOff": "Extreme CapEx, a schedule measured in years, and an approval process that can end it.",
+  "availableFromYear": 2029
+}

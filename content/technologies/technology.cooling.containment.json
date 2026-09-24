@@ -1,0 +1,50 @@
+{
+  "id": "technology.cooling.containment",
+  "schemaVersion": 3,
+  "name": "Hot/Cold Aisle Containment",
+  "description": "Physical separation of hot and cold aisles. Chapter 8: -8% cooling power, +20% density, -10% cooling failures.",
+  "branch": "cooling",
+  "tier": 1,
+  "research": {
+    "costUsd": 1500000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.cooling.air"
+  ],
+  "effects": [
+    {
+      "target": "cooling.energyFactor",
+      "operation": "multiply",
+      "value": 0.92,
+      "priority": 10
+    },
+    {
+      "target": "cooling.densityKwPerRack",
+      "operation": "multiply",
+      "value": 1.2,
+      "priority": 10
+    },
+    {
+      "target": "cooling.failureRate",
+      "operation": "multiply",
+      "value": 0.9,
+      "priority": 10
+    },
+    {
+      "target": "facility.hallCapex",
+      "operation": "multiply",
+      "value": 1.05,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "cooling": [
+      "cooling.containment"
+    ]
+  },
+  "tradeOff": "+5% hall CapEx, and the benefit decays if the layout discipline slips.",
+  "availableFromYear": 2006
+}

@@ -1,0 +1,21 @@
+{
+  "id": "cooling.evaporative_assist",
+  "schemaVersion": 1,
+  "name": "Evaporative Assist",
+  "description": "Adiabatic pre-cooling. Excellent in dry heat and the single largest water consumer in the catalogue.",
+  "researchId": "technology.cooling.evaporative_assist",
+  "capexFactor": 1.42,
+  "maintenanceFactor": 1.22,
+  "energyFactor": 0.62,
+  "energyFactorBest": 0.52,
+  "energyFactorWorst": 1.05,
+  "waterFactor": 2.4,
+  "densityKwPerRack": 28,
+  "heatReuse01": 0.22,
+  "complexity01": 0.44,
+  "deratingStartC": 34,
+  "deratingEndC": 50,
+  "wetBulbSensitivity01": 0.9,
+  "contaminationSensitivity01": 0.2,
+  "baseAnnualFailureRate": 0.075
+}

@@ -1,0 +1,30 @@
+{
+  "id": "hardware.asic.gen1",
+  "schemaVersion": 1,
+  "name": "AI Accelerator Gen 1",
+  "description": "Purpose-built silicon. Outstanding on supported workloads and close to worthless off them.",
+  "researchId": "technology.hardware.ai_accelerators",
+  "family": "asic",
+  "generation": 1,
+  "purchaseFactor": 3.6,
+  "computeFactor": 6.8,
+  "powerFactor": 2.55,
+  "heatFactor": 3.1,
+  "flexibility01": 0.28,
+  "embodiedFactor": 2.2,
+  "lifeYears": 6,
+  "workloadAffinity": {
+    "workload.ai_training": 1.35,
+    "workload.ai_inference": 1.45,
+    "workload.batch_science": 0.5,
+    "workload.streaming": 0.2,
+    "workload.finance": 0.15,
+    "workload.government": 0.15,
+    "workload.disaster_recovery": 0.1,
+    "workload.archive": 0.05
+  },
+  "requiredCoolingKwPerRack": 26,
+  "baseAnnualFailureRate": 0.06,
+  "refurbished": false,
+  "resaleValue01": 0.2
+}

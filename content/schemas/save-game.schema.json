@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/save-game.schema.json",
+  "title": "Save game",
+  "description": "Acceptance criterion 6: saves carry their schema version and migration history.",
+  "type": "object",
+  "required": ["saveVersion", "migrationHistory", "createdUtc", "scenarioId", "campaignSeed", "tickIndex", "state"],
+  "properties": {
+    "saveVersion": { "type": "integer", "minimum": 1 },
+    "migrationHistory": { "type": "array", "items": { "type": "string" } },
+    "createdUtc": { "type": "string" },
+    "scenarioId": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "campaignSeed": { "type": "string", "minLength": 1 },
+    "tickIndex": { "type": "integer", "minimum": 0 },
+    "contentHash": { "type": "string" },
+    "state": { "type": "object" }
+  },
+  "additionalProperties": false
+}

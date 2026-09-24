@@ -1,0 +1,25 @@
+{
+  "id": "technology.cooling.evaporative_assist",
+  "schemaVersion": 3,
+  "name": "Evaporative Assist",
+  "description": "Adiabatic pre-cooling on the condenser air path.",
+  "branch": "cooling",
+  "tier": 2,
+  "research": {
+    "costUsd": 4200000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.cooling.chilled_water"
+  ],
+  "effects": [],
+  "unlocks": {
+    "cooling": [
+      "cooling.evaporative_assist"
+    ]
+  },
+  "tradeOff": "The single largest water consumer available, in the climates that can least spare it.",
+  "availableFromYear": 2009
+}

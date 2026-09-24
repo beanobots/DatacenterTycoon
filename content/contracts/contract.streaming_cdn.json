@@ -1,0 +1,18 @@
+{
+  "id": "contract.streaming_cdn",
+  "schemaVersion": 1,
+  "name": "Streaming Platform Edge Capacity",
+  "description": "Evening-peaked delivery capacity. Volume revenue at a thin margin, and the peak lands when power is dearest.",
+  "workloadId": "workload.streaming",
+  "computeUnits": 5200,
+  "termMonths": 36,
+  "pricePerComputeUnitHour": 0.0587,
+  "slaUptime01": 0.995,
+  "penaltyRate": 1,
+  "minimumReputation": 10,
+  "requiredTechnologies": [],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 4,
+  "renewalProbability01": 0.7,
+  "availableFromYear": 2005
+}

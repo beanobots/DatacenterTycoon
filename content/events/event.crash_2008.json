@@ -1,0 +1,33 @@
+{
+  "id": "event.crash_2008",
+  "schemaVersion": 2,
+  "name": "The 2008 Financial Crisis",
+  "description": "Credit markets seize and enterprise IT budgets are cut mid-year. Customers renegotiate, new work stops arriving, and borrowing gets expensive for anyone who needs it.",
+  "eventClass": "commercial",
+  "trigger": {
+    "dailyProbability": 0,
+    "minimumYear": 1995,
+    "cooldownDays": 3650,
+    "scheduledDate": "2008-09-15"
+  },
+  "durationDays": 620,
+  "durationVarianceDays": 90,
+  "effects": [
+    {
+      "target": "market.contractPrice",
+      "operation": "multiply",
+      "value": 0.78,
+      "priority": 25
+    },
+    {
+      "target": "finance.operatingCost",
+      "operation": "multiply",
+      "value": 1.06,
+      "priority": 25
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 0,
+  "immediateReputation": -3,
+  "mitigation": "Hold the contracts you have rather than chasing new ones, and do not take on debt at this year\u2019s rates. Operators who had already built ahead of demand spent the crisis paying for empty hall."
+}

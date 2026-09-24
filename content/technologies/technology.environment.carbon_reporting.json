@@ -1,0 +1,32 @@
+{
+  "id": "technology.environment.carbon_reporting",
+  "schemaVersion": 3,
+  "name": "Carbon Reporting",
+  "description": "Hourly carbon accounting across scope 1 and 2.",
+  "branch": "environment",
+  "tier": 2,
+  "research": {
+    "costUsd": 2600000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.efficiency.energy_analytics"
+  ],
+  "effects": [
+    {
+      "target": "company.reputationGain",
+      "operation": "add",
+      "value": 0.2,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "carbon_ledger"
+    ]
+  },
+  "tradeOff": "Publishing the number makes it something you can be held to.",
+  "availableFromYear": 2010
+}

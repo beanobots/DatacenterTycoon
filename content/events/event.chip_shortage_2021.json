@@ -1,0 +1,33 @@
+{
+  "id": "event.chip_shortage_2021",
+  "schemaVersion": 2,
+  "name": "The 2021 Semiconductor Shortage",
+  "description": "Pandemic demand and foundry allocation collide. Server lead times stretch from weeks to the better part of a year, and prices follow.",
+  "eventClass": "commercial",
+  "trigger": {
+    "dailyProbability": 0,
+    "minimumYear": 1995,
+    "cooldownDays": 3650,
+    "scheduledDate": "2021-03-01"
+  },
+  "durationDays": 730,
+  "durationVarianceDays": 120,
+  "effects": [
+    {
+      "target": "hardware.purchaseCost",
+      "operation": "multiply",
+      "value": 1.38,
+      "priority": 25
+    },
+    {
+      "target": "facility.constructionSpeed",
+      "operation": "multiply",
+      "value": 0.85,
+      "priority": 25
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 0,
+  "immediateReputation": 0,
+  "mitigation": "Extend the life of what is installed and order earlier than you need to. This is the stretch where retiring hardware on schedule stops being free."
+}

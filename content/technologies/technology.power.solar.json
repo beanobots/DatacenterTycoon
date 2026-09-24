@@ -1,0 +1,33 @@
+{
+  "id": "technology.power.solar",
+  "schemaVersion": 3,
+  "name": "Solar Deployment",
+  "description": "Rooftop and ground-mount photovoltaics. Chapter 8: renewable reputation.",
+  "branch": "power",
+  "tier": 2,
+  "research": {
+    "costUsd": 3000000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.power.renewable_energy"
+  ],
+  "effects": [
+    {
+      "target": "company.reputationGain",
+      "operation": "add",
+      "value": 0.2,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "power": [
+      "power.solar_rooftop",
+      "power.solar_ground"
+    ]
+  },
+  "tradeOff": "Intermittency and land: the ground array competes with every other use of the site.",
+  "availableFromYear": 2011
+}

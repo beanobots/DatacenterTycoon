@@ -1,0 +1,25 @@
+{
+  "id": "technology.environment.environmental_monitoring",
+  "schemaVersion": 3,
+  "name": "Environmental Monitoring",
+  "description": "Water, noise, discharge and air-quality instrumentation.",
+  "branch": "environment",
+  "tier": 1,
+  "research": {
+    "costUsd": 1500000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.operations.rack_monitoring"
+  ],
+  "effects": [],
+  "unlocks": {
+    "capabilities": [
+      "env_telemetry"
+    ]
+  },
+  "tradeOff": "Measuring an impact starts the clock on being asked about it.",
+  "availableFromYear": 2006
+}

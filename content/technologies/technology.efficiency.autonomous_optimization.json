@@ -1,0 +1,45 @@
+{
+  "id": "technology.efficiency.autonomous_optimization",
+  "schemaVersion": 3,
+  "name": "Autonomous Optimization",
+  "description": "Closed-loop control of cooling setpoints, fan curves and placement.",
+  "branch": "efficiency",
+  "tier": 4,
+  "research": {
+    "costUsd": 18000000,
+    "durationDays": 420,
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
+  },
+  "prerequisites": [
+    "technology.operations.advanced_monitoring",
+    "technology.grid.carbon_aware_scheduling"
+  ],
+  "effects": [
+    {
+      "target": "cooling.energyFactor",
+      "operation": "multiply",
+      "value": 0.9,
+      "priority": 10
+    },
+    {
+      "target": "hardware.computePerRack",
+      "operation": "multiply",
+      "value": 1.08,
+      "priority": 10
+    },
+    {
+      "target": "facility.maintenanceComplexity",
+      "operation": "multiply",
+      "value": 1.15,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "autonomous_control"
+    ]
+  },
+  "tradeOff": "The control loop becomes something staff supervise rather than understand.",
+  "availableFromYear": 2020
+}

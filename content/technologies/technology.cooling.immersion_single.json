@@ -1,0 +1,38 @@
+{
+  "id": "technology.cooling.immersion_single",
+  "schemaVersion": 3,
+  "name": "Single-Phase Immersion",
+  "description": "Racks submerged in dielectric fluid. Chapter 8: -50% cooling power, 120-140kW racks.",
+  "branch": "cooling",
+  "tier": 4,
+  "research": {
+    "costUsd": 15000000,
+    "durationDays": 420,
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
+  },
+  "prerequisites": [
+    "technology.cooling.direct_chip"
+  ],
+  "effects": [
+    {
+      "target": "facility.maintenanceComplexity",
+      "operation": "multiply",
+      "value": 1.25,
+      "priority": 10
+    },
+    {
+      "target": "hardware.failureRate",
+      "operation": "multiply",
+      "value": 0.92,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "cooling": [
+      "cooling.immersion_single"
+    ]
+  },
+  "tradeOff": "+40% CapEx and a servicing model your staff have to be retrained for.",
+  "availableFromYear": 2014
+}

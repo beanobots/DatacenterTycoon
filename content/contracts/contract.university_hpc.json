@@ -1,0 +1,18 @@
+{
+  "id": "contract.university_hpc",
+  "schemaVersion": 1,
+  "name": "University HPC Allocation",
+  "description": "Cheap, patient, deferrable work that pays partly in research standing rather than cash.",
+  "workloadId": "workload.batch_science",
+  "computeUnits": 4100,
+  "termMonths": 36,
+  "pricePerComputeUnitHour": 0.0428,
+  "slaUptime01": 0.95,
+  "penaltyRate": 0.6,
+  "minimumReputation": 12,
+  "requiredTechnologies": [],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 7,
+  "renewalProbability01": 0.75,
+  "availableFromYear": 1995
+}

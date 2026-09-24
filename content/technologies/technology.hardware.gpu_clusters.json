@@ -1,0 +1,28 @@
+{
+  "id": "technology.hardware.gpu_clusters",
+  "schemaVersion": 3,
+  "name": "GPU Clusters",
+  "description": "Accelerated compute for AI and scientific workloads. Chapter 8: AI contracts, high revenue.",
+  "branch": "hardware",
+  "tier": 2,
+  "research": {
+    "costUsd": 4000000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.hardware.high_density_computing"
+  ],
+  "effects": [],
+  "unlocks": {
+    "hardware": [
+      "hardware.gpu.gen1"
+    ],
+    "contracts": [
+      "contract.ai_lab_training"
+    ]
+  },
+  "tradeOff": "+40% power and +60% heat against the CPU baseline.",
+  "availableFromYear": 2011
+}

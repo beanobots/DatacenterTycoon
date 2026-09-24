@@ -1,0 +1,60 @@
+{
+  "id": "technology.megaproject.regenerative_campus",
+  "schemaVersion": 3,
+  "name": "Regenerative Campus",
+  "description": "Water-positive, carbon-negative, zero-landfill campus operation.",
+  "branch": "megaproject",
+  "tier": 5,
+  "research": {
+    "costUsd": 50000000,
+    "durationDays": 540,
+    "requiredSpecialists": 10,
+    "minimumCompanyLevel": 4
+  },
+  "prerequisites": [
+    "technology.environment.carbon_removal",
+    "technology.environment.circular_hardware",
+    "technology.environment.habitat_restoration",
+    "technology.environment.water_recycling",
+    "technology.cooling.heat_recovery"
+  ],
+  "effects": [
+    {
+      "target": "water.freshwaterDemand",
+      "operation": "multiply",
+      "value": 0.55,
+      "priority": 10
+    },
+    {
+      "target": "waste.diversionRate",
+      "operation": "add",
+      "value": 0.2,
+      "priority": 10
+    },
+    {
+      "target": "environment.biodiversity",
+      "operation": "add",
+      "value": 25,
+      "priority": 10
+    },
+    {
+      "target": "community.trustGain",
+      "operation": "add",
+      "value": 1,
+      "priority": 10
+    },
+    {
+      "target": "finance.operatingCost",
+      "operation": "multiply",
+      "value": 1.08,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "regenerative"
+    ]
+  },
+  "tradeOff": "The largest capital and coordination burden in the game, across every environmental system at once.",
+  "availableFromYear": 2028
+}

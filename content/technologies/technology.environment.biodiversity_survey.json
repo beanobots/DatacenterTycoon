@@ -1,0 +1,25 @@
+{
+  "id": "technology.environment.biodiversity_survey",
+  "schemaVersion": 3,
+  "name": "Biodiversity Survey",
+  "description": "Ecological baseline survey of the site and its surroundings.",
+  "branch": "environment",
+  "tier": 1,
+  "research": {
+    "costUsd": 2000000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.environment.environmental_monitoring"
+  ],
+  "effects": [],
+  "unlocks": {
+    "capabilities": [
+      "habitat_baseline"
+    ]
+  },
+  "tradeOff": "A baseline you will be measured against for the rest of the campaign.",
+  "availableFromYear": 2012
+}

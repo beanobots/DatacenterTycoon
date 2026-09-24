@@ -1,0 +1,39 @@
+{
+  "id": "event.drought_restriction",
+  "schemaVersion": 1,
+  "name": "Drought Water Restriction",
+  "description": "The watershed goes under restriction. Withdrawal is capped and every cubic metre is watched by the community.",
+  "eventClass": "environmental",
+  "trigger": {
+    "dailyProbability": 0.0018,
+    "minimumYear": 1995,
+    "hazardKey": "drought",
+    "cooldownDays": 180
+  },
+  "durationDays": 90,
+  "durationVarianceDays": 45,
+  "effects": [
+    {
+      "target": "water.priceMultiplier",
+      "operation": "multiply",
+      "value": 2.2,
+      "priority": 20
+    },
+    {
+      "target": "water.withdrawalLimit",
+      "operation": "multiply",
+      "value": 0.55,
+      "priority": 20
+    },
+    {
+      "target": "community.trustGain",
+      "operation": "add",
+      "value": -0.4,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": -8,
+  "immediateReputation": -2,
+  "mitigation": "Switch to reclaimed supply, run dry, or accept the higher cooling energy that comes with using less water."
+}

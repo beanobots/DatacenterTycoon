@@ -1,0 +1,21 @@
+{
+  "id": "cooling.immersion_two_phase",
+  "schemaVersion": 1,
+  "name": "Two-Phase Immersion",
+  "description": "Boiling dielectric fluid at the endgame of density. Fluid cost, containment and regulation dominate operations.",
+  "researchId": "technology.cooling.immersion_two_phase",
+  "capexFactor": 5.2,
+  "maintenanceFactor": 2.05,
+  "energyFactor": 0.31,
+  "energyFactorBest": 0.28,
+  "energyFactorWorst": 0.42,
+  "waterFactor": 0.22,
+  "densityKwPerRack": 220,
+  "heatReuse01": 0.76,
+  "complexity01": 0.94,
+  "deratingStartC": 38,
+  "deratingEndC": 54,
+  "wetBulbSensitivity01": 0.2,
+  "contaminationSensitivity01": 0.02,
+  "baseAnnualFailureRate": 0.11
+}

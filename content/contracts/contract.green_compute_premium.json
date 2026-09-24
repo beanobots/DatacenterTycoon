@@ -1,0 +1,20 @@
+{
+  "id": "contract.green_compute_premium",
+  "schemaVersion": 1,
+  "name": "Certified Low-Carbon Compute",
+  "description": "A premium above market for compute delivered under a hard carbon intensity ceiling, audited hourly.",
+  "workloadId": "workload.ai_training",
+  "computeUnits": 5600,
+  "termMonths": 36,
+  "pricePerComputeUnitHour": 0.1168,
+  "slaUptime01": 0.98,
+  "penaltyRate": 1.4,
+  "minimumReputation": 55,
+  "requiredTechnologies": [
+    "technology.grid.carbon_aware_scheduling"
+  ],
+  "maxCarbonIntensity": 120,
+  "reputationOnCompletion": 14,
+  "renewalProbability01": 0.72,
+  "availableFromYear": 2024
+}

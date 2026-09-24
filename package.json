@@ -1,0 +1,38 @@
+{
+  "name": "datacentertycoon",
+  "version": "0.1.0",
+  "description": "Headless deterministic simulation engine for DatacenterTycoon",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "dct": "./src/cli/main.ts"
+  },
+  "scripts": {
+    "dct": "tsx src/cli/main.ts",
+    "validate": "tsx src/cli/main.ts validate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run test",
+    "build:web": "tsx scripts/build-web.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beanobots/DatacenterTycoon.git"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.1",
+    "esbuild": "0.24.2",
+    "tsx": "4.19.2",
+    "typescript": "5.7.3",
+    "vitest": "3.0.5"
+  }
+}

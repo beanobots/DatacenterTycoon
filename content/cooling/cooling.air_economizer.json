@@ -1,0 +1,21 @@
+{
+  "id": "cooling.air_economizer",
+  "schemaVersion": 1,
+  "name": "Air Economizer",
+  "description": "Free cooling from outside air. Superb in cool clean climates; smoke, dust and humidity close the dampers.",
+  "researchId": "technology.cooling.air_economizer",
+  "capexFactor": 1.28,
+  "maintenanceFactor": 1.08,
+  "energyFactor": 0.9,
+  "energyFactorBest": 0.7,
+  "energyFactorWorst": 1.1,
+  "waterFactor": 0.02,
+  "densityKwPerRack": 20,
+  "heatReuse01": 0.1,
+  "complexity01": 0.35,
+  "deratingStartC": 22,
+  "deratingEndC": 38,
+  "wetBulbSensitivity01": 0.35,
+  "contaminationSensitivity01": 0.85,
+  "baseAnnualFailureRate": 0.06
+}

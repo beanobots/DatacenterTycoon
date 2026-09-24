@@ -1,0 +1,83 @@
+{
+  "id": "scenario.dry_grid",
+  "schemaVersion": 2,
+  "name": "The Dry Grid",
+  "description": "2006-2036. A 12 MW objective outside a desert city, begun in the raised-floor era when land was cheap and nobody asked about water. Excellent solar, extreme heat, severe water stress, gas-heavy evenings, and thirty years in which every one of those becomes someone else's business.",
+  "regionId": "region.desert_southwest",
+  "startDate": "2006-01-01",
+  "durationYears": 30,
+  "startingCash": 42000000,
+  "startingDebt": 12000000,
+  "startingReputation": 35,
+  "startingTechnologies": [
+    "technology.cooling.air",
+    "technology.cooling.chilled_water",
+    "technology.cooling.containment",
+    "technology.hardware.cpu_servers",
+    "technology.power.basic_ups",
+    "technology.power.grid_connection",
+    "technology.security.physical_security"
+  ],
+  "scoreProfileId": "score.default",
+  "balanceProfileId": "balance.default",
+  "eventIds": [
+    "event.ai_demand_surge",
+    "event.battery_recall",
+    "event.brownfield_grant",
+    "event.carbon_tax",
+    "event.chip_shortage",
+    "event.chip_shortage_2021",
+    "event.crash_2008",
+    "event.customer_bankruptcy",
+    "event.diesel_restriction",
+    "event.drought_restriction",
+    "event.energy_crisis_2022",
+    "event.grid_outage",
+    "event.heat_network_offer",
+    "event.heat_wave",
+    "event.price_war",
+    "event.pump_failure",
+    "event.renewable_subsidy",
+    "event.thai_flood_2011",
+    "event.transformer_shortage",
+    "event.university_partnership",
+    "event.water_tariff"
+  ],
+  "objectives": [
+    {
+      "id": "objective.capacity",
+      "description": "Reach 12 MW of commissioned IT capacity.",
+      "metric": "capacity.itCapacityMw",
+      "comparison": "gte",
+      "target": 12,
+      "byYear": 2035
+    },
+    {
+      "id": "objective.wue",
+      "description": "Hold water use effectiveness at or below 0.8 L/kWh.",
+      "metric": "environment.wue",
+      "comparison": "lte",
+      "target": 0.8,
+      "byYear": 2034
+    },
+    {
+      "id": "objective.availability",
+      "description": "Maintain 99.9% availability across the contract book.",
+      "metric": "reliability.availability01",
+      "comparison": "gte",
+      "target": 0.999,
+      "byYear": 2032
+    },
+    {
+      "id": "objective.solvency",
+      "description": "Finish the campaign solvent with positive operating margin.",
+      "metric": "financial.operatingMargin01",
+      "comparison": "gt",
+      "target": 0,
+      "byYear": 2039
+    }
+  ],
+  "minimumAvailability01": 0.995,
+  "targetCapacityMw": 12,
+  "difficulty": "normal"
+}

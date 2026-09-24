@@ -1,0 +1,25 @@
+{
+  "id": "technology.hardware.flash_storage",
+  "schemaVersion": 3,
+  "name": "Flash Storage",
+  "description": "All-flash arrays for latency-sensitive tenants.",
+  "branch": "hardware",
+  "tier": 1,
+  "research": {
+    "costUsd": 2200000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.hardware.cpu_servers"
+  ],
+  "effects": [],
+  "unlocks": {
+    "hardware": [
+      "hardware.storage.flash"
+    ]
+  },
+  "tradeOff": "Higher acquisition cost and embodied impact than spinning disk.",
+  "availableFromYear": 2010
+}

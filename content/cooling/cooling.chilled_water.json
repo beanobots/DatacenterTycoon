@@ -1,0 +1,21 @@
+{
+  "id": "cooling.chilled_water",
+  "schemaVersion": 1,
+  "name": "Chilled Water Plant",
+  "description": "Central chillers and cooling towers. Predictable capacity at large scale, at the cost of plant CapEx and water.",
+  "researchId": "technology.cooling.chilled_water",
+  "capexFactor": 1.55,
+  "maintenanceFactor": 1.25,
+  "energyFactor": 0.76,
+  "energyFactorBest": 0.68,
+  "energyFactorWorst": 1.02,
+  "waterFactor": 1,
+  "densityKwPerRack": 30,
+  "heatReuse01": 0.3,
+  "complexity01": 0.48,
+  "deratingStartC": 32,
+  "deratingEndC": 48,
+  "wetBulbSensitivity01": 0.45,
+  "contaminationSensitivity01": 0.1,
+  "baseAnnualFailureRate": 0.07
+}

@@ -1,0 +1,26 @@
+{
+  "id": "event.price_war",
+  "schemaVersion": 1,
+  "name": "Regional Price War",
+  "description": "A competitor buys market share. Contract pricing across the region drops until it stops.",
+  "eventClass": "commercial",
+  "trigger": {
+    "dailyProbability": 0.0011,
+    "minimumYear": 1995,
+    "cooldownDays": 540
+  },
+  "durationDays": 210,
+  "durationVarianceDays": 90,
+  "effects": [
+    {
+      "target": "market.contractPrice",
+      "operation": "multiply",
+      "value": 0.82,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 0,
+  "immediateTrust": 0,
+  "immediateReputation": 0,
+  "mitigation": "Compete on reliability and carbon credentials rather than matching the price."
+}

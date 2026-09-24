@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/contract.schema.json",
+  "title": "Contract definition",
+  "type": "object",
+  "required": ["id", "schemaVersion", "name", "workloadId", "computeUnits", "termMonths", "pricePerComputeUnitHour", "slaUptime01", "penaltyRate", "minimumReputation", "requiredTechnologies", "maxCarbonIntensity", "reputationOnCompletion", "renewalProbability01", "availableFromYear"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "workloadId": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "computeUnits": { "$ref": "common.schema.json#/$defs/positive" },
+    "termMonths": { "type": "integer", "minimum": 1 },
+    "pricePerComputeUnitHour": { "$ref": "common.schema.json#/$defs/positive" },
+    "slaUptime01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "penaltyRate": { "$ref": "common.schema.json#/$defs/nonNegative" },
+    "minimumReputation": { "$ref": "common.schema.json#/$defs/reputationValue" },
+    "requiredTechnologies": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/permanentId" } },
+    "maxCarbonIntensity": { "$ref": "common.schema.json#/$defs/nonNegative" },
+    "reputationOnCompletion": { "type": "number", "minimum": -20, "maximum": 20 },
+    "renewalProbability01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "availableFromYear": { "type": "integer", "minimum": 1900 }
+  },
+  "additionalProperties": false
+}

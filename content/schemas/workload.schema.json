@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/workload.schema.json",
+  "title": "Workload definition",
+  "type": "object",
+  "required": ["id", "schemaVersion", "name", "revenueFactor", "uptimeRequirement01", "latencySensitivity01", "flexibility01", "priceSensitivity01", "penaltyClass", "compatibleFamilies", "hourlyDemandShape", "meanUtilization01", "latencyToleranceMs", "availableFromYear"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "revenueFactor": { "$ref": "common.schema.json#/$defs/positive" },
+    "uptimeRequirement01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "latencySensitivity01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "flexibility01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "priceSensitivity01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "penaltyClass": { "enum": ["low", "medium", "high", "extreme"] },
+    "compatibleFamilies": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["cpu", "gpu", "asic", "storage", "archive", "experimental"] } },
+    "hourlyDemandShape": { "$ref": "common.schema.json#/$defs/hourlyCurve" },
+    "meanUtilization01": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "latencyToleranceMs": { "$ref": "common.schema.json#/$defs/positive" },
+    "availableFromYear": { "type": "integer", "minimum": 1900 }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,32 @@
+{
+  "id": "technology.environment.refurbishment",
+  "schemaVersion": 3,
+  "name": "Refurbishment Program",
+  "description": "In-house test, repair and re-deployment of retired servers.",
+  "branch": "environment",
+  "tier": 2,
+  "research": {
+    "costUsd": 3600000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.environment.waste_tracking"
+  ],
+  "effects": [
+    {
+      "target": "waste.diversionRate",
+      "operation": "add",
+      "value": 0.1,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "hardware": [
+      "hardware.cpu.refurbished"
+    ]
+  },
+  "tradeOff": "Second-life hardware fails more often and draws more power for the same work.",
+  "availableFromYear": 2010
+}

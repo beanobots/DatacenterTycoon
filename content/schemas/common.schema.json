@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/common.schema.json",
+  "title": "Common definitions",
+  "$defs": {
+    "permanentId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._][a-z0-9_]+)*$",
+      "minLength": 3,
+      "maxLength": 96
+    },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "unitInterval": { "type": "number", "minimum": 0, "maximum": 1 },
+    "nonNegative": { "type": "number", "minimum": 0 },
+    "positive": { "type": "number", "exclusiveMinimum": 0 },
+    "trustValue": { "type": "number", "minimum": -100, "maximum": 100 },
+    "reputationValue": { "type": "number", "minimum": 0, "maximum": 100 },
+    "hourlyCurve": {
+      "type": "array",
+      "minItems": 24,
+      "maxItems": 24,
+      "items": { "type": "number", "minimum": 0 }
+    },
+    "monthlyCurve": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": { "type": "number" }
+    },
+    "modifier": {
+      "type": "object",
+      "required": ["target", "operation", "value", "priority"],
+      "properties": {
+        "target": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)+$" },
+        "operation": { "enum": ["add", "multiply", "set", "min", "max"] },
+        "value": { "type": "number" },
+        "priority": { "type": "integer", "minimum": 0 },
+        "appliesTo": { "$ref": "#/$defs/permanentId" }
+      },
+      "additionalProperties": false
+    },
+    "condition": {
+      "type": "object",
+      "required": ["metric", "comparison", "value"],
+      "properties": {
+        "metric": { "type": "string" },
+        "comparison": { "enum": ["gt", "lt", "gte", "lte"] },
+        "value": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "definitionHeader": {
+      "type": "object",
+      "required": ["id", "schemaVersion", "name"],
+      "properties": {
+        "id": { "$ref": "#/$defs/permanentId" },
+        "schemaVersion": { "$ref": "#/$defs/schemaVersion" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" }
+      }
+    }
+  }
+}

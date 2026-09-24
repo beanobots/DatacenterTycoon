@@ -1,0 +1,26 @@
+{
+  "id": "event.brownfield_grant",
+  "schemaVersion": 1,
+  "name": "Brownfield Redevelopment Grant",
+  "description": "A redevelopment grant opens for industrial reuse of a contaminated site.",
+  "eventClass": "opportunity",
+  "trigger": {
+    "dailyProbability": 0.0007,
+    "minimumYear": 1995,
+    "cooldownDays": 1460
+  },
+  "durationDays": 365,
+  "durationVarianceDays": 90,
+  "effects": [
+    {
+      "target": "facility.hallCapex",
+      "operation": "multiply",
+      "value": 0.88,
+      "priority": 20
+    }
+  ],
+  "immediateCash": 1500000,
+  "immediateTrust": 4,
+  "immediateReputation": 1,
+  "mitigation": "Available only where the site is already disturbed land."
+}

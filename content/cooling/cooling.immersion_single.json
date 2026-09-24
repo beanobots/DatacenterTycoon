@@ -1,0 +1,21 @@
+{
+  "id": "cooling.immersion_single",
+  "schemaVersion": 1,
+  "name": "Single-Phase Immersion",
+  "description": "Racks submerged in dielectric fluid. Server fans disappear; so does the conventional servicing model.",
+  "researchId": "technology.cooling.immersion_single",
+  "capexFactor": 3.6,
+  "maintenanceFactor": 1.75,
+  "energyFactor": 0.38,
+  "energyFactorBest": 0.34,
+  "energyFactorWorst": 0.5,
+  "waterFactor": 0.18,
+  "densityKwPerRack": 140,
+  "heatReuse01": 0.82,
+  "complexity01": 0.82,
+  "deratingStartC": 36,
+  "deratingEndC": 52,
+  "wetBulbSensitivity01": 0.25,
+  "contaminationSensitivity01": 0.02,
+  "baseAnnualFailureRate": 0.095
+}

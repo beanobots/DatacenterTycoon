@@ -1,0 +1,30 @@
+{
+  "id": "hardware.cpu.gen2",
+  "schemaVersion": 1,
+  "name": "CPU Servers Gen 2",
+  "description": "More cores for a modest power increase. The straightforward refresh.",
+  "researchId": "technology.hardware.cpu_gen2",
+  "family": "cpu",
+  "generation": 2,
+  "purchaseFactor": 1.25,
+  "computeFactor": 1.45,
+  "powerFactor": 1.12,
+  "heatFactor": 1.08,
+  "flexibility01": 1,
+  "embodiedFactor": 1.15,
+  "lifeYears": 6,
+  "workloadAffinity": {
+    "workload.streaming": 1.05,
+    "workload.finance": 1.05,
+    "workload.government": 1.05,
+    "workload.batch_science": 0.95,
+    "workload.disaster_recovery": 1,
+    "workload.archive": 0.7,
+    "workload.ai_inference": 0.5,
+    "workload.ai_training": 0.28
+  },
+  "requiredCoolingKwPerRack": 8,
+  "baseAnnualFailureRate": 0.038,
+  "refurbished": false,
+  "resaleValue01": 0.28
+}

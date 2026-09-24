@@ -1,0 +1,25 @@
+{
+  "id": "technology.hardware.cpu_gen2",
+  "schemaVersion": 3,
+  "name": "Second-Generation CPUs",
+  "description": "Higher core counts per socket.",
+  "branch": "hardware",
+  "tier": 1,
+  "research": {
+    "costUsd": 2500000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.efficiency.virtualization"
+  ],
+  "effects": [],
+  "unlocks": {
+    "hardware": [
+      "hardware.cpu.gen2"
+    ]
+  },
+  "tradeOff": "Retiring serviceable hardware early writes off its remaining book value.",
+  "availableFromYear": 2008
+}

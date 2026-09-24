@@ -1,0 +1,39 @@
+{
+  "id": "technology.grid.global_load_migration",
+  "schemaVersion": 3,
+  "name": "Global Load Migration",
+  "description": "Moves work between regions following clean supply. Chapter 8: -35% carbon potential, +10% revenue.",
+  "branch": "grid",
+  "tier": 4,
+  "research": {
+    "costUsd": 15000000,
+    "durationDays": 420,
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
+  },
+  "prerequisites": [
+    "technology.grid.carbon_aware_scheduling",
+    "technology.network.optical_network"
+  ],
+  "effects": [
+    {
+      "target": "scheduling.loadMigration01",
+      "operation": "add",
+      "value": 0.35,
+      "priority": 10
+    },
+    {
+      "target": "network.transitCost",
+      "operation": "multiply",
+      "value": 1.15,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "load_migration"
+    ]
+  },
+  "tradeOff": "+15% network cost, and jurisdictional residency rules constrain where work can go.",
+  "availableFromYear": 2022
+}

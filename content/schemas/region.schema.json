@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/region.schema.json",
+  "title": "Region definition",
+  "type": "object",
+  "required": [
+    "id",
+    "schemaVersion",
+    "name",
+    "archetype",
+    "climate",
+    "grid",
+    "water",
+    "land",
+    "connectivity",
+    "people",
+    "hazards",
+    "policy",
+    "resourceQuality",
+    "trajectory"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "common.schema.json#/$defs/permanentId"
+    },
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "archetype": {
+      "enum": [
+        "desert",
+        "temperate",
+        "cold",
+        "urban",
+        "tropical",
+        "coastal"
+      ]
+    },
+    "climate": {
+      "type": "object",
+      "required": [
+        "monthlyMeanTempC",
+        "monthlySwingC",
+        "monthlyHumidity01",
+        "dailyVariabilityC",
+        "elevationM",
+        "contamination01"
+      ],
+      "properties": {
+        "monthlyMeanTempC": {
+          "$ref": "common.schema.json#/$defs/monthlyCurve"
+        },
+        "monthlySwingC": {
+          "$ref": "common.schema.json#/$defs/monthlyCurve"
+        },
+        "monthlyHumidity01": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "items": {
+            "$ref": "common.schema.json#/$defs/unitInterval"
+          }
+        },
+        "dailyVariabilityC": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "elevationM": {
+          "type": "number"
+        },
+        "contamination01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        }
+      },
+      "additionalProperties": false
+    },
+    "grid": {
+      "type": "object",
+      "required": [
+        "capacityMw",
+        "basePricePerMwh",
+        "hourlyPriceShape",
+        "monthlyPriceShape",
+        "baseCarbonKgPerMwh",
+        "hourlyCarbonShape",
+        "hourlyOutageProbability",
+        "meanOutageHours"
+      ],
+      "properties": {
+        "capacityMw": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "basePricePerMwh": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "hourlyPriceShape": {
+          "$ref": "common.schema.json#/$defs/hourlyCurve"
+        },
+        "monthlyPriceShape": {
+          "$ref": "common.schema.json#/$defs/monthlyCurve"
+        },
+        "baseCarbonKgPerMwh": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "hourlyCarbonShape": {
+          "$ref": "common.schema.json#/$defs/hourlyCurve"
+        },
+        "hourlyOutageProbability": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "meanOutageHours": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      },
+      "additionalProperties": false
+    },
+    "water": {
+      "type": "object",
+      "required": [
+        "annualWithdrawalLimitM3",
+        "pricePerM3",
+        "stress01",
+        "reclaimedAvailability01",
+        "reclaimedPricePerM3",
+        "annualDroughtProbability"
+      ],
+      "properties": {
+        "annualWithdrawalLimitM3": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "pricePerM3": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "stress01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "reclaimedAvailability01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "reclaimedPricePerM3": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "annualDroughtProbability": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        }
+      },
+      "additionalProperties": false
+    },
+    "land": {
+      "type": "object",
+      "required": [
+        "pricePerHectare",
+        "availableHectares",
+        "biodiversitySensitivity01",
+        "brownfield",
+        "constructionCostFactor"
+      ],
+      "properties": {
+        "pricePerHectare": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "availableHectares": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "biodiversitySensitivity01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "brownfield": {
+          "type": "boolean"
+        },
+        "constructionCostFactor": {
+          "$ref": "common.schema.json#/$defs/positive"
+        }
+      },
+      "additionalProperties": false
+    },
+    "connectivity": {
+      "type": "object",
+      "required": [
+        "latencyMsToDemandCentre",
+        "fiberCapacityGbps",
+        "routeDiversity",
+        "transitCostPerGbpsMonth"
+      ],
+      "properties": {
+        "latencyMsToDemandCentre": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "fiberCapacityGbps": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "routeDiversity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "transitCostPerGbpsMonth": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        }
+      },
+      "additionalProperties": false
+    },
+    "people": {
+      "type": "object",
+      "required": [
+        "laborSupply01",
+        "wageIndex",
+        "communitySensitivity01",
+        "populationDensity",
+        "startingTrust"
+      ],
+      "properties": {
+        "laborSupply01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "wageIndex": {
+          "$ref": "common.schema.json#/$defs/positive"
+        },
+        "communitySensitivity01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "populationDensity": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "startingTrust": {
+          "$ref": "common.schema.json#/$defs/trustValue"
+        }
+      },
+      "additionalProperties": false
+    },
+    "hazards": {
+      "type": "object",
+      "required": [
+        "heatWave",
+        "drought",
+        "flood",
+        "storm",
+        "wildfire",
+        "earthquake",
+        "seaLevel"
+      ],
+      "properties": {
+        "heatWave": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "drought": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "flood": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "storm": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "wildfire": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "earthquake": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "seaLevel": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        }
+      },
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "permitDays",
+        "carbonPricePerTonne",
+        "waterRestrictionFactor",
+        "capitalIncentive01",
+        "taxRate01",
+        "reportingMandatory"
+      ],
+      "properties": {
+        "permitDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "carbonPricePerTonne": {
+          "$ref": "common.schema.json#/$defs/nonNegative"
+        },
+        "waterRestrictionFactor": {
+          "type": "number",
+          "minimum": 1
+        },
+        "capitalIncentive01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "taxRate01": {
+          "$ref": "common.schema.json#/$defs/unitInterval"
+        },
+        "reportingMandatory": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "resourceQuality": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/unitInterval"
+      }
+    },
+    "trajectory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gridCarbonKgPerMwh",
+        "energyPricePerMwh"
+      ],
+      "description": "Historical and projected grid conditions at anchor years, linearly interpolated between them and held flat outside. Replaces the abstract annual drift factors, which could only ever describe a smooth exponential and so could not represent the 2022 energy crisis or a coal grid's decarbonisation curve.",
+      "properties": {
+        "gridCarbonKgPerMwh": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "year",
+              "value"
+            ],
+            "properties": {
+              "year": {
+                "type": "integer",
+                "minimum": 1990,
+                "maximum": 2100
+              },
+              "value": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "energyPricePerMwh": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "year",
+              "value"
+            ],
+            "properties": {
+              "year": {
+                "type": "integer",
+                "minimum": 1990,
+                "maximum": 2100
+              },
+              "value": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

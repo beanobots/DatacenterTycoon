@@ -1,0 +1,18 @@
+{
+  "id": "contract.media_archive",
+  "schemaVersion": 1,
+  "name": "National Media Archive",
+  "description": "Ten years of low-intensity retention. The base load that rewards long hardware life and cold storage.",
+  "workloadId": "workload.archive",
+  "computeUnits": 3400,
+  "termMonths": 120,
+  "pricePerComputeUnitHour": 0.0287,
+  "slaUptime01": 0.98,
+  "penaltyRate": 0.4,
+  "minimumReputation": 8,
+  "requiredTechnologies": [],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 3,
+  "renewalProbability01": 0.92,
+  "availableFromYear": 1995
+}

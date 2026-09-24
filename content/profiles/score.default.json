@@ -1,0 +1,42 @@
+{
+  "id": "score.default",
+  "schemaVersion": 1,
+  "name": "Standard Campaign Scoring",
+  "description": "Spec chapter 7 master score: five weighted categories, six rating bands, and the anti-exploit gates that cap a rating regardless of the weighted total.",
+  "weights": {
+    "financial": 0.20,
+    "reliability": 0.25,
+    "environmental": 0.25,
+    "customer": 0.15,
+    "social": 0.15
+  },
+  "ratingBands": [
+    { "rating": "D", "minScore": 0, "label": "Unsustainable Operator" },
+    { "rating": "C", "minScore": 40, "label": "Regional Provider" },
+    { "rating": "B", "minScore": 60, "label": "Trusted Infrastructure Operator" },
+    { "rating": "A", "minScore": 75, "label": "Industry Leader" },
+    { "rating": "S", "minScore": 90, "label": "Global Digital Infrastructure Leader" },
+    { "rating": "S+", "minScore": 98, "label": "Planetary Steward" }
+  ],
+  "gates": [
+    { "id": "gate.critical_insolvency", "description": "Critical insolvency caps the overall rating at C.", "capRating": "C" },
+    { "id": "gate.safety_incident", "description": "A major unresolved safety incident caps the overall rating at C.", "capRating": "C" },
+    { "id": "gate.permit_violation", "description": "A severe permit violation caps the overall rating at B.", "capRating": "B" },
+    { "id": "gate.reliability_floor", "description": "Reliability below the scenario minimum caps the overall rating at B.", "capRating": "B" },
+    { "id": "gate.community_trust", "description": "Critical community trust blocks expansion.", "blocksExpansion": true },
+    { "id": "gate.illegal_disposal", "description": "Illegal disposal sets the environmental category to zero for the reporting period.", "zeroCategory": "environmental" }
+  ],
+  "environmentalTargets": {
+    "targetPue": 1.15,
+    "worstPue": 2.20,
+    "targetCue": 30,
+    "worstCue": 700,
+    "targetWue": 0.20,
+    "worstWue": 3.00,
+    "targetRenewable01": 0.90,
+    "targetHourlyMatch01": 0.85,
+    "targetDiversion01": 0.95,
+    "targetHeatReuse01": 0.25
+  },
+  "maxOffsetShare01": 0.20
+}

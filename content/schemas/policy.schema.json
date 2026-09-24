@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datacentertycoon.dev/schemas/policy.schema.json",
+  "title": "Policy definition",
+  "description": "Regulatory regimes that alter carbon price, water access, reporting and permits.",
+  "type": "object",
+  "required": ["id", "schemaVersion", "name", "effectiveFromYear", "effects", "appliesToRegions"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/permanentId" },
+    "schemaVersion": { "$ref": "common.schema.json#/$defs/schemaVersion" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "effectiveFromYear": { "type": "integer", "minimum": 1900 },
+    "effects": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/modifier" } },
+    "appliesToRegions": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/permanentId" } }
+  },
+  "additionalProperties": false
+}

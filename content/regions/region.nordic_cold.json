@@ -1,0 +1,259 @@
+{
+  "id": "region.nordic_cold",
+  "schemaVersion": 2,
+  "name": "Nordic Cold Coast",
+  "description": "A cold northern site on a low-carbon hydro grid. Free cooling most of the year, abundant water, a district-heat customer next door, and a long haul to the demand centres.",
+  "archetype": "cold",
+  "climate": {
+    "monthlyMeanTempC": [
+      -5,
+      -3.526,
+      0.5,
+      6,
+      11.5,
+      15.526,
+      17,
+      15.526,
+      11.5,
+      6,
+      0.5,
+      -3.526
+    ],
+    "monthlySwingC": [
+      7,
+      7,
+      7,
+      7,
+      7,
+      7,
+      7,
+      7,
+      7,
+      7,
+      7,
+      7
+    ],
+    "monthlyHumidity01": [
+      0.86,
+      0.848,
+      0.815,
+      0.77,
+      0.725,
+      0.692,
+      0.68,
+      0.692,
+      0.725,
+      0.77,
+      0.815,
+      0.848
+    ],
+    "dailyVariabilityC": 4,
+    "elevationM": 40,
+    "contamination01": 0.06
+  },
+  "grid": {
+    "capacityMw": 200,
+    "basePricePerMwh": 44,
+    "hourlyPriceShape": [
+      0.771,
+      0.818,
+      0.878,
+      0.946,
+      1.018,
+      1.089,
+      1.153,
+      1.207,
+      1.247,
+      1.27,
+      1.275,
+      1.261,
+      1.229,
+      1.182,
+      1.122,
+      1.054,
+      0.982,
+      0.911,
+      0.847,
+      0.793,
+      0.753,
+      0.73,
+      0.725,
+      0.739
+    ],
+    "monthlyPriceShape": [
+      1.22,
+      1.193,
+      1.12,
+      1.02,
+      0.92,
+      0.847,
+      0.82,
+      0.847,
+      0.92,
+      1.02,
+      1.12,
+      1.193
+    ],
+    "baseCarbonKgPerMwh": 38,
+    "hourlyCarbonShape": [
+      0.95,
+      0.873,
+      0.804,
+      0.749,
+      0.71,
+      0.692,
+      0.694,
+      0.717,
+      0.76,
+      0.819,
+      0.89,
+      0.969,
+      1.049,
+      1.127,
+      1.196,
+      1.251,
+      1.29,
+      1.308,
+      1.306,
+      1.283,
+      1.24,
+      1.181,
+      1.11,
+      1.031
+    ],
+    "hourlyOutageProbability": 0.00012,
+    "meanOutageHours": 1.8
+  },
+  "water": {
+    "annualWithdrawalLimitM3": 3000000,
+    "pricePerM3": 0.42,
+    "stress01": 0.08,
+    "reclaimedAvailability01": 0.3,
+    "reclaimedPricePerM3": 0.28,
+    "annualDroughtProbability": 0.02
+  },
+  "land": {
+    "pricePerHectare": 42000,
+    "availableHectares": 120,
+    "biodiversitySensitivity01": 0.72,
+    "brownfield": false,
+    "constructionCostFactor": 1.18
+  },
+  "connectivity": {
+    "latencyMsToDemandCentre": 42,
+    "fiberCapacityGbps": 4000,
+    "routeDiversity": 2,
+    "transitCostPerGbpsMonth": 72
+  },
+  "people": {
+    "laborSupply01": 0.4,
+    "wageIndex": 1.22,
+    "communitySensitivity01": 0.45,
+    "populationDensity": 22,
+    "startingTrust": 18
+  },
+  "hazards": {
+    "heatWave": 0.08,
+    "drought": 0.05,
+    "flood": 0.3,
+    "storm": 0.55,
+    "wildfire": 0.1,
+    "earthquake": 0.03,
+    "seaLevel": 0.25
+  },
+  "policy": {
+    "permitDays": 270,
+    "carbonPricePerTonne": 85,
+    "waterRestrictionFactor": 1.1,
+    "capitalIncentive01": 0.12,
+    "taxRate01": 0.24,
+    "reportingMandatory": true
+  },
+  "resourceQuality": {
+    "power.solar_rooftop": 0.11,
+    "power.solar_ground": 0.12,
+    "power.wind_contract": 0.45,
+    "power.hydro_contract": 0.85,
+    "power.gas_ccgt": 0.88,
+    "power.diesel_backup": 0.95,
+    "power.nuclear_contract": 0.92,
+    "power.hydrogen_generator": 0.82,
+    "power.smr": 0.93,
+    "power.grid": 1,
+    "power.battery": 1
+  },
+  "trajectory": {
+    "gridCarbonKgPerMwh": [
+      {
+        "year": 2006,
+        "value": 62
+      },
+      {
+        "year": 2010,
+        "value": 56
+      },
+      {
+        "year": 2015,
+        "value": 47
+      },
+      {
+        "year": 2020,
+        "value": 41
+      },
+      {
+        "year": 2025,
+        "value": 38
+      },
+      {
+        "year": 2030,
+        "value": 26
+      },
+      {
+        "year": 2036,
+        "value": 18
+      }
+    ],
+    "energyPricePerMwh": [
+      {
+        "year": 2006,
+        "value": 36
+      },
+      {
+        "year": 2008,
+        "value": 48
+      },
+      {
+        "year": 2012,
+        "value": 34
+      },
+      {
+        "year": 2016,
+        "value": 30
+      },
+      {
+        "year": 2020,
+        "value": 29
+      },
+      {
+        "year": 2022,
+        "value": 92
+      },
+      {
+        "year": 2024,
+        "value": 52
+      },
+      {
+        "year": 2025,
+        "value": 44
+      },
+      {
+        "year": 2030,
+        "value": 46
+      },
+      {
+        "year": 2036,
+        "value": 50
+      }
+    ]
+  }
+}

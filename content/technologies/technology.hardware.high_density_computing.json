@@ -1,0 +1,33 @@
+{
+  "id": "technology.hardware.high_density_computing",
+  "schemaVersion": 3,
+  "name": "High-Density Computing",
+  "description": "Rack, busbar and airflow engineering for high-power rows.",
+  "branch": "hardware",
+  "tier": 2,
+  "research": {
+    "costUsd": 3000000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.cooling.containment",
+    "technology.hardware.cpu_gen2"
+  ],
+  "effects": [
+    {
+      "target": "cooling.densityKwPerRack",
+      "operation": "multiply",
+      "value": 1.1,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "high_density_layout"
+    ]
+  },
+  "tradeOff": "Every kilowatt of density added is a kilowatt cooling has to answer for.",
+  "availableFromYear": 2010
+}

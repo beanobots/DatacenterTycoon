@@ -1,0 +1,2614 @@
+<title>Cold Aisle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* Coolant teal against heat copper: the two things a hall is always trading.
+     Neutrals carry a faint green bias so they sit with the accent rather than
+     under it. Status hues are fixed and never themed. */
+  :root {
+    --ground: #f2f5f3;
+    --panel: #ffffff;
+    --panel-sunk: #eef2f0;
+    --ink: #131a1b;
+    --ink-2: #47585a;
+    --ink-3: #6b7d7e;
+    --rule: #dbe3e0;
+    --rule-strong: #c3cecb;
+    --accent: #0a918c;
+    --accent-soft: #e2f1ef;
+    --heat: #b85c2a;
+    --heat-soft: #f8ece4;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+    --shadow: 0 1px 2px rgba(19, 26, 27, .06), 0 8px 24px -16px rgba(19, 26, 27, .28);
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101617;
+      --panel: #191f22;
+      --panel-sunk: #141a1c;
+      --ink: #e8efee;
+      --ink-2: #a3b5b5;
+      --ink-3: #7d9092;
+      --rule: #263031;
+      --rule-strong: #354244;
+      --accent: #2ba8a2;
+      --accent-soft: #16302f;
+      --heat: #cf7538;
+      --heat-soft: #2e2018;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #101617;
+    --panel: #191f22;
+    --panel-sunk: #141a1c;
+    --ink: #e8efee;
+    --ink-2: #a3b5b5;
+    --ink-3: #7d9092;
+    --rule: #263031;
+    --rule-strong: #354244;
+    --accent: #2ba8a2;
+    --accent-soft: #16302f;
+    --heat: #cf7538;
+    --heat-soft: #2e2018;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .8);
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 72px; }
+
+  /* ---------- header + controls ---------- */
+  header {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 20;
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .head-in { max-width: 1180px; margin: 0 auto; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; }
+  .brand { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
+  .brand h1 { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .brand p { margin: 0; font-size: 12px; color: var(--ink-3); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  select, input[type="text"], input[type="number"] {
+    font-family: var(--mono); font-size: 13px; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--rule-strong); border-radius: 6px;
+    padding: 7px 9px; min-height: 36px;
+  }
+  select { font-family: var(--sans); }
+  input[type="text"] { width: 110px; }
+  input[type="number"] { width: 72px; }
+  select:focus-visible, input:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  button.run {
+    font-family: var(--sans); font-size: 13px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 1px solid transparent; border-radius: 6px;
+    padding: 8px 18px; min-height: 36px; cursor: pointer;
+  }
+  button.run:hover:not(:disabled) { filter: brightness(1.08); }
+  button.run:disabled { opacity: .55; cursor: progress; }
+
+  .progress { height: 2px; background: var(--rule); position: relative; overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .12s linear; }
+
+  /* ---------- section scaffolding ---------- */
+  section { margin-top: 30px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .sec-head h2 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+  .sec-head .hint { font-size: 12px; color: var(--ink-3); }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; }
+
+  /* ---------- briefing ---------- */
+  .brief { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; }
+  .brief-main { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .brief-main h3 { font-size: 20px; font-weight: 600; letter-spacing: -.015em; }
+  .brief-main p { margin: 0; color: var(--ink-2); max-width: 62ch; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 999px;
+    background: var(--panel-sunk); color: var(--ink-2); border: 1px solid var(--rule);
+  }
+  .site-facts { padding: 16px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; align-content: start; }
+  .fact { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .fact dt { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .fact dd { margin: 0; font-family: var(--mono); font-size: 14px; }
+
+  /* ---------- headline strip ---------- */
+  .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+  .stat { background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .stat .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .stat .v { font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 2px; }
+  .stat .d { font-size: 11px; color: var(--ink-3); font-family: var(--mono); }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .pill.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); background: color-mix(in srgb, var(--good) 10%, transparent); }
+  .pill.good .dot { background: var(--good); }
+  .pill.warning { color: color-mix(in srgb, var(--warning) 72%, var(--ink)); border-color: color-mix(in srgb, var(--warning) 45%, transparent); background: color-mix(in srgb, var(--warning) 14%, transparent); }
+  .pill.warning .dot { background: var(--warning); }
+  .pill.serious { color: color-mix(in srgb, var(--serious) 72%, var(--ink)); border-color: color-mix(in srgb, var(--serious) 45%, transparent); background: color-mix(in srgb, var(--serious) 14%, transparent); }
+  .pill.serious .dot { background: var(--serious); }
+  .pill.critical { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 40%, transparent); background: color-mix(in srgb, var(--critical) 10%, transparent); }
+  .pill.critical .dot { background: var(--critical); }
+  .pill.neutral { color: var(--ink-2); border-color: var(--rule-strong); background: var(--panel-sunk); }
+  .pill.neutral .dot { background: var(--ink-3); }
+
+  /* ---------- small multiples ---------- */
+  .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 900px) { .panels { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .panels { grid-template-columns: 1fr; } }
+  .panel { padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .panel-head .t { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .panel-head .r { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+  .panel svg { display: block; width: 100%; height: auto; max-width: 100%; overflow: visible; }
+  .panel .foot { display: flex; justify-content: space-between; gap: 8px; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .panel .foot .off-target { color: var(--heat); }
+
+  /* ---------- table ---------- */
+  .scroll-x { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+  th {
+    font-family: var(--sans); font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; position: sticky; top: 0; background: var(--panel);
+  }
+  th:first-child, td:first-child { text-align: left; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--panel-sunk); }
+  tbody tr.open { background: var(--accent-soft); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.dim { color: var(--ink-3); }
+
+  /* ---------- score drawer ---------- */
+  .two-col { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .drawer { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+  .drawer-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .drawer-head .y { font-family: var(--mono); font-size: 15px; font-weight: 600; }
+  .cat { display: flex; flex-direction: column; gap: 5px; }
+  .cat-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .cat-top .n { font-size: 12.5px; font-weight: 600; }
+  .cat-top .w { font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+  .cat-top .s { font-family: var(--mono); font-size: 13px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--panel-sunk); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .comps { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 3px 12px; margin-top: 3px; }
+  .comp { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--ink-3); }
+  .comp .cv { font-family: var(--mono); color: var(--ink-2); }
+
+  .list { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .obj { display: flex; gap: 9px; align-items: flex-start; }
+  .obj .mark { flex: none; margin-top: 2px; font-family: var(--mono); font-size: 11px; font-weight: 600; }
+  .obj .body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .obj .desc { font-size: 12.5px; }
+  .obj .val { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .gate { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* ---------- fleet ---------- */
+  .fleet { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .fleet-col { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .fleet-col h3 { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .sub-head { display: flex; align-items: center; gap: 8px; margin: 14px 0 -2px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+  .sub-head::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+  .sub-head .n { order: 3; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-3); }
+  /* --- hall floorplan ------------------------------------------------- */
+  #floorplans { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .hallplan { padding: 13px 15px 15px; }
+  .hallplan-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+  .hallplan-head .nm { font-size: 13px; font-weight: 600; }
+  .hallplan-head .cool { font-size: 11.5px; color: var(--ink-2); }
+  .hallplan-head .fill { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+  .hallplan-sub { font-size: 11px; color: var(--ink-3); margin-bottom: 9px; }
+  .hallplan-group { margin-top: 8px; }
+  .hallplan-group .gl {
+    display: flex; gap: 6px; align-items: baseline;
+    font-size: 10.5px; color: var(--ink-2); margin-bottom: 3px;
+  }
+  .hallplan-group .gl .age { font-family: var(--mono); color: var(--ink-3); }
+  .racks { display: flex; flex-wrap: wrap; gap: 2px; }
+  .rack {
+    width: 11px; height: 14px; border-radius: 2px;
+    background: var(--accent); border: 1px solid transparent;
+  }
+  /* Worn kit reads warm, failed kit reads as an alarm, empty slots read as
+     absence rather than as a state - the three things a glance should separate. */
+  .rack.worn { background: color-mix(in srgb, var(--heat) 70%, var(--accent)); }
+  .rack.old { background: var(--heat); }
+  .rack.failed { background: var(--critical); }
+  .rack.empty { background: transparent; border: 1px dashed var(--rule-strong); }
+  .hallplan-legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 11px;
+    font-size: 10.5px; color: var(--ink-3);
+  }
+  .hallplan-legend span { display: flex; align-items: center; gap: 4px; }
+  .hallplan-legend i { width: 9px; height: 11px; border-radius: 2px; display: block; }
+  @media (max-width: 560px) { .rack { width: 9px; height: 12px; } }
+
+  .fleet-col .why { font-size: 11px; line-height: 1.45; color: var(--ink-2); margin: -4px 0 2px; padding-left: 10px; border-left: 2px solid var(--rule-strong); }
+  .row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 3px 0; border-bottom: 1px dashed var(--rule); }
+  .row:last-child { border-bottom: 0; }
+  .row .l { color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .l.wrap { white-space: normal; overflow: visible; }
+  .row .r { font-family: var(--mono); flex: none; color: var(--ink); }
+  .empty { font-size: 12px; color: var(--ink-3); font-style: italic; }
+
+  /* ---------- diagnostics ---------- */
+  .diag-head { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2);
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .log { max-height: 340px; overflow-y: auto; padding: 4px 0; }
+  .log-row { display: grid; grid-template-columns: 82px 156px minmax(0, 1fr); gap: 10px; padding: 5px 16px; border-bottom: 1px solid var(--rule); font-size: 12px; }
+  .log-row:last-child { border-bottom: 0; }
+  .log-row .when { font-family: var(--mono); color: var(--ink-3); }
+  .log-row .kind { font-family: var(--mono); font-size: 11px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; }
+  .log-row .kind.heat { color: var(--heat); }
+  .log-row .msg { color: var(--ink-2); min-width: 0; }
+
+  footer { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  footer .num { color: var(--ink-2); }
+
+  @media (max-width: 860px) {
+    .brief, .two-col { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .head-in { padding: 12px 16px; }
+    .brand { width: 100%; }
+    .controls { width: 100%; }
+    .field { flex: 1 1 96px; }
+    .log-row { grid-template-columns: 1fr; gap: 2px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+<style>
+  /* ---------- game shell ---------- */
+  .turnbar { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+  .clock { display: flex; flex-direction: column; gap: 1px; margin-right: auto; }
+  .clock .date { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+  .clock .sub { font-size: 11px; color: var(--ink-3); }
+  button.step {
+    font-family: var(--sans); font-size: 13px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 1px solid transparent; border-radius: 6px;
+    padding: 9px 18px; min-height: 38px; cursor: pointer;
+  }
+  button.step.ghost { background: transparent; color: var(--ink-2); border-color: var(--rule-strong); font-weight: 500; }
+  button.step:hover:not(:disabled) { filter: brightness(1.08); }
+  button.step.ghost:hover:not(:disabled) { background: var(--panel-sunk); filter: none; }
+  button.step:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* Ten cells, so the column count is 2, 5 or 10 - anything else leaves a
+     part-empty last row, and the rule-coloured ground behind the grid shows
+     through it as a grey slab. auto-fit cannot promise a divisor. */
+  .hud { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+  @media (min-width: 560px) { .hud { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  @media (min-width: 1000px) { .hud { grid-template-columns: repeat(10, minmax(0, 1fr)); } }
+  .hud .cell { background: var(--panel); padding: 10px 13px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .hud .cell .k { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .hud .cell .v { font-family: var(--mono); font-size: 17px; font-weight: 500; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .hud .cell .s { font-size: 10.5px; color: var(--ink-3); font-family: var(--mono); }
+  .hud .cell.alarm .v { color: var(--critical); }
+
+  .alerts { display: flex; flex-direction: column; gap: 8px; }
+  .alert { display: flex; gap: 11px; padding: 11px 14px; border-radius: 9px; border: 1px solid var(--rule); background: var(--panel); border-left-width: 3px; }
+  .alert.critical { border-left-color: var(--critical); }
+  .alert.serious { border-left-color: var(--serious); }
+  .alert.warning { border-left-color: var(--warning); }
+  .alert.good { border-left-color: var(--good); }
+  .alert .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .alert .ti { font-size: 13px; font-weight: 600; }
+  .alert .de { font-size: 12px; color: var(--ink-2); }
+
+  /* ---------- decisions ---------- */
+  .deck { display: flex; flex-direction: column; gap: 14px; }
+  .cat-block { display: flex; flex-direction: column; gap: 9px; }
+  .cat-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .cat-bar h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+  .cat-bar .count { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .auto {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--ink-3); cursor: pointer; user-select: none;
+  }
+  .auto input { accent-color: var(--accent); width: 14px; height: 14px; }
+
+  /* One category at a time. Five stacked categories ran to several screens of
+     cards; the count on each tab is what the stack was really being scrolled
+     for - where the options are. */
+  .deck-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dtab {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 6px 12px;
+    border-radius: 999px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2);
+  }
+  .dtab:hover:not([aria-selected="true"]) { border-color: var(--accent); }
+  .dtab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dtab .n {
+    font-family: var(--mono); font-size: 10.5px; font-variant-numeric: tabular-nums;
+    padding: 1px 6px; border-radius: 999px;
+    background: var(--panel-sunk); color: var(--ink-2);
+  }
+  .dtab[aria-selected="true"] .n { background: rgba(255, 255, 255, .22); color: #fff; }
+  /* A category with nothing to take reads as quiet, not as an alarm. */
+  .dtab .n.none { color: var(--ink-3); }
+  .dtab[aria-selected="true"] .n.none { color: rgba(255, 255, 255, .7); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 10px; }
+  .act {
+    display: flex; flex-direction: column; gap: 7px; padding: 12px 14px; text-align: left;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 9px;
+    font: inherit; color: inherit; cursor: pointer; min-width: 0;
+  }
+  .act:hover:not(:disabled) { border-color: var(--accent); }
+  .act:disabled { cursor: not-allowed; opacity: .62; }
+  .act .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .act .nm { font-size: 13px; font-weight: 600; min-width: 0; }
+  .act .px { font-family: var(--mono); font-size: 12px; flex: none; color: var(--ink-2); }
+  .act .px.free { color: var(--good); }
+  .act .de { font-size: 11.5px; color: var(--ink-2); }
+  .act .tr { font-size: 11px; color: var(--heat); display: flex; gap: 5px; }
+  .act .tr::before { content: "\2298"; flex: none; }
+  .act .bl { font-size: 11px; color: var(--critical); }
+  .running { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .project {
+    display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px; border-radius: 999px;
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .project .pn { font-size: 12px; font-weight: 600; }
+  .project .pbar { width: 46px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--accent) 22%, transparent); overflow: hidden; }
+  .project .pbar i { display: block; height: 100%; background: var(--accent); }
+  .project .pp { font-family: var(--mono); font-size: 10.5px; color: var(--ink-2); }
+
+  .qty { display: flex; gap: 5px; margin-top: 1px; }
+  .qty span { font-size: 10px; color: var(--ink-3); align-self: center; margin-right: 2px; }
+  .qty button {
+    font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 5px; cursor: pointer;
+    background: var(--panel-sunk); border: 1px solid var(--rule-strong); color: var(--ink);
+  }
+  .qty button:hover:not(:disabled) { border-color: var(--accent); }
+  .qty button:disabled { opacity: .4; cursor: not-allowed; }
+  .qty button.fill { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
+  /* The option you are looking at, on a card that shows one member of a
+     family at a time. Filled rather than outlined, so which generation or
+     size the price below belongs to is readable at a glance. */
+  .qty button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .obody { display: flex; flex-direction: column; gap: 7px; }
+  /* Spending millions gets its own button, never a size chip. */
+  button.commit {
+    font-family: var(--sans); font-size: 12px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 1px solid transparent; border-radius: 6px;
+    padding: 7px 14px; margin-top: 2px; cursor: pointer; align-self: flex-start;
+  }
+  button.commit:hover:not(:disabled) { filter: brightness(1.08); }
+  button.commit:disabled { opacity: .45; cursor: not-allowed; }
+  .qty select {
+    font-family: var(--mono); font-size: 11px; padding: 3px 6px; border-radius: 5px; cursor: pointer;
+    background: var(--panel-sunk); border: 1px solid var(--rule-strong); color: var(--ink);
+    max-width: 100%; min-width: 0; flex: 1;
+  }
+  .qty select:hover { border-color: var(--accent); }
+  .order { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 60;
+    background: var(--ink); color: var(--ground); font-size: 13px; font-weight: 500;
+    padding: 10px 18px; border-radius: 999px; box-shadow: var(--shadow); max-width: min(92vw, 520px);
+  }
+  .toast.bad { background: var(--critical); color: #fff; }
+
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tab {
+    font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 6px 13px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2); cursor: pointer;
+  }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+
+  /* ---------- saves ---------- */
+  .saves { display: flex; flex-direction: column; gap: 8px; }
+  .save-row { display: flex; gap: 8px; align-items: stretch; }
+  .save-main {
+    flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px;
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 9px; padding: 11px 14px;
+  }
+  .save-main:hover { border-color: var(--accent); }
+  .save-main .sn { font-size: 13px; font-weight: 600; }
+  .save-main .sm { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+  .save-del {
+    flex: none; font: inherit; font-size: 12px; cursor: pointer; color: var(--ink-3);
+    background: transparent; border: 1px solid var(--rule); border-radius: 9px; padding: 0 14px;
+  }
+  .save-del:hover { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, transparent); }
+
+  /* ---------- plan ---------- */
+  .plan { display: flex; flex-direction: column; gap: 22px; }
+  .plan-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .plan-head h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+  .plan-head .note { font-size: 12px; color: var(--ink-3); }
+  .horizon { margin-left: auto; display: flex; gap: 5px; }
+  .horizon button {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--rule-strong); color: var(--ink-2);
+  }
+  .horizon button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .meter { display: block; height: 7px; border-radius: 4px; background: var(--panel-sunk); overflow: hidden; min-width: 72px; }
+  .meter i { display: block; height: 100%; background: var(--heat); }
+  .fit { font-family: var(--mono); font-size: 11px; }
+  .fit.yes { color: var(--good); }
+  .fit.no { color: var(--critical); }
+  td .hint-sm { font-family: var(--sans); font-size: 11px; color: var(--ink-3); }
+  .sched { display: flex; flex-direction: column; }
+  .sched-row { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--rule); }
+  .sched-row:last-child { border-bottom: 0; }
+  .sched-row .when { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .sched-row .when.far { color: var(--ink-3); }
+  .sched-row .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .sched-row .what .l { font-size: 12.5px; font-weight: 600; }
+  .sched-row .what .d { font-size: 11.5px; color: var(--ink-2); }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 14px; height: 2px; border-radius: 2px; display: inline-block; }
+  /* Far from the turn controls, and quiet: this ends a campaign. */
+  .start-over {
+    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .start-over .hint { font-size: 12px; color: var(--ink-3); }
+  .gameover { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .gameover h3 { font-size: 18px; font-weight: 600; }
+  .gameover .verdict { font-size: 13px; color: var(--ink-2); max-width: 64ch; }
+
+  @media (max-width: 560px) {
+    .clock .date { font-size: 17px; }
+    .cards { grid-template-columns: 1fr; }
+  }
+</style>
+
+<header>
+  <div class="head-in">
+    <div class="clock">
+      <span class="date" id="clock-date">&mdash;</span>
+      <span class="sub" id="clock-sub">Choose a site to begin</span>
+    </div>
+    <div class="turnbar" id="turnbar">
+      <button class="step" id="next-month" type="button">Advance month</button>
+      <button class="step ghost" id="next-year" type="button">Advance year</button>
+      <button class="step ghost" id="save" type="button">Save</button>
+    </div>
+  </div>
+  <div class="progress"><i id="bar"></i></div>
+</header>
+
+<div class="wrap">
+  <section id="setup-sec" hidden>
+    <div class="card brief-main">
+      <h3>Start a campaign</h3>
+      <p>You run the site. Every month the simulation stops and hands you the decisions: what to
+        research, which contracts to take, what hardware to buy, when to build or re-plumb a hall,
+        and where the power comes from. Hand any of it back to the autopilot whenever you like.</p>
+      <div class="setup">
+        <div class="field">
+          <label for="scenario">Site</label>
+          <select id="scenario"></select>
+        </div>
+        <div class="field">
+          <label for="years">Campaign length</label>
+          <select id="years"></select>
+        </div>
+        <div class="field">
+          <label for="seed">Seed</label>
+          <input type="text" id="seed" value="first-site" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="assist">Autopilot</label>
+          <select id="assist">
+            <option value="manual" selected>You decide everything</option>
+            <option value="auto">Autopilot decides everything</option>
+          </select>
+        </div>
+        <button class="step" id="begin" type="button">Begin</button>
+      </div>
+      <div class="tags" id="setup-tags"></div>
+    </div>
+
+    <div class="card brief-main" style="margin-top:16px">
+      <h3>Resume a campaign</h3>
+      <p id="saves-note">Connecting to storage&hellip;</p>
+      <div class="saves" id="saves"></div>
+    </div>
+  </section>
+
+  <section id="game-sec" hidden>
+    <div class="hud" id="hud"></div>
+
+    <div id="floor-wrap" style="margin-top:26px">
+      <div class="sec-head"><h2>The floor</h2><span class="hint" id="floor-hint"></span></div>
+      <div id="floorplans"></div>
+    </div>
+
+    <div style="margin-top:18px" id="alerts-wrap">
+      <div class="sec-head"><h2>Since last month</h2><span class="hint" id="alerts-hint"></span></div>
+      <div class="alerts" id="alerts"></div>
+    </div>
+
+    <div style="margin-top:26px">
+      <div class="sec-head">
+        <h2>Your move</h2>
+        <span class="hint" id="deck-hint"></span>
+      </div>
+      <div class="deck" id="deck"></div>
+    </div>
+
+    <div style="margin-top:30px">
+      <div class="tabs" id="tabs">
+        <button class="tab" type="button" data-tab="site" aria-selected="true">Site</button>
+        <button class="tab" type="button" data-tab="plan" aria-selected="false">Plan</button>
+        <button class="tab" type="button" data-tab="trend" aria-selected="false">Trend</button>
+        <button class="tab" type="button" data-tab="report" aria-selected="false">Annual report</button>
+        <button class="tab" type="button" data-tab="log" aria-selected="false">Log</button>
+      </div>
+
+      <div id="tab-site">
+        <div class="two-col">
+          <div class="fleet" id="fleet" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"></div>
+          <div class="card list" id="objectives"></div>
+        </div>
+      </div>
+
+      <div id="tab-plan" hidden>
+        <div class="plan">
+          <div>
+            <div class="plan-head">
+              <h3>What you can sell now</h3>
+              <span class="note">Capacity is not fungible: an accelerator rack cannot serve archive.</span>
+            </div>
+            <div class="card scroll-x" style="margin-top:10px">
+              <table id="headroom-table"><thead id="headroom-head"></thead><tbody id="headroom-body"></tbody></table>
+            </div>
+          </div>
+
+          <div>
+            <div class="plan-head">
+              <h3>If you order nothing more</h3>
+              <span class="note" id="plan-note"></span>
+              <div class="horizon" id="horizon"></div>
+            </div>
+            <div class="card panel" style="margin-top:10px;padding:14px 16px">
+              <div class="legend" id="plan-legend"></div>
+              <div id="plan-chart"></div>
+            </div>
+            <div class="card scroll-x" style="margin-top:10px">
+              <table id="projection-table"><thead id="projection-head"></thead><tbody id="projection-body"></tbody></table>
+            </div>
+          </div>
+
+          <div>
+            <div class="plan-head">
+              <h3>Already committed</h3>
+              <span class="note">Construction, contract terms and hardware reaching end of life.</span>
+            </div>
+            <div class="card sched" id="schedule" style="margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-trend" hidden>
+        <div class="panels" id="panels"></div>
+      </div>
+
+      <div id="tab-report" hidden>
+        <div class="two-col">
+          <div class="card scroll-x">
+            <table id="report-table">
+              <thead id="report-head"></thead>
+              <tbody id="report-body"></tbody>
+            </table>
+          </div>
+          <div class="card drawer" id="drawer"></div>
+        </div>
+      </div>
+
+      <div id="tab-log" hidden>
+        <div class="diag-head" id="diag-filters"></div>
+        <div class="card log" id="log" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="card gameover" id="gameover" hidden></div>
+
+    <div class="start-over">
+      <button class="step ghost" id="restart" type="button">New campaign</button>
+      <span class="hint">Ends this campaign. Save first if you want to come back to it.</span>
+    </div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var DCT = window.DCT;
+  var run = null;
+  var state = {
+    meta: null, scenarios: [], years: [], alerts: [], actions: [],
+    dashboard: null, fleet: null, objectives: [], diagnostics: [],
+    openYear: null, hover: null, filter: 'all', tab: 'site', finished: false, busy: false,
+    headroom: [], projection: [], schedule: [], horizon: 12, saves: [], deckTab: null,
+    chartWorkload: null, projectionByWorkload: {}, chartGap: null,
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  // ---------- formatting -------------------------------------------------
+  function money(v) {
+    var abs = Math.abs(v);
+    // The sign goes before the currency: "-$401k", not "$-401k".
+    var sign = v < 0 ? '-' : '';
+    if (abs >= 1e9) return sign + '$' + (abs / 1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return sign + '$' + (abs / 1e6).toFixed(1) + 'M';
+    if (abs >= 1e3) return sign + '$' + (abs / 1e3).toFixed(0) + 'k';
+    return sign + '$' + abs.toFixed(0);
+  }
+  function pct(v, d) { return (v * 100).toFixed(d === undefined ? 1 : d) + '%'; }
+  function num(v, d) {
+    if (v === null || v === undefined || !isFinite(v)) return 'n/a';
+    return v.toFixed(d === undefined ? 2 : d);
+  }
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function ratingTone(r) {
+    if (r === 'S+' || r === 'S' || r === 'A') return 'good';
+    if (r === 'B') return 'warning';
+    if (r === 'C') return 'serious';
+    return 'critical';
+  }
+  function pill(tone, label) {
+    var node = el('span', 'pill ' + tone);
+    node.appendChild(el('span', 'dot'));
+    node.appendChild(el('span', null, label));
+    return node;
+  }
+
+  var toastTimer = null;
+  function toast(message, bad) {
+    var existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    var node = el('div', 'toast' + (bad ? ' bad' : ''), message);
+    document.body.appendChild(node);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { node.remove(); }, 3200);
+  }
+
+  // ---------- charts (single series per panel, own scale) ----------------
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    var node = document.createElementNS(SVG_NS, tag);
+    for (var k in attrs) if (attrs[k] !== null) node.setAttribute(k, String(attrs[k]));
+    return node;
+  }
+
+  function panel(spec) {
+    var W = 260, H = 104, L = 38, R = 8, T = 10, B = 18;
+    var values = spec.values;
+    var card = el('div', 'card panel');
+    var head = el('div', 'panel-head');
+    head.appendChild(el('span', 't', spec.title));
+    var readout = el('span', 'r');
+    head.appendChild(readout);
+    card.appendChild(head);
+
+    var finite = values.filter(function (v) { return v !== null && isFinite(v); });
+    if (finite.length === 0) {
+      card.appendChild(el('div', 'empty', 'No closed year yet'));
+      return { node: card, update: function () {} };
+    }
+
+    var lo = Math.min.apply(null, finite);
+    var hi = Math.max.apply(null, finite);
+    var dataRange = Math.max(hi - lo, Math.abs(hi) * 0.02, 1e-6);
+    var target = spec.target;
+    var targetInReach = target !== undefined && target !== null
+      && target >= lo - dataRange * 2 && target <= hi + dataRange * 2;
+    if (targetInReach) { lo = Math.min(lo, target); hi = Math.max(hi, target); }
+    if (spec.zero) lo = Math.min(lo, 0);
+    if (hi - lo < 1e-9) hi = lo + Math.max(Math.abs(lo) * 0.1, 1);
+    var pad = (hi - lo) * 0.14;
+    lo -= pad; hi += pad;
+
+    var x = function (i) { return L + (values.length <= 1 ? 0 : (i / (values.length - 1)) * (W - L - R)); };
+    var y = function (v) { return T + (1 - (v - lo) / (hi - lo)) * (H - T - B); };
+
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': spec.title + ' by year' });
+    [hi - pad, lo + pad].forEach(function (v) {
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--rule)', 'stroke-width': 1, fill: 'none' }));
+      var t = svgEl('text', { x: L - 5, y: y(v) + 3, 'text-anchor': 'end', fill: 'var(--ink-3)', 'font-size': 8.5, 'font-family': 'var(--mono)' });
+      t.textContent = spec.fmt(v);
+      svg.appendChild(t);
+    });
+    if (targetInReach) {
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(target), y2: y(target), stroke: 'var(--heat)', 'stroke-width': 1, 'stroke-dasharray': '3 3', fill: 'none', opacity: .75 }));
+      var tl = svgEl('text', { x: W - R, y: y(target) - 3.5, 'text-anchor': 'end', fill: 'var(--heat)', 'font-size': 8, 'font-family': 'var(--mono)' });
+      tl.textContent = spec.targetLabel || ('target ' + spec.fmt(target));
+      svg.appendChild(tl);
+    }
+
+    var d = '';
+    values.forEach(function (v, i) {
+      if (v === null || !isFinite(v)) return;
+      d += (d === '' ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2);
+    });
+    svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+
+    var last = -1;
+    for (var i = values.length - 1; i >= 0; i -= 1) {
+      if (values[i] !== null && isFinite(values[i])) { last = i; break; }
+    }
+    if (last >= 0) {
+      svg.appendChild(svgEl('circle', { cx: x(last), cy: y(values[last]), r: 3.2, fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 1.5 }));
+    }
+    var marker = svgEl('circle', { cx: 0, cy: 0, r: 4.5, fill: 'var(--accent)', stroke: 'var(--panel)', 'stroke-width': 2, opacity: 0 });
+    var rule = svgEl('line', { x1: 0, x2: 0, y1: T, y2: H - B, stroke: 'var(--rule-strong)', 'stroke-width': 1, fill: 'none', opacity: 0 });
+    svg.appendChild(rule); svg.appendChild(marker);
+    var hit = svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: 'transparent', style: 'cursor:crosshair' });
+    svg.appendChild(hit);
+    card.appendChild(svg);
+
+    var foot = el('div', 'foot');
+    foot.appendChild(el('span', null, spec.labels[0]));
+    if (target !== undefined && target !== null && !targetInReach) {
+      foot.appendChild(el('span', 'off-target', spec.targetLabel || ('target ' + spec.fmt(target))));
+    }
+    foot.appendChild(el('span', null, spec.labels[spec.labels.length - 1]));
+    card.appendChild(foot);
+
+    function nearest(e) {
+      var box = svg.getBoundingClientRect();
+      var px = ((e.clientX - box.left) / box.width) * W;
+      var best = 0, dist = Infinity;
+      for (var i = 0; i < values.length; i += 1) {
+        var dd = Math.abs(x(i) - px);
+        if (dd < dist) { dist = dd; best = i; }
+      }
+      return best;
+    }
+    hit.addEventListener('pointermove', function (e) { setHover(nearest(e)); });
+    hit.addEventListener('pointerleave', function () { setHover(null); });
+
+    function update(index) {
+      var pick = index === null ? last : index;
+      var v = values[pick];
+      if (v === null || v === undefined || !isFinite(v)) {
+        readout.textContent = 'n/a';
+        marker.setAttribute('opacity', 0); rule.setAttribute('opacity', 0);
+        return;
+      }
+      readout.textContent = spec.fmt(v);
+      var show = index !== null;
+      marker.setAttribute('cx', x(pick)); marker.setAttribute('cy', y(v));
+      marker.setAttribute('opacity', show ? 1 : 0);
+      rule.setAttribute('x1', x(pick)); rule.setAttribute('x2', x(pick));
+      rule.setAttribute('opacity', show ? 1 : 0);
+    }
+    update(null);
+    return { node: card, update: update };
+  }
+
+  var panelUpdaters = [];
+  function setHover(index) {
+    state.hover = index;
+    panelUpdaters.forEach(function (fn) { fn(index); });
+  }
+
+  /**
+   * Campaign lengths offered for the chosen site, defaulting to its own.
+   *
+   * Each site opens in a different decade and runs to 2036, so a fixed list of
+   * lengths is wrong for all of them: the default has to be the scenario's own
+   * duration, and the shorter options are for players who want a taste of the
+   * era rather than the whole arc.
+   */
+  function fillYears() {
+    var scenario = currentScenario();
+    var host = $('years');
+    var full = scenario ? scenario.durationYears : 8;
+    var choices = [];
+    [5, 10, 15, 20, 25, 30].forEach(function (n) { if (n < full) choices.push(n); });
+    choices.push(full);
+    host.textContent = '';
+    choices.forEach(function (n) {
+      var option = el('option', null, n === full
+        ? n + ' years \u00b7 to ' + ((scenario ? scenario.startYear : 0) + n)
+        : n + ' years');
+      option.value = String(n);
+      if (n === full) option.selected = true;
+      host.appendChild(option);
+    });
+  }
+
+  function currentScenario() {
+    var id = $('scenario').value;
+    for (var i = 0; i < state.scenarios.length; i += 1) {
+      if (state.scenarios[i].id === id) return state.scenarios[i];
+    }
+    return state.scenarios[0] || null;
+  }
+
+  function renderPanels() {
+    var host = $('panels');
+    host.textContent = '';
+    panelUpdaters = [];
+    if (state.years.length === 0) {
+      host.appendChild(el('div', 'empty', 'Charts appear once the first year closes.'));
+      return;
+    }
+    var labels = state.years.map(function (y) { return String(y.report.year); });
+    var s = currentScenario();
+    [
+      { title: 'IT capacity', values: state.years.map(function (y) { return y.report.capacity.itCapacityMw; }),
+        fmt: function (v) { return v.toFixed(1) + ' MW'; }, zero: true,
+        target: s ? s.targetCapacityMw : null, targetLabel: s ? 'target ' + s.targetCapacityMw + ' MW' : null },
+      { title: 'PUE', values: state.years.map(function (y) { return y.report.environment.pue; }),
+        fmt: function (v) { return v.toFixed(3); }, target: 1.15, targetLabel: 'best in class 1.15' },
+      { title: 'Availability', values: state.years.map(function (y) { return y.report.reliability.availability01; }),
+        fmt: function (v) { return (v * 100).toFixed(2) + '%'; },
+        target: s ? s.minimumAvailability01 : null,
+        targetLabel: s ? 'floor ' + (s.minimumAvailability01 * 100).toFixed(1) + '%' : null },
+      { title: 'Carbon intensity', values: state.years.map(function (y) { return y.report.environment.cue; }),
+        fmt: function (v) { return v.toFixed(0) + ' kg'; }, zero: true },
+      { title: 'Operating margin', values: state.years.map(function (y) { return y.report.financial.operatingMargin01; }),
+        fmt: function (v) { return (v * 100).toFixed(0) + '%'; }, zero: true, target: 0, targetLabel: 'break-even' },
+      { title: 'Overall score', values: state.years.map(function (y) { return y.score.overall; }),
+        fmt: function (v) { return v.toFixed(1); }, target: 75, targetLabel: 'A grade 75' },
+    ].forEach(function (spec) {
+      spec.labels = labels;
+      var built = panel(spec);
+      host.appendChild(built.node);
+      panelUpdaters.push(built.update);
+    });
+  }
+
+  // ---------- HUD --------------------------------------------------------
+  function renderHud() {
+    var host = $('hud');
+    host.textContent = '';
+    var d = state.dashboard;
+    if (!d) return;
+
+    function cell(key, value, sub, alarm, title) {
+      var node = el('div', 'cell' + (alarm ? ' alarm' : ''));
+      if (title) node.title = title;
+      node.appendChild(el('div', 'k', key));
+      node.appendChild(el('div', 'v', value));
+      node.appendChild(el('div', 's', sub || ''));
+      host.appendChild(node);
+    }
+
+    cell('Cash', money(d.cash), money(d.budget) + ' free', d.cash <= 0);
+
+    // Cash beside cash flow, because a healthy balance and a business losing
+    // money every month look identical until the two are read together.
+    var cf = d.cashFlow;
+    cell('Cash flow',
+      cf ? (cf.net >= 0 ? '+' : '') + money(cf.net) : '\u2014',
+      cf ? money(cf.revenue) + ' in' : 'first month',
+      !!cf && cf.net < 0,
+      cf
+        ? 'Last full month: ' + money(cf.revenue) + ' earned, ' + money(cf.operatingCost)
+          + ' spent running the site'
+          + (cf.capex > 0 ? ', and ' + money(cf.capex) + ' of capital spending on top.' : '.')
+        : 'No month has closed yet.');
+
+    cell('Debt', money(d.debt), '');
+    cell('IT capacity', d.itCapacityMw.toFixed(2) + ' MW', d.rackCount + ' racks');
+    cell('Contracts', String(d.contractCount), Math.round(d.committedUnits).toLocaleString() + ' CU sold');
+    cell('Free to sell', Math.round(d.freeUnits).toLocaleString() + ' CU',
+      d.bestFitWorkload ? 'most room: ' + d.bestFitWorkload : 'no capacity', d.freeUnits <= 0);
+    cell('Reputation', Math.round(d.reputation) + '', 'trust ' + (d.trust > 0 ? '+' : '') + Math.round(d.trust));
+
+    // Specialists folded into R&D rather than given a cell of their own: the
+    // row holds ten across, and an eleventh would leave the gap that the
+    // widths were chosen to close.
+    var rd = d.projects.length === 0 ? 'idle' : d.projects.length + ' running';
+    var free = d.freeSpecialists + '/' + d.totalSpecialists + ' free';
+    var shown = d.projects.slice(0, 2)
+      .map(function (p) { return Math.round(p.progress01 * 100) + '%'; }).join(' \u00b7 ');
+    var rdSub = d.projects.length === 0
+      ? free
+      : shown + (d.projects.length > 2 ? ' +' + (d.projects.length - 2) : '') + ' \u00b7 ' + free;
+    cell('R&D', rd, rdSub, d.projects.length === 0 && d.freeSpecialists > 0,
+      d.freeSpecialists + ' of ' + d.totalSpecialists + ' specialists are free to assign.');
+
+    cell('Hall inlet', d.worstInletC > 0 ? d.worstInletC.toFixed(0) + '\u00b0C' : '\u2014',
+      d.throttling ? 'throttling' : 'ambient ' + d.ambientC.toFixed(0) + '\u00b0C', d.throttling);
+    cell('Grid', d.gridAvailable ? 'up' : 'down',
+      d.activeEvents.length ? d.activeEvents.length + ' events' : 'no events', !d.gridAvailable);
+  }
+
+  function renderAlerts() {
+    var host = $('alerts');
+    host.textContent = '';
+    if (state.alerts.length === 0) {
+      $('alerts-hint').textContent = 'A quiet month';
+      var quiet = el('div', 'alert good');
+      var t = el('div', 'txt');
+      t.appendChild(el('div', 'ti', 'Nothing needed your attention'));
+      t.appendChild(el('div', 'de', 'The site ran inside its envelope. The log has the detail.'));
+      quiet.appendChild(t);
+      host.appendChild(quiet);
+      return;
+    }
+    $('alerts-hint').textContent = state.alerts.length + ' item' + (state.alerts.length > 1 ? 's' : '');
+    state.alerts.forEach(function (alert) {
+      var node = el('div', 'alert ' + alert.severity);
+      var txt = el('div', 'txt');
+      var title = el('div', 'ti');
+      title.appendChild(pill(alert.severity, alert.severity));
+      title.appendChild(document.createTextNode(' ' + alert.title));
+      txt.appendChild(title);
+      txt.appendChild(el('div', 'de', alert.detail));
+      node.appendChild(txt);
+      host.appendChild(node);
+    });
+  }
+
+  // ---------- decisions --------------------------------------------------
+  var CATEGORY_LABELS = {
+    research: 'Research', contracts: 'Contract market', halls: 'Halls',
+    hardware: 'Hardware', cooling: 'Cooling', power: 'Power',
+  };
+  var CATEGORY_BLURB = {
+    research: 'Run as many projects as you have specialists for. Each is funded from cash, day by day.',
+    contracts: 'Offers leave the table after about three months. Sell only what the fleet can serve; '
+      + 'a contract you cannot serve can be ended here, for a fee.',
+    halls: 'The buildings. A hall takes about six months to commission and its cooling is fixed '
+      + 'when it is built, so what you choose here decides what can ever go inside it.',
+    hardware: 'What goes inside. Racks earn from the month they land, but only in a hall whose '
+      + 'cooling can carry their density. Retiring a group early frees its slots for different kit.',
+    cooling: 'Nothing to retrofit to yet: a hall can only be re-plumbed onto a cooling technology you '
+      + 'have researched. Research one in the Cooling branch and the halls you own appear here.',
+    power: 'Everything downstream of the meter depends on this. Clean supply costs more up front.',
+  };
+
+  function renderDeck() {
+    var host = $('deck');
+    host.textContent = '';
+    if (!run) return;
+
+    var auto = run.autopilot();
+    var byCategory = {};
+    state.actions.forEach(function (action) {
+      (byCategory[action.category] = byCategory[action.category] || []).push(action);
+    });
+
+    var takeable = state.actions.filter(function (a) { return !a.blocked && a.affordable; }).length;
+    $('deck-hint').textContent = state.finished ? 'Campaign complete'
+      : takeable + ' of ' + state.actions.length + ' available now';
+
+    // Open on a category with something to do, so the first turn does not
+    // start on an empty tab.
+    var available = function (category) {
+      return (byCategory[category] || []).filter(function (a) {
+        return !a.blocked && a.affordable;
+      }).length;
+    };
+    if (DCT.decisionCategories.indexOf(state.deckTab) < 0) state.deckTab = null;
+    if (!state.deckTab) {
+      DCT.decisionCategories.forEach(function (category) {
+        if (!state.deckTab && !auto[category] && available(category) > 0) state.deckTab = category;
+      });
+      state.deckTab = state.deckTab || DCT.decisionCategories[0];
+    }
+
+    var tabs = el('div', 'deck-tabs');
+    tabs.setAttribute('role', 'tablist');
+    DCT.decisionCategories.forEach(function (category) {
+      var button = el('button', 'dtab');
+      button.type = 'button';
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', state.deckTab === category ? 'true' : 'false');
+      button.appendChild(el('span', null, CATEGORY_LABELS[category]));
+      var count = available(category);
+      var badge = el('span', 'n' + (auto[category] || count === 0 ? ' none' : ''),
+        auto[category] ? 'auto' : String(count));
+      button.appendChild(badge);
+      button.addEventListener('click', function () {
+        state.deckTab = category;
+        renderDeck();
+      });
+      tabs.appendChild(button);
+    });
+    host.appendChild(tabs);
+
+    [state.deckTab].forEach(function (category) {
+      var actions = byCategory[category] || [];
+      var block = el('div', 'cat-block');
+
+      var bar = el('div', 'cat-bar');
+      // The tab badge counts what can be TAKEN; this counts what exists. The
+      // two coincide often enough that showing a bare number twice reads as a
+      // repeat rather than as two different facts, so this one says which.
+      var ready = available(category);
+      // Count what is on screen. Sizes and generations fold into one card, so
+      // "18 options" above six cards reads as a miscount rather than as the
+      // eighteen separate buys those six cards hold between them.
+      var cards = groupActions(actions).length;
+      bar.appendChild(el('span', 'count', auto[category] ? 'on autopilot'
+        : cards !== actions.length
+          ? cards + ' kind' + (cards === 1 ? '' : 's') + ' \u00b7 ' + ready
+            + ' of ' + actions.length + ' available now'
+          : actions.length + ' option' + (actions.length === 1 ? '' : 's')
+            + (ready === actions.length ? ', all available now'
+              : ' \u00b7 ' + ready + ' available now')));
+      var toggle = el('label', 'auto');
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.id = 'auto-' + category;
+      box.checked = auto[category];
+      box.addEventListener('change', function () {
+        run.setAutopilot(category, box.checked);
+        refresh();
+        toast(box.checked ? CATEGORY_LABELS[category] + ' handed to autopilot'
+          : CATEGORY_LABELS[category] + ' is yours now');
+      });
+      toggle.appendChild(box);
+      toggle.appendChild(el('span', null, 'autopilot'));
+      bar.appendChild(toggle);
+      block.appendChild(bar);
+
+      // Show what is already running before what could be started: research is
+      // concurrent now, and the bench is the constraint the player plans against.
+      if (category === 'research' && state.dashboard) {
+        var d = state.dashboard;
+        var running = el('div', 'running');
+        if (d.projects.length === 0) {
+          running.appendChild(el('span', 'empty', 'Nothing under way. '
+            + d.freeSpecialists + ' of ' + d.totalSpecialists + ' specialists free.'));
+        } else {
+          d.projects.forEach(function (project) {
+            var chip = el('span', 'project');
+            chip.appendChild(el('span', 'pn', project.name));
+            var bar = el('span', 'pbar');
+            var fill = el('i');
+            fill.style.width = Math.round(project.progress01 * 100) + '%';
+            bar.appendChild(fill);
+            chip.appendChild(bar);
+            chip.appendChild(el('span', 'pp', Math.round(project.progress01 * 100) + '% \u00b7 '
+              + money(project.costPerDay) + '/day'));
+            running.appendChild(chip);
+          });
+          running.appendChild(el('span', 'empty', d.freeSpecialists + ' of '
+            + d.totalSpecialists + ' specialists free'));
+        }
+        block.appendChild(running);
+      }
+
+      if (auto[category]) {
+        block.appendChild(el('div', 'empty', 'The heuristic is handling ' + CATEGORY_LABELS[category].toLowerCase()
+          + '. Untick autopilot to take it over.'));
+        host.appendChild(block);
+        return;
+      }
+      if (actions.length === 0) {
+        block.appendChild(el('div', 'empty', CATEGORY_BLURB[category]));
+        host.appendChild(block);
+        return;
+      }
+
+      // Acquiring and changing are different decisions and were previously
+      // interleaved, which buried every way of undoing something under a list
+      // of things to buy. Splitting them is what makes the second kind
+      // findable at all.
+      var acquire = actions.filter(function (a) { return CHANGE_KINDS.indexOf(a.kind) < 0; });
+      var change = actions.filter(function (a) { return CHANGE_KINDS.indexOf(a.kind) >= 0; });
+
+      addCards(block, acquire, null);
+      if (change.length > 0) addCards(block, change, CHANGE_HEADING[category] || 'Change what you own');
+      host.appendChild(block);
+    });
+  }
+
+  /** Action kinds that alter something already owned rather than acquire more. */
+  var CHANGE_KINDS = ['contract.drop', 'hardware.retire', 'power.retire', 'hall.retrofit'];
+  var CHANGE_HEADING = {
+    contracts: 'End a contract',
+    hardware: 'Take racks off the floor',
+    power: 'Decommission',
+    cooling: 'Re-plumb a live hall',
+  };
+  /** Cards shown per group before the rest are folded away. */
+  var CARD_LIMIT = 18;
+
+  /**
+   * Fold together the options that are the same decision in different sizes
+   * or vintages.
+   *
+   * Three generations of CPU rack, and three sizes of the same hall, used to
+   * sit as peers of every other option - so the choice that matters (which
+   * KIND of rack, which cooling) was buried under the choice that follows
+   * from it. Grouped, the shelf lists kinds and each card carries its own
+   * sizes.
+   *
+   * Everything else passes through as a group of one, so the order of the
+   * list is the order the engine gave it.
+   */
+  function groupKey(action) {
+    if (action.kind === 'hardware.buy') return 'family:' + action.family;
+    if (action.kind === 'hall.build') return 'cooling:' + action.coolingId;
+    return null;
+  }
+
+  function groupActions(actions) {
+    var groups = [];
+    var byKey = {};
+    actions.forEach(function (action) {
+      var key = groupKey(action);
+      if (key === null) { groups.push([action]); return; }
+      if (!byKey[key]) { byKey[key] = []; groups.push(byKey[key]); }
+      byKey[key].push(action);
+    });
+    return groups;
+  }
+
+  function addCards(block, actions, heading) {
+    if (actions.length === 0) return;
+    var groups = groupActions(actions);
+    if (heading) {
+      var sub = el('div', 'sub-head');
+      sub.appendChild(el('span', null, heading));
+      sub.appendChild(el('span', 'n', groups.length + ''));
+      block.appendChild(sub);
+    }
+    var cards = el('div', 'cards');
+    groups.slice(0, CARD_LIMIT).forEach(function (group) {
+      cards.appendChild(groupKey(group[0]) === null ? actionCard(group[0]) : optionCard(group));
+    });
+    block.appendChild(cards);
+    if (groups.length > CARD_LIMIT) {
+      block.appendChild(el('div', 'empty',
+        'Showing ' + CARD_LIMIT + ' of ' + groups.length + '. The rest stay on the table.'));
+    }
+  }
+
+  function actionCard(action) {
+    var disabled = state.finished || !!action.blocked || !action.affordable;
+    var card = el(action.kind === 'hardware.buy' ? 'div' : 'button', 'act');
+    if (action.kind !== 'hardware.buy') {
+      card.type = 'button';
+      card.disabled = disabled;
+      card.addEventListener('click', function () { take(action.id, 1); });
+    } else if (disabled) {
+      card.style.opacity = '.62';
+    }
+
+    var top = el('div', 'top');
+    top.appendChild(el('span', 'nm', action.label));
+    // Retiring pays rather than costs; labelling that "no cost" reads as a
+    // trick, and the proceeds are the number the decision turns on.
+    var proceeds = action.kind === 'hardware.retire' ? action.resale
+      : action.kind === 'power.retire' ? action.salvage : 0;
+    var price;
+    if (proceeds > 0) price = el('span', 'px free', '+' + money(proceeds));
+    else if (action.cost === 0) price = el('span', 'px free', 'no cost');
+    else price = el('span', 'px', money(action.cost));
+    top.appendChild(price);
+    card.appendChild(top);
+
+    card.appendChild(el('div', 'de', action.detail));
+    if (action.tradeOff) card.appendChild(el('div', 'tr', action.tradeOff));
+    if (action.blocked) card.appendChild(el('div', 'bl', action.blocked));
+    else if (!action.affordable) card.appendChild(el('div', 'bl', 'Beyond the free capital you hold.'));
+
+    if (action.kind === 'hardware.buy' && !action.blocked) card.appendChild(rackOrderRow(action));
+    return card;
+  }
+
+  /**
+   * One card for a family of hardware, or for one cooling technology in every
+   * size it is built in. The option row picks which member you are looking
+   * at; everything below it - price, detail, trade-off, the order row - is
+   * that member's.
+   *
+   * A hall is committed with its own button rather than by picking a size,
+   * because a hall is millions of dollars and six months, and a size button
+   * that also spends the money is a misclick waiting to happen.
+   */
+  function optionCard(group) {
+    var isHall = group[0].kind === 'hall.build';
+    var options = group.slice().sort(function (a, b) {
+      return isHall ? a.racks - b.racks
+        : (a.generation - b.generation) || a.variant.localeCompare(b.variant);
+    });
+
+    // A hall opens on its smallest size: the least money and the least floor
+    // to fill. Hardware opens on the newest generation you can actually take,
+    // since that is what an operator with the cash would order.
+    //
+    // Newest means the highest generation, not the last in the list: two
+    // products can share a generation - flash and spinning disk are both
+    // first-generation storage - and picking the later of those by name
+    // would open the card on whichever happened to sort last.
+    var usable = options.filter(function (o) { return !o.blocked && o.affordable; });
+    var newest = function (list) {
+      return list.reduce(function (best, o) {
+        return o.generation > best.generation ? o : best;
+      }, list[0]);
+    };
+    var chosen = isHall ? options[0] : newest(usable.length > 0 ? usable : options);
+
+    // "Gen" is only the right word when these are generations of one product.
+    var pickerLabel = isHall ? 'size'
+      : options.every(function (o) { return /^Gen /.test(o.variant); }) ? 'gen' : 'type';
+
+    var card = el('div', 'act');
+    var top = el('div', 'top');
+    var nameEl = el('span', 'nm', isHall ? chosen.coolingName : chosen.familyLabel);
+    var priceEl = el('span', 'px', '');
+    top.appendChild(nameEl);
+    top.appendChild(priceEl);
+    card.appendChild(top);
+
+    var picker = null;
+    if (options.length > 1) {
+      picker = el('div', 'qty');
+      picker.appendChild(el('span', null, pickerLabel));
+      card.appendChild(picker);
+    }
+    var body = el('div', 'obody');
+    card.appendChild(body);
+
+    function paintPicker() {
+      if (!picker) return;
+      Array.prototype.forEach.call(picker.querySelectorAll('button'), function (b) { b.remove(); });
+      options.forEach(function (option) {
+        var b = el('button', option === chosen ? 'on' : null,
+          isHall ? option.racks + '' : option.variant);
+        b.type = 'button';
+        b.title = isHall ? option.racks + ' racks \u00b7 ' + money(option.cost)
+          : option.label + ' \u00b7 ' + money(option.costPerRack) + ' per rack';
+        b.addEventListener('click', function () { chosen = option; paint(); });
+        picker.appendChild(b);
+      });
+    }
+
+    function paint() {
+      paintPicker();
+      priceEl.className = 'px';
+      priceEl.textContent = money(chosen.cost);
+      body.textContent = '';
+      body.appendChild(el('div', 'de', chosen.detail));
+      if (chosen.tradeOff) body.appendChild(el('div', 'tr', chosen.tradeOff));
+      if (chosen.blocked) body.appendChild(el('div', 'bl', chosen.blocked));
+      else if (!chosen.affordable) body.appendChild(el('div', 'bl', 'Beyond the free capital you hold.'));
+
+      if (isHall) {
+        var build = el('button', 'commit', 'Build ' + chosen.racks + '-rack hall');
+        build.type = 'button';
+        build.disabled = state.finished || !!chosen.blocked || !chosen.affordable;
+        build.addEventListener('click', function () { take(chosen.id, 1); });
+        body.appendChild(build);
+      } else if (!chosen.blocked) {
+        body.appendChild(rackOrderRow(chosen));
+      }
+      card.style.opacity = (chosen.blocked || !chosen.affordable) ? '.62' : '';
+    }
+
+    paint();
+    return card;
+  }
+
+  /**
+   * Choose a hall, then an order size.
+   *
+   * Racks used to go into whichever hall happened to come first, so a second
+   * hall could never be filled and no hall could be given a job of its own.
+   * The hall is part of the order now, and "fill" takes whatever is left in
+   * the one selected.
+   */
+  function rackOrderRow(action) {
+    var wrap = el('div', 'order');
+    var chosen = DCT.anyHall;
+
+    var usable = action.halls.filter(function (h) { return h.canCool && h.freeSlots > 0; });
+    if (action.halls.length > 1 || usable.length !== action.halls.length) {
+      var row = el('div', 'qty');
+      row.appendChild(el('span', null, 'into'));
+      var select = document.createElement('select');
+      var any = document.createElement('option');
+      any.value = DCT.anyHall;
+      any.textContent = 'wherever it fits (' + action.spaceAvailable + ' free)';
+      select.appendChild(any);
+      action.halls.forEach(function (h) {
+        var opt = document.createElement('option');
+        opt.value = h.hallId;
+        opt.textContent = h.name + ' \u00b7 ' + h.racksInstalled + '/' + h.rackCapacity
+          + (h.blocked ? ' \u00b7 ' + h.blocked : ' \u00b7 ' + h.freeSlots + ' free');
+        opt.disabled = !!h.blocked;
+        select.appendChild(opt);
+      });
+      select.addEventListener('change', function () {
+        chosen = select.value;
+        paintSizes();
+      });
+      row.appendChild(select);
+      wrap.appendChild(row);
+    }
+
+    var qty = el('div', 'qty');
+    wrap.appendChild(qty);
+
+    function slotsHere() {
+      if (chosen === DCT.anyHall) return action.spaceAvailable;
+      for (var i = 0; i < action.halls.length; i++) {
+        if (action.halls[i].hallId === chosen) return action.halls[i].freeSlots;
+      }
+      return 0;
+    }
+
+    function order(size) {
+      return function () { take('hardware:' + chosen + ':' + action.hardwareId, size); };
+    }
+
+    function paintSizes() {
+      qty.textContent = '';
+      qty.appendChild(el('span', null, 'order'));
+      var free = slotsHere();
+      DCT.rackOrderSizes.forEach(function (size) {
+        var b = el('button', null, size + '');
+        b.type = 'button';
+        var can = size <= free && size <= action.maxAffordable && !state.finished;
+        b.disabled = !can;
+        b.title = can ? money(size * action.costPerRack)
+          : (size > free ? 'Only ' + free + ' rack slots free there'
+            : 'Beyond the free capital you hold');
+        b.addEventListener('click', order(size));
+        qty.appendChild(b);
+      });
+
+      // Filling a 220-rack hall in fifties is five clicks and four chances to
+      // put racks somewhere you did not mean to.
+      var most = Math.min(free, action.maxAffordable);
+      var fill = el('button', 'fill', most > 0 ? 'fill (' + most + ')' : 'fill');
+      fill.type = 'button';
+      fill.disabled = most <= 0 || state.finished;
+      fill.title = most > 0 ? money(most * action.costPerRack)
+        : (free <= 0 ? 'No free slots there' : 'Beyond the free capital you hold');
+      fill.addEventListener('click', order(most));
+      qty.appendChild(fill);
+    }
+
+    paintSizes();
+    return wrap;
+  }
+
+  function take(actionId, quantity) {
+    if (!run || state.finished) return;
+    var result = run.act(actionId, quantity);
+    toast(result.message, !result.ok);
+    refresh();
+  }
+
+
+  // ---------- plan -------------------------------------------------------
+  var HORIZONS = [3, 6, 12, 24];
+
+  function renderHorizon() {
+    var host = $('horizon');
+    host.textContent = '';
+    HORIZONS.forEach(function (months) {
+      var b = el('button', null, months + ' mo');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', state.horizon === months ? 'true' : 'false');
+      b.addEventListener('click', function () { state.horizon = months; renderPlan(); });
+      host.appendChild(b);
+    });
+  }
+
+  function renderHeadroom() {
+    var head = $('headroom-head');
+    head.textContent = '';
+    var hr = el('tr');
+    ['Workload', 'Racks', 'Capacity', 'Sold', 'Free now', 'Free in ' + state.horizon + ' mo', 'Committed', 'One more rack adds']
+      .forEach(function (label) { hr.appendChild(el('th', null, label)); });
+    head.appendChild(hr);
+
+    var body = $('headroom-body');
+    body.textContent = '';
+    state.headroom.forEach(function (row) {
+      var tr = el('tr');
+      tr.style.cursor = 'default';
+      tr.appendChild(el('td', null, row.name));
+      tr.appendChild(el('td', 'dim', row.capableRacks.toLocaleString()));
+      tr.appendChild(el('td', null, Math.round(row.servableUnits).toLocaleString()));
+      tr.appendChild(el('td', 'dim', Math.round(row.reservedUnits).toLocaleString()));
+
+      tr.appendChild(el('td', null, Math.round(row.freeUnits).toLocaleString()));
+
+      // The same row at the horizon, which is the answer to "can I still take
+      // this on once the current contracts and cohorts have moved".
+      var future = el('td');
+      var projected = state.projectionByWorkload[row.workloadId];
+      if (projected === undefined) {
+        future.appendChild(el('span', 'hint-sm', '\u2014'));
+      } else {
+        var delta = projected - row.freeUnits;
+        future.appendChild(document.createTextNode(Math.round(projected).toLocaleString()));
+        if (Math.abs(delta) >= 1) {
+          future.appendChild(el('span', 'fit ' + (delta >= 0 ? 'yes' : 'no'),
+            ' ' + (delta >= 0 ? '+' : '') + Math.round(delta).toLocaleString()));
+        }
+      }
+      tr.appendChild(future);
+
+      var meterCell = el('td');
+      var meter = el('span', 'meter');
+      var fill = el('i');
+      fill.style.width = Math.max(0, Math.min(100, row.utilisation01 * 100)).toFixed(0) + '%';
+      meter.appendChild(fill);
+      meterCell.appendChild(meter);
+      tr.appendChild(meterCell);
+
+      var add = el('td', 'dim');
+      if (row.unitsPerAddedRack > 0) {
+        add.textContent = '+' + Math.round(row.unitsPerAddedRack) + ' CU';
+        var who = el('span', 'hint-sm', ' ' + row.bestHardware);
+        add.appendChild(who);
+      } else if (row.unlockedBy) {
+        add.appendChild(el('span', 'hint-sm', 'research ' + row.unlockedBy));
+      } else {
+        add.textContent = '\u2014';
+      }
+      tr.appendChild(add);
+      body.appendChild(tr);
+    });
+  }
+
+  /**
+   * One workload's sellable capacity against what is sold, over the horizon.
+   *
+   * A single workload, because capacity is not fungible: charting a sum would
+   * count the same rack once per workload it can serve. Both series are compute
+   * units of that workload, so they share one scale, and the gap between them
+   * IS the headroom - the month the lines meet is the month it runs out.
+   */
+  function renderPlanChart() {
+    var host = $('plan-chart');
+    host.textContent = '';
+    var months = state.projection;
+    if (months.length < 2 || !state.chartWorkload) {
+      host.appendChild(el('div', 'empty', 'Sell something, or install racks, and the headroom curve appears here.'));
+      $('plan-legend').textContent = '';
+      return;
+    }
+
+    var pick = function (m) {
+      for (var i = 0; i < m.perWorkload.length; i += 1) {
+        if (m.perWorkload[i].workloadId === state.chartWorkload) return m.perWorkload[i];
+      }
+      return { servableUnits: 0, reservedUnits: 0, freeUnits: 0 };
+    };
+
+    var W = 640, H = 168, L = 52, R = 62, T = 12, B = 26;
+    var capacity = months.map(function (m) { return pick(m).servableUnits * 0.85; });
+    var sold = months.map(function (m) { return pick(m).reservedUnits; });
+    var hi = Math.max.apply(null, capacity.concat(sold));
+    if (hi <= 0) hi = 1;
+    hi *= 1.12;
+
+    var x = function (i) { return L + (i / (months.length - 1)) * (W - L - R); };
+    var y = function (v) { return T + (1 - v / hi) * (H - T - B); };
+
+    var svg = svgEl('svg', {
+      viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+      'aria-label': 'Sellable capacity against committed capacity over the next ' + state.horizon + ' months',
+      style: 'width:100%;height:auto;overflow:visible',
+    });
+
+    [hi / 1.12, hi / 2.24, 0].forEach(function (v) {
+      svg.appendChild(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--rule)', 'stroke-width': 1, fill: 'none' }));
+      var t = svgEl('text', { x: L - 6, y: y(v) + 3, 'text-anchor': 'end', fill: 'var(--ink-3)', 'font-size': 9, 'font-family': 'var(--mono)' });
+      t.textContent = Math.round(v).toLocaleString();
+      svg.appendChild(t);
+    });
+
+    // The band between the lines is the headroom. When the two run close
+    // together - the usual case for a fleet sold near its limit - the lines
+    // alone are indistinguishable, and the gap is the whole question.
+    var lastIndex = months.length - 1;
+    var oversold = sold[lastIndex] > capacity[lastIndex];
+    var band = '';
+    capacity.forEach(function (v, i) { band += (i === 0 ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2); });
+    for (var i = lastIndex; i >= 0; i -= 1) band += 'L' + x(i).toFixed(2) + ' ' + y(sold[i]).toFixed(2);
+    band += 'Z';
+    svg.appendChild(svgEl('path', {
+      d: band, fill: oversold ? 'var(--heat)' : 'var(--accent)', opacity: 0.16, stroke: 'none',
+    }));
+
+    function line(values, stroke) {
+      var d = '';
+      values.forEach(function (v, i) { d += (d === '' ? 'M' : 'L') + x(i).toFixed(2) + ' ' + y(v).toFixed(2); });
+      svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: stroke, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    }
+    line(capacity, 'var(--accent)');
+    line(sold, 'var(--heat)');
+
+    // Direct labels at the endpoints, so identity never rests on colour alone.
+    // Two near-identical series would stack their labels on top of each other,
+    // so they are pushed apart when they collide.
+    var capY = y(capacity[lastIndex]);
+    var soldY = y(sold[lastIndex]);
+    if (Math.abs(capY - soldY) < 11) {
+      var mid = (capY + soldY) / 2;
+      capY = mid - 5.5;
+      soldY = mid + 5.5;
+    }
+    [[capacity, 'var(--accent)', 'sellable', capY], [sold, 'var(--heat)', 'sold', soldY]]
+      .forEach(function (series) {
+        var values = series[0], colour = series[1], name = series[2], labelY = series[3];
+        svg.appendChild(svgEl('circle', {
+          cx: x(lastIndex), cy: y(values[lastIndex]), r: 3.2,
+          fill: colour, stroke: 'var(--panel)', 'stroke-width': 1.5,
+        }));
+        var label = svgEl('text', {
+          x: x(lastIndex) + 7, y: labelY + 3, fill: 'var(--ink-2)',
+          'font-size': 9.5, 'font-family': 'var(--mono)',
+        });
+        label.textContent = name;
+        svg.appendChild(label);
+      });
+
+    // The gap is the answer, but a band only a few pixels tall cannot hold a
+    // label without covering the very lines it describes. The number goes in
+    // the legend, where it has room; the band carries the shape.
+    state.chartGap = {
+      units: Math.round(Math.abs(capacity[lastIndex] - sold[lastIndex])),
+      oversold: oversold,
+    };
+
+    months.forEach(function (m, i) {
+      if (m.monthsAhead % Math.max(1, Math.round(months.length / 6)) !== 0) return;
+      var t = svgEl('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', fill: 'var(--ink-3)', 'font-size': 9, 'font-family': 'var(--mono)' });
+      t.textContent = m.monthsAhead === 0 ? 'now' : '+' + m.monthsAhead;
+      svg.appendChild(t);
+    });
+
+    host.appendChild(svg);
+
+    var legend = $('plan-legend');
+    legend.textContent = '';
+    var name = 'this workload';
+    for (var i = 0; i < state.headroom.length; i += 1) {
+      if (state.headroom[i].workloadId === state.chartWorkload) name = state.headroom[i].name;
+    }
+    var title = el('span');
+    title.appendChild(el('strong', null, name));
+    legend.appendChild(title);
+    if (state.chartGap) {
+      var gap = el('span', 'fit ' + (state.chartGap.oversold ? 'no' : 'yes'),
+        state.chartGap.units.toLocaleString()
+        + (state.chartGap.oversold ? ' oversold in ' : ' still sellable in ')
+        + state.horizon + ' months');
+      legend.appendChild(gap);
+    }
+    [['var(--accent)', 'Sellable capacity'], ['var(--heat)', 'Already sold']].forEach(function (pair) {
+      var item = el('span');
+      var swatch = el('i');
+      swatch.style.background = pair[0];
+      item.appendChild(swatch);
+      item.appendChild(el('span', null, pair[1]));
+      legend.appendChild(item);
+    });
+  }
+
+  function renderProjection() {
+    var head = $('projection-head');
+    head.textContent = '';
+    var hr = el('tr');
+    ['When', 'IT capacity', 'Racks', 'Rack slots', 'Free slots', 'What happens']
+      .forEach(function (label) { hr.appendChild(el('th', null, label)); });
+    head.appendChild(hr);
+
+    var body = $('projection-body');
+    body.textContent = '';
+    var months = state.projection;
+    // A row for every month is unreadable at 24; show the ones that change and
+    // a regular sample of the rest.
+    var stride = months.length > 14 ? 3 : 1;
+    months.forEach(function (m) {
+      if (m.monthsAhead % stride !== 0 && m.events.length === 0) return;
+      var tr = el('tr');
+      tr.style.cursor = 'default';
+      var when = el('td', null, m.monthsAhead === 0 ? 'now' : '+' + m.monthsAhead + ' mo');
+      tr.appendChild(when);
+      tr.appendChild(el('td', null, m.itCapacityMw.toFixed(2) + ' MW'));
+      tr.appendChild(el('td', 'dim', m.rackCount.toLocaleString()));
+      tr.appendChild(el('td', 'dim', m.rackSlots.toLocaleString()));
+      tr.appendChild(el('td', null, Math.max(0, m.rackSlots - m.rackCount).toLocaleString()));
+      var what = el('td');
+      what.style.textAlign = 'left';
+      what.style.whiteSpace = 'normal';
+      if (m.events.length === 0) what.appendChild(el('span', 'hint-sm', m.monthsAhead === 0 ? m.label : ''));
+      else what.appendChild(el('span', 'hint-sm', m.events.join(' \u00b7 ')));
+      tr.appendChild(what);
+      body.appendChild(tr);
+    });
+
+    var last = months[months.length - 1];
+    var now = months[0];
+    if (last && now) {
+      var deltaMw = last.itCapacityMw - now.itCapacityMw;
+      $('plan-note').textContent = 'In ' + state.horizon + ' months: '
+        + last.itCapacityMw.toFixed(2) + ' MW'
+        + (Math.abs(deltaMw) >= 0.005
+          ? ' (' + (deltaMw > 0 ? '+' : '') + deltaMw.toFixed(2) + ')' : ' (unchanged)')
+        + ', ' + Math.max(0, last.rackSlots - last.rackCount).toLocaleString() + ' rack slots free.';
+    }
+  }
+
+  function renderSchedule() {
+    var host = $('schedule');
+    host.textContent = '';
+    if (state.schedule.length === 0) {
+      var none = el('div', 'sched-row');
+      none.appendChild(el('span', 'when', '\u2014'));
+      var what = el('div', 'what');
+      what.appendChild(el('div', 'l', 'Nothing committed in this window'));
+      what.appendChild(el('div', 'd', 'No construction under way, no contract reaching term, no hardware aging out.'));
+      none.appendChild(what);
+      host.appendChild(none);
+      return;
+    }
+    state.schedule.forEach(function (entry) {
+      var row = el('div', 'sched-row');
+      var when = el('span', 'when' + (entry.monthsAhead > 12 ? ' far' : ''),
+        entry.monthsAhead === 0 ? 'now' : '+' + entry.monthsAhead + ' mo');
+      row.appendChild(when);
+      var what = el('div', 'what');
+      what.appendChild(el('div', 'l', entry.label));
+      what.appendChild(el('div', 'd', entry.detail));
+      row.appendChild(what);
+      host.appendChild(row);
+    });
+  }
+
+  function renderPlan() {
+    if (!run) return;
+    state.headroom = run.headroom();
+    state.projection = run.projection(state.horizon);
+    state.schedule = run.schedule();
+
+    // Chart the workload carrying the most committed capacity - the one whose
+    // headroom the player is actually spending. With nothing sold, chart the
+    // one with the most capacity, which is what they would sell first.
+    var chosen = null;
+    var bestSold = -1;
+    var bestCapacity = -1;
+    state.headroom.forEach(function (row) {
+      if (row.reservedUnits > bestSold) { bestSold = row.reservedUnits; }
+      if (row.servableUnits > bestCapacity) { bestCapacity = row.servableUnits; }
+    });
+    state.headroom.forEach(function (row) {
+      if (chosen) return;
+      if (bestSold > 0 ? row.reservedUnits === bestSold : row.servableUnits === bestCapacity) {
+        chosen = row.workloadId;
+      }
+    });
+    state.chartWorkload = chosen;
+
+    // Headroom at the horizon, indexed for the table's forward column.
+    state.projectionByWorkload = {};
+    var last = state.projection[state.projection.length - 1];
+    if (last) {
+      last.perWorkload.forEach(function (row) {
+        state.projectionByWorkload[row.workloadId] = row.freeUnits;
+      });
+    }
+    renderHorizon();
+    renderHeadroom();
+    renderPlanChart();
+    renderProjection();
+    renderSchedule();
+  }
+
+  // ---------- site / report / log ---------------------------------------
+  /**
+   * Each hall drawn as its floor: one cell per rack slot, grouped by the batch
+   * it was installed in.
+   *
+   * The grouping is what makes the mix legible - a hall is rarely one kind of
+   * machine - and the colour is condition, because that is what the player can
+   * still do something about. Empty slots are drawn rather than omitted: the
+   * gap between what a hall holds and what is in it is the decision the room
+   * is asking you to make.
+   */
+  function renderFloorplans() {
+    var host = $('floorplans');
+    host.textContent = '';
+    var fleet = state.fleet;
+    // The floor leads the page now, so an empty one is hidden rather than
+    // shown: "No halls yet" as the first thing on screen is a worse opening
+    // than the numbers that follow it.
+    var wrap = $('floor-wrap');
+    if (!fleet || fleet.halls.length === 0) {
+      if (wrap) wrap.hidden = true;
+      return;
+    }
+    if (wrap) wrap.hidden = false;
+
+    var totalRacks = 0, totalSlots = 0;
+    fleet.halls.forEach(function (h) { totalRacks += h.racks; totalSlots += h.capacity; });
+    $('floor-hint').textContent = fleet.halls.length + ' hall' + (fleet.halls.length === 1 ? '' : 's')
+      + ' \u00b7 ' + totalRacks.toLocaleString() + ' of ' + totalSlots.toLocaleString() + ' slots filled';
+
+    fleet.halls.forEach(function (hall) { host.appendChild(hallPlan(hall)); });
+  }
+
+  /** Condition band for a rack cell: healthy, worn, or near the end. */
+  function rackClass(condition01) {
+    if (condition01 >= 0.8) return 'rack';
+    if (condition01 >= 0.55) return 'rack worn';
+    return 'rack old';
+  }
+
+  function hallPlan(hall) {
+    var card = el('div', 'card hallplan');
+
+    var head = el('div', 'hallplan-head');
+    head.appendChild(el('span', 'nm', hall.id));
+    head.appendChild(el('span', 'cool', hall.cooling));
+    head.appendChild(el('span', 'fill', hall.racks + '/' + hall.capacity));
+    card.appendChild(head);
+
+    var bits = [];
+    if (hall.underConstruction) bits.push('under construction');
+    else {
+      bits.push(hall.inletTempC.toFixed(0) + '\u00b0C inlet');
+      if (hall.throttle01 > 0.02) bits.push('throttling ' + pct(hall.throttle01, 0));
+      if (hall.thermalCeilingC !== null && hall.hoursAboveCeiling >= 1) {
+        bits.push('cooling runs out above ' + hall.thermalCeilingC.toFixed(0) + '\u00b0C, '
+          + Math.round(hall.hoursAboveCeiling) + ' h/yr over');
+      }
+      bits.push('condition ' + pct(hall.condition01, 0));
+    }
+    card.appendChild(el('div', 'hallplan-sub', bits.join(' \u00b7 ')));
+
+    var used = 0;
+    (hall.groups || []).forEach(function (group) {
+      used += group.count;
+      var block = el('div', 'hallplan-group');
+      var label = el('div', 'gl');
+      label.appendChild(el('span', null, group.count + ' \u00d7 ' + group.hardware));
+      label.appendChild(el('span', 'age', group.ageYears.toFixed(1) + 'y of '
+        + group.lifeYears + ' \u00b7 ' + group.kwPerRack.toFixed(1) + ' kW'));
+      block.appendChild(label);
+
+      var row = el('div', 'racks');
+      // Failed racks are drawn first within their group so a run of red reads
+      // as one problem rather than as speckle across the whole floor.
+      for (var i = 0; i < group.count; i++) {
+        var failed = i < group.failed;
+        var cell = el('span', failed ? 'rack failed' : rackClass(group.condition01));
+        cell.title = group.hardware + ' \u00b7 bought ' + Math.floor(group.vintageYear)
+          + ' \u00b7 ' + group.kwPerRack.toFixed(1) + ' kW'
+          + (failed ? ' \u00b7 failed, awaiting repair'
+            : ' \u00b7 condition ' + pct(group.condition01, 0));
+        row.appendChild(cell);
+      }
+      block.appendChild(row);
+      card.appendChild(block);
+    });
+
+    var free = Math.max(0, hall.capacity - used);
+    if (free > 0) {
+      var block2 = el('div', 'hallplan-group');
+      block2.appendChild(el('div', 'gl', free + ' empty slot' + (free === 1 ? '' : 's')));
+      var row2 = el('div', 'racks');
+      for (var j = 0; j < free; j++) {
+        var slot = el('span', 'rack empty');
+        slot.title = 'Empty rack slot';
+        row2.appendChild(slot);
+      }
+      block2.appendChild(row2);
+      card.appendChild(block2);
+    }
+
+    var legend = el('div', 'hallplan-legend');
+    [['rack', 'healthy'], ['rack worn', 'worn'], ['rack old', 'near end of life'],
+      ['rack failed', 'failed'], ['rack empty', 'empty slot']].forEach(function (pair) {
+      var item = el('span');
+      var swatch = document.createElement('i');
+      swatch.className = pair[0];
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(pair[1]));
+      legend.appendChild(item);
+    });
+    card.appendChild(legend);
+    return card;
+  }
+
+  function renderFleet() {
+    var host = $('fleet');
+    host.textContent = '';
+    var fleet = state.fleet;
+    if (!fleet) return;
+
+    function column(title, rows, emptyText) {
+      var col = el('div', 'card fleet-col');
+      col.appendChild(el('h3', null, title));
+      if (rows.length === 0) col.appendChild(el('div', 'empty', emptyText));
+      else rows.forEach(function (pair) {
+        var row = el('div', 'row');
+        var label = el('span', 'l', pair[0]);
+        if (pair[2]) label.classList.add('wrap');
+        row.appendChild(label);
+        row.appendChild(el('span', 'r', pair[1]));
+        col.appendChild(row);
+      });
+      host.appendChild(col);
+    }
+
+    // The floorplan above carries each hall's cooling, thermal ceiling and
+    // condition, so this column is a tally and stops repeating it.
+    column('Halls', fleet.halls.map(function (h) {
+      var note = h.underConstruction ? 'building'
+        : h.throttle01 > 0.02 ? 'throttling ' + pct(h.throttle01, 0)
+        : h.inletTempC.toFixed(0) + '\u00b0C';
+      return [h.id, h.racks + '/' + h.capacity + ' \u00b7 ' + note];
+    }), 'No halls.');
+    column('Fleet', fleet.hardware.map(function (h) { return [h.name, h.racks + ' racks']; }), 'No racks installed.');
+    column('Power', fleet.power.map(function (p) {
+      return [p.name + (p.clean ? ' \u00b7' : ''), p.capacityMw.toFixed(1) + ' MW'];
+    }), 'No power assets.');
+    // The book is where a player looks after the alert has scrolled away, so
+    // each row carries how the contract is actually being served and why.
+    contractColumn(fleet.contracts);
+    var byBranch = {};
+    fleet.research.forEach(function (t) { byBranch[t.branch] = (byBranch[t.branch] || 0) + 1; });
+    column('Research', Object.keys(byBranch).sort().map(function (b) {
+      return [b, String(byBranch[b])];
+    }), 'Nothing researched.');
+  }
+
+  /**
+   * The contract book, with each row's availability against its commitment.
+   *
+   * A breach reported only as a count in a monthly alert is unreadable by the
+   * time the player wonders about it, so the reason lives on the contract it
+   * belongs to and stays there until the next period replaces it.
+   */
+  function contractColumn(contracts) {
+    var col = el('div', 'card fleet-col');
+    col.appendChild(el('h3', null, 'Contract book'));
+    if (contracts.length === 0) {
+      col.appendChild(el('div', 'empty', 'Nothing sold yet.'));
+      $('fleet').appendChild(col);
+      return;
+    }
+    contracts.forEach(function (c) {
+      var row = el('div', 'row');
+      var label = el('span', 'l wrap', c.name);
+      row.appendChild(label);
+      var right = el('span', 'r');
+      if (c.availability01 === null) {
+        right.textContent = c.computeUnits.toLocaleString() + ' CU';
+      } else {
+        var missing = c.availability01 < c.required01;
+        right.appendChild(pill(missing ? 'critical' : 'good', pct(c.availability01, 1)));
+        right.appendChild(document.createTextNode(' ' + c.computeUnits.toLocaleString() + ' CU'));
+      }
+      row.appendChild(right);
+      col.appendChild(row);
+      if (c.cause) {
+        var why = el('div', 'why');
+        why.textContent = c.cause
+          + (c.penalty > 0 ? ' Cost ' + money(c.penalty) + ' last month.' : '');
+        col.appendChild(why);
+      }
+    });
+    $('fleet').appendChild(col);
+  }
+
+  function renderObjectives() {
+    var host = $('objectives');
+    host.textContent = '';
+    host.appendChild(el('h3', null, 'Scenario objectives'));
+    if (state.objectives.length === 0) {
+      host.appendChild(el('div', 'empty', 'Objectives are measured against closed years.'));
+      return;
+    }
+    state.objectives.forEach(function (o) {
+      var row = el('div', 'obj');
+      var mark = el('span', 'mark');
+      mark.appendChild(pill(o.met ? 'good' : 'neutral', o.met ? 'met' : 'open'));
+      row.appendChild(mark);
+      var body = el('div', 'body');
+      body.appendChild(el('div', 'desc', o.description));
+      var shown = o.value === null ? 'n/a'
+        : (Math.abs(o.value) >= 100 ? o.value.toFixed(0) : o.value.toFixed(3));
+      body.appendChild(el('div', 'val', o.metric + ' = ' + shown + '  (need ' + o.comparison + ' ' + o.target + ')'));
+      row.appendChild(body);
+      host.appendChild(row);
+    });
+  }
+
+  var COLUMNS = [
+    ['Year', function (y) { return y.report.year; }, false],
+    ['IT MW', function (y) { return y.report.capacity.itCapacityMw.toFixed(2); }, false],
+    ['PUE', function (y) { return y.report.environment.pue === null ? 'n/a' : y.report.environment.pue.toFixed(3); }, false],
+    ['CUE', function (y) { return num(y.report.environment.cue, 0); }, true],
+    ['WUE', function (y) { return y.report.environment.wue === null ? 'n/a' : y.report.environment.wue.toFixed(3); }, true],
+    ['Avail', function (y) { return pct(y.report.reliability.availability01, 3); }, false],
+    ['Revenue', function (y) { return money(y.report.financial.revenue); }, false],
+    ['Margin', function (y) { return pct(y.report.financial.operatingMargin01, 0); }, true],
+    ['Cash', function (y) { return money(y.report.financial.cash); }, true],
+    ['Tech', function (y) { return y.report.research.completed; }, true],
+    ['Score', function (y) { return y.score.overall.toFixed(1); }, false],
+  ];
+
+  function renderTable() {
+    var head = $('report-head');
+    head.textContent = '';
+    var hr = el('tr');
+    COLUMNS.forEach(function (c) { hr.appendChild(el('th', null, c[0])); });
+    hr.appendChild(el('th', null, 'Rating'));
+    head.appendChild(hr);
+
+    var body = $('report-body');
+    body.textContent = '';
+    if (state.years.length === 0) {
+      var tr = el('tr');
+      var td = el('td', 'dim', 'The first year has not closed yet.');
+      td.colSpan = COLUMNS.length + 1;
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    state.years.forEach(function (entry, index) {
+      var tr = el('tr');
+      if (state.openYear === index) tr.className = 'open';
+      COLUMNS.forEach(function (c) { tr.appendChild(el('td', c[2] ? 'dim' : null, c[1](entry))); });
+      var lastCell = el('td');
+      lastCell.appendChild(pill(ratingTone(entry.score.rating), entry.score.rating));
+      tr.appendChild(lastCell);
+      tr.addEventListener('click', function () { state.openYear = index; renderTable(); renderDrawer(); });
+      tr.addEventListener('pointerenter', function () { setHover(index); });
+      body.appendChild(tr);
+    });
+  }
+
+  var WEIGHTS = { financial: 0.20, reliability: 0.25, environmental: 0.25, customer: 0.15, social: 0.15 };
+  var CATEGORY_ORDER = ['reliability', 'environmental', 'financial', 'customer', 'social'];
+  var CATEGORY_NAMES = {
+    financial: 'Financial health', reliability: 'Reliability', environmental: 'Environmental',
+    customer: 'Customer success', social: 'Social licence',
+  };
+  var COMPONENT_NAMES = {
+    margin: 'Margin', runway: 'Runway', debtCoverage: 'Debt cover', diversity: 'Book diversity',
+    utilization: 'Utilisation', availability: 'Availability', slaCompliance: 'SLA met',
+    recovery: 'Recovery', preventableIncidents: 'Preventable', reserves: 'Reserves',
+    carbon: 'Carbon', pue: 'PUE', water: 'Water', renewable: 'Renewable', hourlyMatch: 'Hourly match',
+    circularity: 'Circularity', heatReuse: 'Heat reuse', habitat: 'Habitat', offsets: 'Offsets',
+    completion: 'Completion', latency: 'Latency', reputation: 'Reputation', retention: 'Retention',
+    trust: 'Trust', jobs: 'Jobs', heatBenefit: 'Heat benefit', gridCooperation: 'Grid services',
+    transparency: 'Transparency',
+  };
+
+  function renderDrawer() {
+    var host = $('drawer');
+    host.textContent = '';
+    var index = state.openYear === null ? state.years.length - 1 : state.openYear;
+    var entry = state.years[index];
+    if (!entry) {
+      host.appendChild(el('div', 'empty', 'Close a year to decompose its score.'));
+      return;
+    }
+    var head = el('div', 'drawer-head');
+    head.appendChild(el('span', 'y', entry.report.year + ' score ' + entry.score.overall.toFixed(1)));
+    head.appendChild(pill(ratingTone(entry.score.rating), entry.score.rating + ' \u00b7 ' + entry.score.label));
+    host.appendChild(head);
+
+    CATEGORY_ORDER.forEach(function (key) {
+      var detail = entry.score.categories[key];
+      if (!detail) return;
+      var cat = el('div', 'cat');
+      var top = el('div', 'cat-top');
+      var left = el('span');
+      left.appendChild(el('span', 'n', CATEGORY_NAMES[key]));
+      left.appendChild(document.createTextNode(' '));
+      left.appendChild(el('span', 'w', '\u00d7' + WEIGHTS[key].toFixed(2)));
+      top.appendChild(left);
+      top.appendChild(el('span', 's', detail.score.toFixed(1)));
+      cat.appendChild(top);
+      var bar = el('div', 'bar');
+      var fill = el('i');
+      fill.style.width = Math.max(0, Math.min(100, detail.score)) + '%';
+      bar.appendChild(fill);
+      cat.appendChild(bar);
+      var comps = el('div', 'comps');
+      Object.keys(detail.components).forEach(function (name) {
+        var row = el('div', 'comp');
+        row.appendChild(el('span', null, COMPONENT_NAMES[name] || name));
+        row.appendChild(el('span', 'cv', detail.components[name].toFixed(0)));
+        comps.appendChild(row);
+      });
+      cat.appendChild(comps);
+      host.appendChild(cat);
+    });
+
+    if (entry.score.gatesTripped && entry.score.gatesTripped.length > 0) {
+      var gates = el('div', 'gate');
+      gates.appendChild(el('span', 'w', 'Gates tripped:'));
+      entry.score.gatesTripped.forEach(function (g) {
+        gates.appendChild(pill('critical', g.replace('gate.', '').replace(/_/g, ' ')));
+      });
+      host.appendChild(gates);
+    }
+  }
+
+  var FILTERS = [
+    ['all', 'Everything'], ['failure.', 'Failures'], ['thermal.', 'Thermal'], ['event.', 'Events'],
+    ['build.', 'Build'], ['research.', 'Research'], ['contract.', 'Contracts'], ['sla.', 'SLA'], ['grid.', 'Grid'],
+  ];
+  function renderFilters() {
+    var host = $('diag-filters');
+    host.textContent = '';
+    FILTERS.forEach(function (pair) {
+      var chip = el('button', 'chip', pair[1]);
+      chip.type = 'button';
+      chip.setAttribute('aria-pressed', state.filter === pair[0] ? 'true' : 'false');
+      chip.addEventListener('click', function () { state.filter = pair[0]; renderFilters(); renderLog(); });
+      host.appendChild(chip);
+    });
+  }
+  function renderLog() {
+    var host = $('log');
+    host.textContent = '';
+    var rows = state.diagnostics.filter(function (e) {
+      return state.filter === 'all' || e.kind.indexOf(state.filter) === 0;
+    });
+    if (rows.length === 0) {
+      var none = el('div', 'log-row');
+      none.appendChild(el('span', 'msg empty', 'Nothing logged under this filter.'));
+      host.appendChild(none);
+      return;
+    }
+    rows.slice(-400).reverse().forEach(function (e) {
+      var row = el('div', 'log-row');
+      row.appendChild(el('span', 'when', e.timeIso.slice(0, 10)));
+      var kind = el('span', 'kind', e.kind);
+      if (e.kind.indexOf('thermal.') === 0 || e.kind.indexOf('failure.') === 0) kind.className = 'kind heat';
+      row.appendChild(kind);
+      row.appendChild(el('span', 'msg', e.message));
+      host.appendChild(row);
+    });
+  }
+
+  function renderFooter() {
+    var host = $('footer');
+    host.textContent = '';
+    if (!state.meta) return;
+    [
+      ['Definitions', state.meta.definitionCount],
+      ['Technologies', state.meta.counts.technologies],
+      ['Content hash', state.meta.contentHash],
+      ['Validation', state.meta.errors + ' errors \u00b7 ' + state.meta.warnings + ' warnings'],
+      ['Tick', '15 simulated minutes'],
+    ].forEach(function (pair) {
+      var span = el('span');
+      span.appendChild(document.createTextNode(pair[0] + ' '));
+      span.appendChild(el('span', 'num', pair[1]));
+      host.appendChild(span);
+    });
+  }
+
+  function renderGameOver() {
+    var host = $('gameover');
+    if (!state.finished) { host.hidden = true; return; }
+    host.hidden = false;
+    host.textContent = '';
+    var last = state.years[state.years.length - 1];
+    var met = state.objectives.filter(function (o) { return o.met; }).length;
+    host.appendChild(el('h3', null, 'Campaign complete'));
+    if (last) {
+      var line = el('div', 'drawer-head');
+      line.appendChild(el('span', 'y', 'Final score ' + last.score.overall.toFixed(1)));
+      line.appendChild(pill(ratingTone(last.score.rating), last.score.rating + ' \u00b7 ' + last.score.label));
+      host.appendChild(line);
+      host.appendChild(el('div', 'verdict',
+        'You finished at ' + last.report.capacity.itCapacityMw.toFixed(2) + ' MW with a PUE of '
+        + (last.report.environment.pue === null ? 'n/a' : last.report.environment.pue.toFixed(3))
+        + ', availability of ' + pct(last.report.reliability.availability01, 3)
+        + ' and ' + money(last.report.financial.cash) + ' in the bank. '
+        + met + ' of ' + state.objectives.length + ' objectives met.'));
+    }
+    var again = el('button', 'step', 'New campaign');
+    again.type = 'button';
+    again.addEventListener('click', showSetup);
+    host.appendChild(again);
+  }
+
+
+  // ---------- save storage ------------------------------------------------
+  /**
+   * Where campaigns are kept.
+   *
+   * The `db` capability is durable and follows the player between devices, but
+   * a view may not be granted it - `claude.use` resolves null for reasons the
+   * page cannot distinguish - so the browser's own storage is the fallback and
+   * the page works with neither. Nothing here blocks the first paint: the save
+   * list fills in when the backend answers.
+   */
+  var store = {
+    backend: 'pending',
+    db: null,
+
+    async connect() {
+      try {
+        var db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+        if (db) { this.db = db; this.backend = 'db'; return; }
+      } catch (error) {
+        // An unavailable capability is not an error condition for the page.
+      }
+      this.backend = this.localAvailable() ? 'local' : 'none';
+    },
+
+    localAvailable() {
+      try {
+        window.localStorage.setItem('dct.probe', '1');
+        window.localStorage.removeItem('dct.probe');
+        return true;
+      } catch (error) {
+        return false;
+      }
+    },
+
+    readLocal() {
+      try {
+        var raw = window.localStorage.getItem(LOCAL_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (error) {
+        return {};
+      }
+    },
+
+    writeLocal(map) {
+      try {
+        window.localStorage.setItem(LOCAL_KEY, JSON.stringify(map));
+        return true;
+      } catch (error) {
+        return false;
+      }
+    },
+
+    /** Saved campaigns, newest first. */
+    async list() {
+      if (this.backend === 'db' && this.db) {
+        try {
+          var snap = await this.db.collection('saves').orderBy('savedAtIso', 'desc').limit(24).get();
+          return snap.docs.map(function (doc) {
+            var data = doc.data() || {};
+            return { id: doc.id, name: data.name, savedAtIso: data.savedAtIso, summary: data.summary };
+          });
+        } catch (error) {
+          return [];
+        }
+      }
+      if (this.backend === 'local') {
+        var map = this.readLocal();
+        return Object.keys(map).map(function (id) {
+          return { id: id, name: map[id].name, savedAtIso: map[id].savedAtIso, summary: map[id].summary };
+        }).sort(function (a, b) { return (b.savedAtIso || '').localeCompare(a.savedAtIso || ''); });
+      }
+      return [];
+    },
+
+    async put(id, record) {
+      if (this.backend === 'db' && this.db) {
+        await this.db.doc('saves/' + id).set(record);
+        return true;
+      }
+      if (this.backend === 'local') {
+        var map = this.readLocal();
+        map[id] = record;
+        return this.writeLocal(map);
+      }
+      return false;
+    },
+
+    async get(id) {
+      if (this.backend === 'db' && this.db) {
+        var snap = await this.db.doc('saves/' + id).get();
+        return snap.exists ? snap.data() : null;
+      }
+      if (this.backend === 'local') return this.readLocal()[id] || null;
+      return null;
+    },
+
+    async remove(id) {
+      if (this.backend === 'db' && this.db) {
+        await this.db.doc('saves/' + id).delete();
+        return true;
+      }
+      if (this.backend === 'local') {
+        var map = this.readLocal();
+        delete map[id];
+        return this.writeLocal(map);
+      }
+      return false;
+    },
+
+    describe() {
+      if (this.backend === 'db') return 'Saved with this artifact, on any device you open it from.';
+      if (this.backend === 'local') return 'Saved in this browser only.';
+      if (this.backend === 'pending') return 'Connecting to storage\u2026';
+      return 'Storage is unavailable in this view, so campaigns cannot be saved.';
+    },
+  };
+
+  var LOCAL_KEY = 'dct.saves.v1';
+
+  /**
+   * A slot id per campaign, so saving the same campaign again replaces it
+   * rather than growing a pile of near-identical snapshots. A different site
+   * or seed is a different campaign and gets its own slot.
+   */
+  function slotId(scenarioId, seed) {
+    var clean = function (text) {
+      return String(text).replace(/[^A-Za-z0-9_.~:@+-]/g, '-').slice(0, 60);
+    };
+    return (clean(scenarioId) + '~' + clean(seed || 'default')).slice(0, 180);
+  }
+
+  async function saveCampaign() {
+    if (!run) return;
+    if (store.backend === 'pending') { toast('Storage is still connecting. Try again in a moment.'); return; }
+    if (store.backend === 'none') { toast('Storage is unavailable in this view.', true); return; }
+
+    var saved = run.save();
+    var id = slotId(saved.summary.scenarioId, saved.summary.seed);
+    var record = {
+      name: saved.summary.scenarioName + ' \u00b7 ' + saved.summary.monthLabel,
+      savedAtIso: new Date().toISOString(),
+      summary: saved.summary,
+      file: saved.file,
+    };
+    try {
+      var ok = await store.put(id, record);
+      if (!ok) { toast('Could not save: storage refused the write.', true); return; }
+      toast('Saved ' + record.name + '. ' + store.describe());
+      await refreshSaveList();
+    } catch (error) {
+      // A write can be refused by quota or by this viewer's access level.
+      toast('Could not save: ' + (error && error.message ? error.message : 'storage refused the write'), true);
+    }
+  }
+
+  async function resumeCampaign(id) {
+    var record = null;
+    try {
+      record = await store.get(id);
+    } catch (error) {
+      toast('Could not read that save.', true);
+      return;
+    }
+    if (!record || !record.file) { toast('That save is no longer there.', true); return; }
+
+    var restored;
+    try {
+      restored = DCT.restoreRun(record.file);
+    } catch (error) {
+      toast('That save could not be resumed: ' + (error && error.message ? error.message : 'unknown error'), true);
+      return;
+    }
+
+    run = restored.run;
+    state.finished = restored.run.remainingTicks() <= 0;
+    state.alerts = [];
+    state.openYear = null;
+    $('setup-sec').hidden = true;
+    $('game-sec').hidden = false;
+    $('turnbar').hidden = false;
+
+    var when = new Date(record.summary.dateIso);
+    $('clock-date').textContent = MONTHS[when.getUTCMonth()] + ' ' + when.getUTCFullYear();
+    $('clock-sub').textContent = 'Month ' + (record.summary.monthsElapsed + 1)
+      + ' of ' + record.summary.totalMonths + ' \u00b7 resumed';
+    renderAlerts();
+    refresh();
+    window.scrollTo({ top: 0 });
+
+    if (restored.contentMismatch) {
+      toast('Resumed, but this save was written against different game content. '
+        + 'Numbers may not line up.', true);
+    } else if (restored.migrations.length > 0) {
+      toast('Resumed and upgraded from an older save format.');
+    } else {
+      toast('Resumed ' + record.name + '.');
+    }
+  }
+
+  async function deleteSave(id, name) {
+    try {
+      await store.remove(id);
+      toast('Deleted ' + name + '.');
+    } catch (error) {
+      toast('Could not delete that save.', true);
+    }
+    await refreshSaveList();
+  }
+
+  async function refreshSaveList() {
+    var host = $('saves');
+    if (!host) return;
+    var note = $('saves-note');
+    if (note) note.textContent = store.describe();
+
+    var saves = [];
+    try {
+      saves = await store.list();
+    } catch (error) {
+      saves = [];
+    }
+    state.saves = saves;
+
+    host.textContent = '';
+    if (store.backend === 'pending') {
+      host.appendChild(el('div', 'empty', 'Connecting to storage\u2026'));
+      return;
+    }
+    if (saves.length === 0) {
+      host.appendChild(el('div', 'empty',
+        store.backend === 'none'
+          ? 'Campaigns cannot be saved in this view.'
+          : 'No saved campaigns yet. Use Save during a campaign to keep one.'));
+      return;
+    }
+
+    saves.forEach(function (entry) {
+      var summary = entry.summary || {};
+      var row = el('div', 'save-row');
+
+      var main = el('button', 'save-main');
+      main.type = 'button';
+      main.appendChild(el('span', 'sn', entry.name || 'Saved campaign'));
+      var meta = el('span', 'sm');
+      meta.textContent = [
+        'month ' + ((summary.monthsElapsed || 0) + 1) + ' of ' + (summary.totalMonths || '?'),
+        (summary.itCapacityMw || 0).toFixed(2) + ' MW',
+        money(summary.cash || 0),
+        (summary.contracts || 0) + ' contracts',
+        summary.rating ? summary.rating + ' ' + (summary.overall || 0).toFixed(1) : 'unscored',
+        summary.manual ? 'you decide' : 'autopilot',
+      ].join(' \u00b7 ');
+      main.appendChild(meta);
+      main.addEventListener('click', function () { resumeCampaign(entry.id); });
+      row.appendChild(main);
+
+      var remove = el('button', 'save-del', 'Delete');
+      remove.type = 'button';
+      remove.title = 'Delete this save';
+      remove.addEventListener('click', function () { deleteSave(entry.id, entry.name || 'save'); });
+      row.appendChild(remove);
+
+      host.appendChild(row);
+    });
+  }
+
+  // ---------- turn loop --------------------------------------------------
+  function refresh() {
+    if (!run) return;
+    state.actions = run.actions();
+    state.dashboard = run.dashboard();
+    state.fleet = run.fleet();
+    state.objectives = run.objectives();
+    state.years = run.years();
+    state.diagnostics = run.diagnostics();
+    renderHud();
+    renderDeck();
+    renderFleet();
+    renderFloorplans();
+    renderObjectives();
+    renderTable();
+    renderDrawer();
+    renderPanels();
+    renderPlan();
+    renderLog();
+    renderGameOver();
+    var remaining = run.remainingTicks();
+    $('bar').style.width = ((1 - remaining / run.totalTicks) * 100).toFixed(1) + '%';
+    $('next-month').disabled = state.finished || state.busy;
+    $('next-year').disabled = state.finished || state.busy;
+    $('save').disabled = state.busy || store.backend === 'none';
+  }
+
+  function advance(kind) {
+    if (!run || state.busy || state.finished) return;
+    state.busy = true;
+    $('next-month').disabled = true;
+    $('next-year').disabled = true;
+    $('next-month').textContent = 'Simulating\u2026';
+
+    // Yield first so the button state paints before the engine blocks the thread.
+    setTimeout(function () {
+      var summary = kind === 'year' ? run.advanceYear() : run.advanceMonth();
+      state.alerts = summary.alerts;
+      state.finished = summary.finished;
+      state.openYear = null;
+      var date = new Date(summary.dateIso);
+      $('clock-date').textContent = MONTHS[date.getUTCMonth()] + ' ' + date.getUTCFullYear();
+      var totalMonths = run.totalYears * 12;
+      var elapsed = Math.round((1 - run.remainingTicks() / run.totalTicks) * totalMonths);
+      $('clock-sub').textContent = state.finished ? 'Campaign complete'
+        : 'Month ' + Math.min(totalMonths, elapsed + 1) + ' of ' + totalMonths;
+      state.busy = false;
+      $('next-month').textContent = 'Advance month';
+      renderAlerts();
+      refresh();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 16);
+  }
+
+  function showSetup() {
+    run = null;
+    state.finished = false;
+    state.years = [];
+    state.alerts = [];
+    $('setup-sec').hidden = false;
+    $('game-sec').hidden = true;
+    $('turnbar').hidden = true;
+    $('clock-date').textContent = '\u2014';
+    $('clock-sub').textContent = 'Choose a site to begin';
+    $('bar').style.width = '0%';
+    renderSetupTags();
+    refreshSaveList();
+  }
+
+  function renderSetupTags() {
+    var s = currentScenario();
+    var host = $('setup-tags');
+    host.textContent = '';
+    if (!s) return;
+    [s.description].forEach(function () {});
+    var desc = el('p', null, s.description);
+    desc.style.margin = '0';
+    desc.style.color = 'var(--ink-2)';
+    host.appendChild(desc);
+    var tags = el('div', 'tags');
+    [
+      s.regionName,
+      'summer peak ' + num(s.region.summerPeakC, 0) + '\u00b0C',
+      'grid ' + num(s.region.gridCarbonKgPerMwh, 0) + ' kg/MWh',
+      'power $' + num(s.region.gridPricePerMwh, 0) + '/MWh',
+      'water stress ' + num(s.region.waterStress01 * 100, 0) + '/100',
+      'latency ' + num(s.region.latencyMs, 0) + ' ms',
+      s.targetCapacityMw + ' MW objective',
+      money(s.startingCash) + ' cash',
+    ].forEach(function (text) { tags.appendChild(el('span', 'tag', text)); });
+    host.appendChild(tags);
+  }
+
+  function begin() {
+    var scenarioId = $('scenario').value;
+    var years = parseInt($('years').value, 10) || 8;
+    var seed = $('seed').value || 'default';
+    var manual = $('assist').value === 'manual';
+
+    try {
+      run = DCT.createRun(scenarioId, seed, 'balanced', years, manual);
+    } catch (error) {
+      toast('Could not start: ' + error.message, true);
+      return;
+    }
+    state.finished = false;
+    state.alerts = [];
+    state.openYear = null;
+    $('setup-sec').hidden = true;
+    $('game-sec').hidden = false;
+    $('turnbar').hidden = false;
+
+    // From the run, not from a constant: each site opens in its own decade.
+    var start = new Date(run.dateIso());
+    $('clock-date').textContent = MONTHS[start.getUTCMonth()] + ' ' + start.getUTCFullYear();
+    $('clock-sub').textContent = 'Month 1 of ' + (years * 12) + ' \u00b7 ' + (manual ? 'you decide' : 'autopilot');
+    renderAlerts();
+    refresh();
+    window.scrollTo({ top: 0 });
+  }
+
+  function setTab(name) {
+    state.tab = name;
+    ['site', 'plan', 'trend', 'report', 'log'].forEach(function (key) {
+      $('tab-' + key).hidden = key !== name;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
+      tab.setAttribute('aria-selected', tab.getAttribute('data-tab') === name ? 'true' : 'false');
+    });
+  }
+
+  function boot() {
+    if (!DCT) {
+      $('setup-sec').hidden = false;
+      $('setup-tags').textContent = 'The simulation bundle did not load, so no campaign can start.';
+      return;
+    }
+    state.meta = DCT.describe();
+    state.scenarios = state.meta.scenarios;
+
+    var scenarioSelect = $('scenario');
+    state.scenarios.forEach(function (s) {
+      var option = el('option', null, s.name);
+      option.value = s.id;
+      scenarioSelect.appendChild(option);
+    });
+    scenarioSelect.value = 'scenario.dry_grid';
+    if (!scenarioSelect.value) scenarioSelect.selectedIndex = 0;
+    scenarioSelect.addEventListener('change', function () {
+      renderSetupTags();
+      fillYears();
+    });
+    fillYears();
+
+    $('begin').addEventListener('click', begin);
+    $('save').addEventListener('click', saveCampaign);
+    $('restart').addEventListener('click', showSetup);
+    $('next-month').addEventListener('click', function () { advance('month'); });
+    $('next-year').addEventListener('click', function () { advance('year'); });
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tab) {
+      tab.addEventListener('click', function () { setTab(tab.getAttribute('data-tab')); });
+    });
+
+    renderFilters();
+    renderFooter();
+    setTab('site');
+    showSetup();
+
+    // Storage connects after the page is up: `use()` can take seconds and may
+    // never answer, and none of that should hold the first paint.
+    store.connect().then(function () {
+      refreshSaveList();
+    });
+
+    // Open on a real site rather than an empty form, then start it for them.
+    begin();
+  }
+
+  boot();
+})();
+</script>

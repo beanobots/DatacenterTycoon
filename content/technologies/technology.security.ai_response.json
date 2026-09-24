@@ -1,0 +1,33 @@
+{
+  "id": "technology.security.ai_response",
+  "schemaVersion": 3,
+  "name": "AI Threat Response",
+  "description": "Automated detection and containment of live intrusions.",
+  "branch": "security",
+  "tier": 4,
+  "research": {
+    "costUsd": 16000000,
+    "durationDays": 420,
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
+  },
+  "prerequisites": [
+    "technology.security.zero_trust",
+    "technology.hardware.ai_computing"
+  ],
+  "effects": [
+    {
+      "target": "security.incidentRate",
+      "operation": "multiply",
+      "value": 0.7,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "auto_response"
+    ]
+  },
+  "tradeOff": "Automated containment will occasionally contain something that was working.",
+  "availableFromYear": 2019
+}

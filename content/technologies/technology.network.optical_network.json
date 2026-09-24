@@ -1,0 +1,38 @@
+{
+  "id": "technology.network.optical_network",
+  "schemaVersion": 3,
+  "name": "Optical Switching",
+  "description": "Optical circuit switching between halls and sites.",
+  "branch": "network",
+  "tier": 3,
+  "research": {
+    "costUsd": 9000000,
+    "durationDays": 300,
+    "requiredSpecialists": 6,
+    "minimumCompanyLevel": 2
+  },
+  "prerequisites": [
+    "technology.network.n400g"
+  ],
+  "effects": [
+    {
+      "target": "network.transitCost",
+      "operation": "multiply",
+      "value": 0.85,
+      "priority": 10
+    },
+    {
+      "target": "network.latency",
+      "operation": "multiply",
+      "value": 0.92,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "optical_switching"
+    ]
+  },
+  "tradeOff": "A specialist operating discipline for a fabric few staff have run before.",
+  "availableFromYear": 2022
+}

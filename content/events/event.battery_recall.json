@@ -1,0 +1,26 @@
+{
+  "id": "event.battery_recall",
+  "schemaVersion": 1,
+  "name": "Battery Module Recall",
+  "description": "A fire-safety recall takes half the storage fleet out of service pending module replacement.",
+  "eventClass": "operational",
+  "trigger": {
+    "dailyProbability": 0.0005,
+    "minimumYear": 1995,
+    "cooldownDays": 730
+  },
+  "durationDays": 120,
+  "durationVarianceDays": 30,
+  "effects": [
+    {
+      "target": "power.storageCapacity",
+      "operation": "multiply",
+      "value": 0.5,
+      "priority": 20
+    }
+  ],
+  "immediateCash": -450000,
+  "immediateTrust": -3,
+  "immediateReputation": -3,
+  "mitigation": "Keep enough generator capacity that storage is an optimisation, not a dependency."
+}

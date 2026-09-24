@@ -1,0 +1,30 @@
+{
+  "id": "hardware.asic.gen2",
+  "schemaVersion": 1,
+  "name": "AI Accelerator Gen 2",
+  "description": "The densest commercial option. A vendor dependency as much as a hardware choice.",
+  "researchId": "technology.hardware.ai_accelerators_gen2",
+  "family": "asic",
+  "generation": 2,
+  "purchaseFactor": 5.1,
+  "computeFactor": 11,
+  "powerFactor": 3.5,
+  "heatFactor": 4.35,
+  "flexibility01": 0.24,
+  "embodiedFactor": 2.75,
+  "lifeYears": 6,
+  "workloadAffinity": {
+    "workload.ai_training": 1.5,
+    "workload.ai_inference": 1.6,
+    "workload.batch_science": 0.5,
+    "workload.streaming": 0.2,
+    "workload.finance": 0.15,
+    "workload.government": 0.15,
+    "workload.disaster_recovery": 0.1,
+    "workload.archive": 0.05
+  },
+  "requiredCoolingKwPerRack": 40,
+  "baseAnnualFailureRate": 0.065,
+  "refurbished": false,
+  "resaleValue01": 0.22
+}

@@ -1,0 +1,25 @@
+{
+  "id": "technology.power.renewable_contracts",
+  "schemaVersion": 3,
+  "name": "Renewable Contracts",
+  "description": "Power purchase agreements and the settlement machinery behind them.",
+  "branch": "power",
+  "tier": 1,
+  "research": {
+    "costUsd": 2200000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.efficiency.energy_analytics"
+  ],
+  "effects": [],
+  "unlocks": {
+    "capabilities": [
+      "ppa_market"
+    ]
+  },
+  "tradeOff": "Contract exposure to an output you do not control.",
+  "availableFromYear": 2009
+}

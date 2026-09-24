@@ -1,0 +1,46 @@
+{
+  "id": "technology.grid.virtual_power_plant",
+  "schemaVersion": 3,
+  "name": "Virtual Power Plant",
+  "description": "Aggregated storage and flexible load bid as a grid resource. Chapter 8: grid-service revenue, trust bonus.",
+  "branch": "grid",
+  "tier": 4,
+  "research": {
+    "costUsd": 20000000,
+    "durationDays": 420,
+    "requiredSpecialists": 8,
+    "minimumCompanyLevel": 3
+  },
+  "prerequisites": [
+    "technology.grid.battery_storage",
+    "technology.grid.demand_response",
+    "technology.operations.forecasting"
+  ],
+  "effects": [
+    {
+      "target": "grid.demandResponseRevenue",
+      "operation": "multiply",
+      "value": 2.2,
+      "priority": 10
+    },
+    {
+      "target": "community.trustGain",
+      "operation": "add",
+      "value": 0.6,
+      "priority": 10
+    },
+    {
+      "target": "facility.maintenanceComplexity",
+      "operation": "multiply",
+      "value": 1.1,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "vpp"
+    ]
+  },
+  "tradeOff": "Operational complexity: the facility now has grid obligations as well as customer ones.",
+  "availableFromYear": 2022
+}

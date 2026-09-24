@@ -1,0 +1,25 @@
+{
+  "id": "technology.cooling.chilled_water",
+  "schemaVersion": 3,
+  "name": "Chilled Water Plant",
+  "description": "Central chiller plant with cooling towers and a distribution loop.",
+  "branch": "cooling",
+  "tier": 2,
+  "research": {
+    "costUsd": 3500000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.cooling.containment"
+  ],
+  "effects": [],
+  "unlocks": {
+    "cooling": [
+      "cooling.chilled_water"
+    ]
+  },
+  "tradeOff": "Plant CapEx, pumps, compressors and a standing water demand.",
+  "availableFromYear": 2006
+}

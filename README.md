@@ -1,1 +1,380 @@
-# DatacenterTycoon
+# DatacenterTycoon — simulation engine
+
+A headless, deterministic simulation engine for **DatacenterTycoon**, a
+data-center city-builder about compute, energy, cooling, water, carbon,
+hardware, reliability and community impact.
+
+Built to the *Master Game Design and Implementation Specification*. The spec
+targets Unity and C#; this implementation is TypeScript on Node. The content
+layer — JSON definitions plus JSON Schemas — is the portable part and transfers
+to a Unity project unchanged.
+
+## Quick start
+
+```bash
+npm install
+npm run validate          # validate all content against its schemas
+npm test                  # unit, simulation and golden-scenario tests
+npm run dct -- scenarios  # list the playable scenarios
+npm run dct -- run --scenario scenario.dry_grid --years 10
+```
+
+## What it does
+
+```
+$ npm run dct -- run --scenario scenario.cold_cloud --years 8 --seed golden
+
+Cold Cloud Facility - Nordic Cold Coast
+seed "golden", strategy "balanced", 8 years, 280512 ticks in 10.4s
+
+year      IT cap     PUE    CUE     WUE   avail      revenue    mgn     cash  trust     score
+------------------------------------------------------------------------------------------------
+2025    0.72 MW   1.532     67   0.000   99.790%      4.0M   -87%     173M     21    C 58.8
+2026    0.80 MW   1.510     59   0.000  100.000%      6.3M   -37%     160M     21    B 64.3
+2027    0.90 MW   1.481     59   0.000  100.000%     10.0M    36%     151M     30    B 70.9
+2028    1.11 MW   1.477     56   0.000  100.000%     11.9M    27%     141M     23    B 69.4
+2029    1.27 MW   1.470     55   0.000   99.966%     18.4M    54%     135M     23    B 70.5
+2030    1.56 MW   1.459     52   0.000  100.000%     29.7M    64%     132M     24    B 73.1
+2031    1.41 MW   1.457     47   0.000  100.000%     30.6M    58%     124M     45    B 72.8
+2032    1.58 MW   1.346     41   0.401  100.000%     26.2M    53%     114M     60    A 77.8
+
+Objectives
+  [ ] Reach a PUE of 1.20 or better.  (environment.pue = 1.3456, target lte 1.2)
+  [x] Export at least 15% of facility energy as useful heat.  (environment.erf01 = 0.326)
+  [ ] Reach 20 MW of commissioned IT capacity.  (capacity.itCapacityMw = 1.5818)
+```
+
+Every number decomposes. `--diagnostics 40` prints the event stream behind it —
+grid outages, thermal throttling, rack failures, retrofits, research, SLA
+breaches — each with the values that produced it.
+
+## Playing it
+
+`npm run build:web` bundles the engine for the browser and writes `web/`. Serve
+that directory and open it, or use the published artifact. Each month the
+simulation stops and hands you the decisions the autopilot would otherwise make:
+research, contracts, halls, hardware, cooling retrofits and power. Untick a
+category's autopilot to take it over, tick it to hand it back.
+
+Every campaign opens on the same site: one 60-rack hall, full, holding 30 CPU
+racks, 15 HDD archive arrays and 15 tape. Fixed rather than sized to the
+decade, so the era shows up in what the site costs to run and what the market
+will pay for it rather than in how much of it you are given. It is mixed
+because the opening contract book is mixed - the archive and tape rows are
+what let a first-year operator take the cheap long-term archive work while the
+CPU rows chase the general contracts. Because the hall is full, your first
+growth decision is a building, and the hardware cards say so.
+
+Halls and hardware are separate categories although both grow capacity. A hall
+is a building - six months to commission, priced in millions, and its cooling
+fixed when it is built. A rack is stock: it earns the month it lands. Held
+apart, you can leave the property decisions to the heuristic and still choose
+what goes on the floor, and the heuristic honours the split: with the hardware
+category yours it builds shells and puts nothing in them, and with halls yours
+it fills the floor it was given and builds no more of it.
+
+Each card is a kind rather than a variant. One card per hardware family carries
+its generations, so the choice that matters - which kind of rack - is not
+buried under the choice that follows from it, and one card per cooling
+technology carries the hall sizes it is built in. Order size is picked on the
+card; a hall is committed with its own button rather than by picking a size,
+because a hall is millions of dollars and a size chip that also spends them is
+a misclick waiting to happen.
+
+The stat row across the top carries cash beside last month's cash flow, because
+a healthy balance and a business losing money every month look identical until
+the two are read together. The figure is the last COMPLETE month's revenue less
+its running cost, with capital spending reported separately in the cell's
+tooltip; it reads as a dash until the first month closes, rather than
+extrapolating a part-month into a whole one.
+
+The contract board is ordered rather than listed in market order: offers you
+can sign come first, offers that fit ahead of offers that do not, and within
+that by the rate per compute unit rather than headline value - a large contract
+at a poor rate ties up the same racks for longer and is the easier mistake to
+make. Offers blocked on reputation or an unresearched technology sink to the
+bottom whatever they pay.
+
+**Saving and resuming.** Save at any month boundary. A save carries the
+scenario, the campaign seed, the tick index, the content hash, the autopilot
+settings, the campaign length and the whole game state, so resuming replays the
+same campaign rather than a similar one - the random streams continue from where
+they stopped, not from a reseed. Saves are keyed by scenario and seed, so saving
+again overwrites that campaign's slot instead of accumulating copies.
+
+Where a save lives depends on how the page is opened. Opened as a published
+artifact it uses that artifact's stored documents and follows you between
+devices; opened from a plain file server there is nothing to store it in, so it
+falls back to that browser's local storage. The page says which it did. The
+diagnostic log is trimmed to the last 150 entries before writing, which is what
+keeps a fifteen-year campaign inside a stored document - diagnostics are a
+write-only record, so trimming them changes no outcome.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `dct validate` | Validates every content file against its schema and cross-references |
+| `dct scenarios` | Lists scenarios with their objectives |
+| `dct run --scenario <id>` | Runs a campaign and prints annual reports |
+| `dct golden` | Runs every scenario once — the regression sweep |
+
+Useful flags: `--seed`, `--years`, `--strategy`, `--out <file.json>` for
+telemetry, `--save`/`--load` for save round-trips, `--diagnostics <n>`.
+
+## What is implemented
+
+**Content pipeline** — 146 JSON definitions across 11 kinds, 15 JSON Schemas,
+an importer that collects every problem in one pass, and a cross-reference
+validator implementing chapter 10's error and warning table (unknown
+references, dependency cycles, unit incompatibilities, unnormalised score
+weights, unreachable and dominated content).
+
+**The full chapter 9 tick pipeline**, all ten steps, at 15 simulated minutes per
+tick: weather → market → workload arrivals → allocation → IT power and heat →
+power dispatch → cooling dispatch → reliability hazards → accounting → SLA.
+Plus maintenance, construction, events, research, finance, community and the
+contract market on their chapter 3 cadences.
+
+**The physics the design pillars rest on** — a psychrometric cooling model where
+technologies derate against dry-bulb or wet-bulb temperature by their own
+sensitivity; power dispatch by merit order with storage and hourly clean-energy
+matching; bathtub-curve failure hazards scaled by age, condition, thermal stress
+and load; independent accounting of energy, carbon, water, waste and habitat.
+
+**Chapter 12's balance tables** as data: 9 cooling technologies, 11 power
+sources, 12 hardware families, 8 workloads, 69 technologies across all ten
+branches, 17 events, 10 contract archetypes, 4 regions, 4 scenarios.
+
+**The chapter 7 master score** with all five weighted categories, six rating
+bands, the anti-exploit gates, and a per-component decomposition for every
+number.
+
+**Forward planning.** `src/sim/planning.ts` answers the two questions an
+operator asks constantly: how much more work can this fleet take on, and what
+will it look like in six months. Both are computed from committed state -
+construction progress, lead times, hardware ages, contract terms - using the
+same constants the systems advance by, so the forecast and the outcome cannot
+drift. Headroom is reported per workload and never summed: the same rack serves
+several workloads, so a total would promise capacity that does not exist.
+
+**The campaign sits in history, 2006 to 2036.** Each site opens in its own
+decade and all four run to 2036: the desert grid in 2006, when land was cheap
+and nobody asked about water; urban colocation in 2012, in the middle of the
+colo boom; the Arctic site in 2016, when the industry worked out that the
+cheapest cooling is weather; the coal-belt site in 2020, with sixteen years to
+decarbonise an operation built on it.
+
+Every one of the 69 technologies carries the year it became something an
+operator could actually buy - aisle containment 2006, air economisation 2008,
+direct-to-chip 2012, single-phase immersion 2014, lithium UPS 2016, two-phase
+immersion 2018, carbon-aware scheduling 2020, small modular reactors 2029. The
+dependency tree is binding on top of that, so nothing arrives before what it is
+built on; where the two disagreed the tree won and the drift is documented in
+the content. Researching immersion cooling in 2006 is refused with the year,
+not with a generic error.
+
+**Hardware carries its vintage.** `src/sim/era.ts` holds the curves the decades
+move along: compute per rack, revenue per compute-unit, rack power draw, rack
+cost, real demand growth, market reach and the general price level - all
+anchored at 1.0 in 2025, the year the rest of the balance profile was tuned
+for. A 2006 rack does about 2% of a 2025 rack's work, draws 2.7 kW and costs
+about the same money; a 2036 rack does 450 times that work and draws 10.8 kW.
+
+What a rack delivers and what it draws are fixed at the year it was BOUGHT, not
+read from the current year. Applying the curves fleet-wide instead looked
+reasonable and destroyed the game: a 2006 hall quietly gained compute and
+quadrupled its power draw as the decades passed, the cooling blew out, and
+every campaign collapsed around 2030 for no reason the player could see.
+Research modifiers still apply to the whole fleet, because virtualization
+genuinely does make installed machines do more - the distinction is between a
+choice you made and time passing.
+
+Contract sizes move along the same compute curve, so a contract needs roughly
+the same number of racks in any decade, plus a demand curve on top for the
+industry genuinely getting bigger. Without that second curve an operator's
+fleet SHRINKS as hardware improves: the same customers fit on fewer machines
+every year.
+
+**Grids decarbonise on their own schedule.** Each region carries dated
+trajectories for carbon intensity and energy price rather than an annual drift
+rate. A compounding rate can only ever draw a smooth exponential, which cannot
+represent a coal grid's decarbonisation curve or the 2021-23 energy crisis. The
+coal belt runs 820 kg/MWh in 2006 and 300 in 2036; the Nordic site is already
+at 62 and ends at 18.
+
+**Four shocks are history rather than hazard** and fire on their dates: the
+2008 financial crisis, the 2011 Thai hard-drive flood, the 2021 semiconductor
+shortage and the 2022 energy crisis. The energy crisis deliberately carries no
+price effect of its own - that is already in the regional trajectory, and
+charging it twice would be a lie about the same event.
+
+**One capacity calculation, used everywhere.** `src/sim/capacity.ts` places the
+contract book on the fleet the same way the allocation step places it, and
+reports what is left. Everything that answers "will this fit" goes through it:
+the offer advice, the planning table, the forecast, and the autopilot's own
+signing. It exists because three separate things used to make a fit claim
+untrue. Capacity is shared - a CPU rack serves six workloads - but reservations
+were counted per workload, so the same rack could be sold six times. Demand was
+judged at its average when contracts are served at their peak, which is up to
+1.45x. And the spare capacity an availability needs was a flat 15% for
+everything, when it follows from the arrival distribution: holding 99.9% needs
+32% spare, holding 95% needs 16%.
+
+**A thermal ceiling on what can be promised.** `src/sim/thermal-outlook.ts`
+bisects the real cooling model to find the ambient temperature at which a hall
+starts shedding load, then integrates the region's climate for how much of the
+year is above it. The desert site's air-cooled hall caps out around 45 C and is
+above that for roughly 40 hours a year, so it cannot hold better than 99.5%
+availability however many racks are free - which is why a 99.9% contract is
+refused there with that number quoted, rather than accepted and breached every
+summer. A retrofit moves the ceiling immediately, and the autopilot now
+retrofits against it instead of quietly selling less for ever.
+
+**Breaches that explain themselves.** The allocation step is the only place
+that can see the difference between the capacity the fleet is rated for and
+what it actually delivered, so that is where an unserved compute-unit-hour is
+attributed to a cause: no compatible hardware, oversold capacity, thermal
+throttling, failed racks or worn racks. The split is counterfactual - the share
+a healthy, cool, fully working fleet would have covered is charged to whichever
+of those took it away, and the remainder is capacity the operator never had.
+The SLA step names the dominant cause with the lever that closes it, the
+contract book carries it, and the monthly alert leads with the one costing most.
+The distinction that matters is the first one: no quantity of the racks already
+on the floor will serve a workload they are not compatible with.
+
+**A playable turn loop.** `src/sim/player.ts` enumerates what the operator could
+do this month and applies the choice; `src/sim/operator.ts` is now an operations
+layer with an optional heuristic on top, switchable per decision category. A
+player and the autopilot call the same operations, so a hall the player builds
+is priced, aged and failed exactly like one the heuristic builds. The browser
+build in `web/` is the game: advance a month, read what happened, decide.
+
+Racks go into a hall you choose. Every commissioned hall is listed with what is
+installed, what is free and - when its cooling cannot carry the density - why it
+cannot take this hardware, with a fill option that takes whatever is left in the
+one selected.
+
+Actions come in two kinds and the deck separates them. Acquiring - research,
+contracts, racks, halls, power - and changing what you already own: ending a
+contract for an exit fee, retiring a rack group early to free its slots for
+different hardware, decommissioning a power asset, re-plumbing a live hall.
+Without the second kind the only answer to a bad position is to buy your way
+out of it, which is exactly the position an operator who has oversold cannot
+afford.
+
+**Determinism and saves** — nine independent counter-based random streams,
+persisted stream state, content hashing, and save migrations across every
+schema version the format has had - a save written against the first version
+still loads and runs.
+
+## Design notes worth knowing
+
+- **Definitions are immutable.** The importer deep-freezes everything; runtime
+  state refers to content by permanent string ID.
+- **Reports are built from accumulated totals, never averaged ratios.** PUE, CUE
+  and WUE are divided once, at year end, and are `null` rather than infinite
+  when IT energy is zero.
+- **Reserved capacity and running work are separate quantities.** A customer
+  reserving compute occupies it whether or not their jobs run; utilisation
+  decides the power those units draw. That is what makes a disaster-recovery
+  tenant cheap to host and an AI training cluster expensive.
+- **Research is paid for in cash, not a parallel currency.** A project commits a
+  budget that is drawn down daily over its duration, so R&D competes with racks,
+  plant and debt service for the same money. Several projects run at once; what
+  limits them is specialists — staff who cannot be in two places — and the cash
+  to keep them all funded. A project that runs out of funding stalls and holds
+  its bench rather than failing.
+- **The operator is an autopilot, not a rule.** `src/sim/operator.ts` holds the
+  mechanics of running the business plus a heuristic that decides when to use
+  them. Hand any category to the player and the heuristic stops acting on it;
+  the mechanics are unchanged. Four strategy presets weight the heuristic's
+  judgement differently.
+- **Every action states its trade-off.** The first design pillar is that a
+  technology improves at most two outcomes while adding a cost or constraint.
+  That is only a pillar if the player sees the other half before committing, so
+  the action list carries it as text.
+
+See `docs/ARCHITECTURE.md` for the layering and `docs/MODIFIER-TARGETS.md` for
+the effect namespace that technologies, events and policies write against.
+
+## Status and known gaps
+
+The engine runs 35-year campaigns deterministically and every acceptance
+criterion in chapter 14 that does not require a UI is covered by tests.
+
+**The design target is measured, not argued about.** `scripts/balance.mjs` runs
+every scenario across seeds and reports when a competent operator turns
+profitable and when it has paid off the loan it started with;
+`scripts/sweep.mjs` moves one balance number at a time against that target.
+
+Current state, over sixteen runs (four scenarios, four seeds, full campaign
+length):
+
+| | measured | target |
+| --- | --- | --- |
+| Turns profitable | 13/16, mean year 2.2 | about year 3 |
+| Clears its debt | **0/16** | about year 10 |
+| Survives the campaign | 14/16 | - |
+| Reaches its MW objective | 0/16 | see below |
+
+Three of the four sites finish A-rated on every seed. Every failure in that
+table - both deaths, both runs that never turn profitable - is the desert
+site, described next.
+
+**Debt does not clear, on any site or any seed.** Half the design target is
+met and half is not, and it is worth naming which. Interest runs at 6.5% a
+year with a reputation risk premium, so an operator of middling standing pays
+roughly 7 to 8%. The quarterly minimum repayment is 2% of the balance, about
+8% a year - so the minimum almost exactly cancels the interest and the
+principal barely moves. Anything faster has to come from the surplus rule,
+which pays down 18% of whatever cash sits above a six-month operating
+reserve.
+
+That surplus is the problem: the operator's own capital budget keeps back the
+same six months of running cost and spends everything above it on racks, and
+it runs every month where debt service runs every quarter. The two compete
+for one pot and the operator always gets there first, so the surplus rule
+almost never fires. Fixing it means deciding how an operator should split
+free cash between growth and the loan - a design question about what the game
+should reward, not a bug with an obvious patch.
+
+**The desert site is still fragile and is the live balance problem.** It opens
+in 2006, which is the hardest position in the game: the fewest technologies,
+the hottest site, and a cooling plant whose maintenance runs at around 40% of
+revenue because a desert hall needs far more plant per rack than a cold one.
+It now trades from day one and reaches B on some seeds, but on others the
+fleet still decays faster than the operator replaces it and the campaign ends
+with almost no operation. The next thing to look at is the maintenance charge
+on cooling plant specifically, which is currently levied on asset value
+without regard to how much of that value is plant rather than racks.
+
+**Capacity targets are not reachable yet.** The megawatt objectives (12 to 30
+MW) are far above what an operator actually builds - about 3 to 9 MW by year
+12. Growth is better than it was, but the objectives were written against a
+different growth curve and need revisiting.
+
+**Balance is a prototype, as the spec intends.** Chapter 12 states its values
+are "prototype gameplay values... they require simulation testing and iterative
+playtesting". Two open items are worth naming:
+
+*Capacity growth.* The operator policy grows more slowly than the scenarios'
+megawatt targets assume, so capacity objectives (12 MW desert, 20 MW cold) are
+not met inside a campaign even when the operation is otherwise healthy. The
+financial, reliability and environmental loops behave correctly; what needs
+iteration is the capital-allocation policy and the per-MW cost and revenue bases
+it works against. `--out` telemetry and the `build.*` / `finance.*` diagnostics
+exist to drive that work.
+
+*A design question the weights raise.* On the fossil-grid scenario an operator
+can reach an A ("Industry Leader") with a carbon intensity near 570 kg/MWh,
+because the environmental category scores it correctly at 41/100 but is only
+25% of the total and the other four categories are strong. That follows chapter
+7's weights and bands exactly, and chapter 7's anti-exploit gates contain no
+carbon floor — so this is faithful to the spec rather than a bug. Whether a
+carbon gate belongs alongside the insolvency and permit gates is a design call,
+not an implementation one.
+
+Not yet built: multi-region campaigns and load migration between them, the
+policy definition kind (schema exists, no system reads it), competitor
+operators, and the presentation layer.

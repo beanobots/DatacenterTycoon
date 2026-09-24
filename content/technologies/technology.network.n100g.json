@@ -1,0 +1,32 @@
+{
+  "id": "technology.network.n100g",
+  "schemaVersion": 3,
+  "name": "100G Networking",
+  "description": "100 gigabit spine and transit capacity.",
+  "branch": "network",
+  "tier": 1,
+  "research": {
+    "costUsd": 1600000,
+    "durationDays": 120,
+    "requiredSpecialists": 2,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [
+    "technology.hardware.cpu_servers"
+  ],
+  "effects": [
+    {
+      "target": "network.transitCost",
+      "operation": "multiply",
+      "value": 0.95,
+      "priority": 10
+    }
+  ],
+  "unlocks": {
+    "capabilities": [
+      "net_100g"
+    ]
+  },
+  "tradeOff": "Optics and transit commitments scale with the port count.",
+  "availableFromYear": 2012
+}

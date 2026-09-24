@@ -1,0 +1,23 @@
+{
+  "id": "technology.power.basic_ups",
+  "schemaVersion": 3,
+  "name": "Basic UPS",
+  "description": "Battery ride-through between a grid loss and the generators starting.",
+  "branch": "power",
+  "tier": 0,
+  "research": {
+    "costUsd": 0,
+    "durationDays": 0,
+    "requiredSpecialists": 1,
+    "minimumCompanyLevel": 0
+  },
+  "prerequisites": [],
+  "effects": [],
+  "unlocks": {
+    "capabilities": [
+      "ride_through"
+    ]
+  },
+  "tradeOff": "Conversion losses on every watt that passes through it.",
+  "availableFromYear": 1995
+}

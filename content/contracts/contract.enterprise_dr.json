@@ -1,0 +1,18 @@
+{
+  "id": "contract.enterprise_dr",
+  "schemaVersion": 1,
+  "name": "Enterprise Disaster Recovery",
+  "description": "Capacity that idles at 22% and must be perfect the hour it is called. Reserve revenue for reserved capacity.",
+  "workloadId": "workload.disaster_recovery",
+  "computeUnits": 2200,
+  "termMonths": 48,
+  "pricePerComputeUnitHour": 0.0711,
+  "slaUptime01": 0.999,
+  "penaltyRate": 2.8,
+  "minimumReputation": 25,
+  "requiredTechnologies": [],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 5,
+  "renewalProbability01": 0.88,
+  "availableFromYear": 1995
+}

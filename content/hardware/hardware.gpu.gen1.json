@@ -1,0 +1,30 @@
+{
+  "id": "hardware.gpu.gen1",
+  "schemaVersion": 1,
+  "name": "GPU Cluster Gen 1",
+  "description": "Accelerators for training and scientific work. Revenue per rack jumps; so does heat density.",
+  "researchId": "technology.hardware.gpu_clusters",
+  "family": "gpu",
+  "generation": 1,
+  "purchaseFactor": 2.1,
+  "computeFactor": 3,
+  "powerFactor": 2.15,
+  "heatFactor": 2.6,
+  "flexibility01": 0.56,
+  "embodiedFactor": 1.65,
+  "lifeYears": 5,
+  "workloadAffinity": {
+    "workload.ai_training": 1,
+    "workload.ai_inference": 0.9,
+    "workload.batch_science": 1,
+    "workload.streaming": 0.6,
+    "workload.finance": 0.5,
+    "workload.government": 0.5,
+    "workload.disaster_recovery": 0.4,
+    "workload.archive": 0.2
+  },
+  "requiredCoolingKwPerRack": 18,
+  "baseAnnualFailureRate": 0.07,
+  "refurbished": false,
+  "resaleValue01": 0.35
+}

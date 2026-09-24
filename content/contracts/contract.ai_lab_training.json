@@ -1,0 +1,20 @@
+{
+  "id": "contract.ai_lab_training",
+  "schemaVersion": 1,
+  "name": "AI Laboratory Training Capacity",
+  "description": "Large deadline-bound training runs that can follow cheap clean power, as long as the deadline holds.",
+  "workloadId": "workload.ai_training",
+  "computeUnits": 9000,
+  "termMonths": 24,
+  "pricePerComputeUnitHour": 0.0909,
+  "slaUptime01": 0.97,
+  "penaltyRate": 1.2,
+  "minimumReputation": 35,
+  "requiredTechnologies": [
+    "technology.hardware.gpu_clusters"
+  ],
+  "maxCarbonIntensity": 0,
+  "reputationOnCompletion": 8,
+  "renewalProbability01": 0.55,
+  "availableFromYear": 2016
+}

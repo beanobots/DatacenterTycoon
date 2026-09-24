@@ -1,0 +1,26 @@
+{
+  "id": "technology.power.advanced_power_markets",
+  "schemaVersion": 3,
+  "name": "Advanced Power Markets",
+  "description": "Wholesale market participation, hedging and settlement.",
+  "branch": "power",
+  "tier": 2,
+  "research": {
+    "costUsd": 6000000,
+    "durationDays": 210,
+    "requiredSpecialists": 4,
+    "minimumCompanyLevel": 1
+  },
+  "prerequisites": [
+    "technology.power.renewable_contracts",
+    "technology.efficiency.energy_analytics"
+  ],
+  "effects": [],
+  "unlocks": {
+    "capabilities": [
+      "wholesale_market"
+    ]
+  },
+  "tradeOff": "Market exposure cuts both ways in a price spike.",
+  "availableFromYear": 2014
+}
