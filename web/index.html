@@ -395,6 +395,19 @@
   .qty button:hover:not(:disabled) { border-color: var(--accent); }
   .qty button:disabled { opacity: .4; cursor: not-allowed; }
   .qty button.fill { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
+  /* The option you are looking at, on a card that shows one member of a
+     family at a time. Filled rather than outlined, so which generation or
+     size the price below belongs to is readable at a glance. */
+  .qty button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .obody { display: flex; flex-direction: column; gap: 7px; }
+  /* Spending millions gets its own button, never a size chip. */
+  button.commit {
+    font-family: var(--sans); font-size: 12px; font-weight: 600; color: #fff;
+    background: var(--accent); border: 1px solid transparent; border-radius: 6px;
+    padding: 7px 14px; margin-top: 2px; cursor: pointer; align-self: flex-start;
+  }
+  button.commit:hover:not(:disabled) { filter: brightness(1.08); }
+  button.commit:disabled { opacity: .45; cursor: not-allowed; }
   .qty select {
     font-family: var(--mono); font-size: 11px; padding: 3px 6px; border-radius: 5px; cursor: pointer;
     background: var(--panel-sunk); border: 1px solid var(--rule-strong); color: var(--ink);
@@ -978,15 +991,17 @@
 
   // ---------- decisions --------------------------------------------------
   var CATEGORY_LABELS = {
-    research: 'Research', contracts: 'Contract market', capacity: 'Capacity',
-    cooling: 'Cooling', power: 'Power',
+    research: 'Research', contracts: 'Contract market', halls: 'Halls',
+    hardware: 'Hardware', cooling: 'Cooling', power: 'Power',
   };
   var CATEGORY_BLURB = {
     research: 'Run as many projects as you have specialists for. Each is funded from cash, day by day.',
     contracts: 'Offers leave the table after about three months. Sell only what the fleet can serve; '
       + 'a contract you cannot serve can be ended here, for a fee.',
-    capacity: 'Racks earn; halls hold them. A rack needs a hall whose cooling can carry its density. '
-      + 'Retiring a group early frees its slots for different hardware.',
+    halls: 'The buildings. A hall takes about six months to commission and its cooling is fixed '
+      + 'when it is built, so what you choose here decides what can ever go inside it.',
+    hardware: 'What goes inside. Racks earn from the month they land, but only in a hall whose '
+      + 'cooling can carry their density. Retiring a group early frees its slots for different kit.',
     cooling: 'Nothing to retrofit to yet: a hall can only be re-plumbed onto a cooling technology you '
       + 'have researched. Research one in the Cooling branch and the halls you own appear here.',
     power: 'Everything downstream of the meter depends on this. Clean supply costs more up front.',
@@ -1051,10 +1066,17 @@
       // two coincide often enough that showing a bare number twice reads as a
       // repeat rather than as two different facts, so this one says which.
       var ready = available(category);
+      // Count what is on screen. Sizes and generations fold into one card, so
+      // "18 options" above six cards reads as a miscount rather than as the
+      // eighteen separate buys those six cards hold between them.
+      var cards = groupActions(actions).length;
       bar.appendChild(el('span', 'count', auto[category] ? 'on autopilot'
-        : actions.length + ' option' + (actions.length === 1 ? '' : 's')
-          + (ready === actions.length ? ', all available now'
-            : ' \u00b7 ' + ready + ' available now')));
+        : cards !== actions.length
+          ? cards + ' kind' + (cards === 1 ? '' : 's') + ' \u00b7 ' + ready
+            + ' of ' + actions.length + ' available now'
+          : actions.length + ' option' + (actions.length === 1 ? '' : 's')
+            + (ready === actions.length ? ', all available now'
+              : ' \u00b7 ' + ready + ' available now')));
       var toggle = el('label', 'auto');
       var box = document.createElement('input');
       box.type = 'checkbox';
@@ -1127,29 +1149,61 @@
   var CHANGE_KINDS = ['contract.drop', 'hardware.retire', 'power.retire', 'hall.retrofit'];
   var CHANGE_HEADING = {
     contracts: 'End a contract',
-    capacity: 'Take racks off the floor',
+    hardware: 'Take racks off the floor',
     power: 'Decommission',
     cooling: 'Re-plumb a live hall',
   };
   /** Cards shown per group before the rest are folded away. */
   var CARD_LIMIT = 18;
 
+  /**
+   * Fold together the options that are the same decision in different sizes
+   * or vintages.
+   *
+   * Three generations of CPU rack, and three sizes of the same hall, used to
+   * sit as peers of every other option - so the choice that matters (which
+   * KIND of rack, which cooling) was buried under the choice that follows
+   * from it. Grouped, the shelf lists kinds and each card carries its own
+   * sizes.
+   *
+   * Everything else passes through as a group of one, so the order of the
+   * list is the order the engine gave it.
+   */
+  function groupKey(action) {
+    if (action.kind === 'hardware.buy') return 'family:' + action.family;
+    if (action.kind === 'hall.build') return 'cooling:' + action.coolingId;
+    return null;
+  }
+
+  function groupActions(actions) {
+    var groups = [];
+    var byKey = {};
+    actions.forEach(function (action) {
+      var key = groupKey(action);
+      if (key === null) { groups.push([action]); return; }
+      if (!byKey[key]) { byKey[key] = []; groups.push(byKey[key]); }
+      byKey[key].push(action);
+    });
+    return groups;
+  }
+
   function addCards(block, actions, heading) {
     if (actions.length === 0) return;
+    var groups = groupActions(actions);
     if (heading) {
       var sub = el('div', 'sub-head');
       sub.appendChild(el('span', null, heading));
-      sub.appendChild(el('span', 'n', actions.length + ''));
+      sub.appendChild(el('span', 'n', groups.length + ''));
       block.appendChild(sub);
     }
     var cards = el('div', 'cards');
-    actions.slice(0, CARD_LIMIT).forEach(function (action) {
-      cards.appendChild(actionCard(action));
+    groups.slice(0, CARD_LIMIT).forEach(function (group) {
+      cards.appendChild(groupKey(group[0]) === null ? actionCard(group[0]) : optionCard(group));
     });
     block.appendChild(cards);
-    if (actions.length > CARD_LIMIT) {
+    if (groups.length > CARD_LIMIT) {
       block.appendChild(el('div', 'empty',
-        'Showing ' + CARD_LIMIT + ' of ' + actions.length + '. The rest stay on the table.'));
+        'Showing ' + CARD_LIMIT + ' of ' + groups.length + '. The rest stay on the table.'));
     }
   }
 
@@ -1183,6 +1237,100 @@
     else if (!action.affordable) card.appendChild(el('div', 'bl', 'Beyond the free capital you hold.'));
 
     if (action.kind === 'hardware.buy' && !action.blocked) card.appendChild(rackOrderRow(action));
+    return card;
+  }
+
+  /**
+   * One card for a family of hardware, or for one cooling technology in every
+   * size it is built in. The option row picks which member you are looking
+   * at; everything below it - price, detail, trade-off, the order row - is
+   * that member's.
+   *
+   * A hall is committed with its own button rather than by picking a size,
+   * because a hall is millions of dollars and six months, and a size button
+   * that also spends the money is a misclick waiting to happen.
+   */
+  function optionCard(group) {
+    var isHall = group[0].kind === 'hall.build';
+    var options = group.slice().sort(function (a, b) {
+      return isHall ? a.racks - b.racks
+        : (a.generation - b.generation) || a.variant.localeCompare(b.variant);
+    });
+
+    // A hall opens on its smallest size: the least money and the least floor
+    // to fill. Hardware opens on the newest generation you can actually take,
+    // since that is what an operator with the cash would order.
+    //
+    // Newest means the highest generation, not the last in the list: two
+    // products can share a generation - flash and spinning disk are both
+    // first-generation storage - and picking the later of those by name
+    // would open the card on whichever happened to sort last.
+    var usable = options.filter(function (o) { return !o.blocked && o.affordable; });
+    var newest = function (list) {
+      return list.reduce(function (best, o) {
+        return o.generation > best.generation ? o : best;
+      }, list[0]);
+    };
+    var chosen = isHall ? options[0] : newest(usable.length > 0 ? usable : options);
+
+    // "Gen" is only the right word when these are generations of one product.
+    var pickerLabel = isHall ? 'size'
+      : options.every(function (o) { return /^Gen /.test(o.variant); }) ? 'gen' : 'type';
+
+    var card = el('div', 'act');
+    var top = el('div', 'top');
+    var nameEl = el('span', 'nm', isHall ? chosen.coolingName : chosen.familyLabel);
+    var priceEl = el('span', 'px', '');
+    top.appendChild(nameEl);
+    top.appendChild(priceEl);
+    card.appendChild(top);
+
+    var picker = null;
+    if (options.length > 1) {
+      picker = el('div', 'qty');
+      picker.appendChild(el('span', null, pickerLabel));
+      card.appendChild(picker);
+    }
+    var body = el('div', 'obody');
+    card.appendChild(body);
+
+    function paintPicker() {
+      if (!picker) return;
+      Array.prototype.forEach.call(picker.querySelectorAll('button'), function (b) { b.remove(); });
+      options.forEach(function (option) {
+        var b = el('button', option === chosen ? 'on' : null,
+          isHall ? option.racks + '' : option.variant);
+        b.type = 'button';
+        b.title = isHall ? option.racks + ' racks \u00b7 ' + money(option.cost)
+          : option.label + ' \u00b7 ' + money(option.costPerRack) + ' per rack';
+        b.addEventListener('click', function () { chosen = option; paint(); });
+        picker.appendChild(b);
+      });
+    }
+
+    function paint() {
+      paintPicker();
+      priceEl.className = 'px';
+      priceEl.textContent = money(chosen.cost);
+      body.textContent = '';
+      body.appendChild(el('div', 'de', chosen.detail));
+      if (chosen.tradeOff) body.appendChild(el('div', 'tr', chosen.tradeOff));
+      if (chosen.blocked) body.appendChild(el('div', 'bl', chosen.blocked));
+      else if (!chosen.affordable) body.appendChild(el('div', 'bl', 'Beyond the free capital you hold.'));
+
+      if (isHall) {
+        var build = el('button', 'commit', 'Build ' + chosen.racks + '-rack hall');
+        build.type = 'button';
+        build.disabled = state.finished || !!chosen.blocked || !chosen.affordable;
+        build.addEventListener('click', function () { take(chosen.id, 1); });
+        body.appendChild(build);
+      } else if (!chosen.blocked) {
+        body.appendChild(rackOrderRow(chosen));
+      }
+      card.style.opacity = (chosen.blocked || !chosen.affordable) ? '.62' : '';
+    }
+
+    paint();
     return card;
   }
 

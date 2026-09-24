@@ -91,6 +91,17 @@ export interface HardwareAction extends PlayerActionBase {
   readonly kind: 'hardware.buy';
   readonly hardwareId: string;
   readonly family: string;
+  /**
+   * What to call the family, and what to call this one within it, so a
+   * console can put every generation of a thing on one card.
+   *
+   * Three generations of CPU rack are the same decision taken at different
+   * times, and listing them as three peers of the GPU rack buries the choice
+   * that matters - which KIND of rack - under the choice that does not.
+   */
+  readonly familyLabel: string;
+  readonly variant: string;
+  readonly generation: number;
   readonly costPerRack: number;
   readonly rackKw: number;
   /** Racks that fit in the halls that can cool them. */
@@ -108,6 +119,12 @@ export interface HardwareAction extends PlayerActionBase {
 export interface HallAction extends PlayerActionBase {
   readonly kind: 'hall.build';
   readonly coolingId: string;
+  /**
+   * The cooling on its own, apart from the size. One card per cooling
+   * technology offers its sizes as a choice; three cards per technology made
+   * the shelf three times longer without adding a decision.
+   */
+  readonly coolingName: string;
   readonly racks: number;
   readonly densityKwPerRack: number;
   readonly waterFactor: number;
@@ -173,6 +190,40 @@ export interface ActionResult {
 
 /** Hall sizes offered when building. Modular expansion, per chapter 4. */
 const HALL_SIZES = [60, 120, 220];
+/**
+ * What each hardware family is called on the shelf.
+ *
+ * The definitions name individual products ("CPU Servers Gen 2"); this names
+ * the shelf they sit on, so the console can group them. A family with no
+ * entry falls back to the product's own name, which is correct for a
+ * one-of-a-kind rig and merely verbose for anything else.
+ */
+const FAMILY_LABEL: Readonly<Record<string, string>> = {
+  cpu: 'CPU servers',
+  gpu: 'GPU clusters',
+  asic: 'AI accelerators',
+  storage: 'Storage arrays',
+  archive: 'Cold archive',
+  experimental: 'Experimental',
+};
+
+/**
+ * The short name for one product within its family: "Gen 2", "Refurbished".
+ *
+ * Taken from the product name with the family's own words removed, rather
+ * than built from the generation number, because two products can share a
+ * generation - flash and spinning disk are both first-generation storage -
+ * and "Gen 1" twice on one card names neither of them.
+ */
+function variantLabel(name: string, familyLabel: string): string {
+  // No shelf name to strip: the product is the only thing on its shelf.
+  if (familyLabel.length === 0) return name;
+  // The labels above carry no regex metacharacters today, and a family added
+  // later should not be able to turn a label into a pattern.
+  const words = familyLabel.toLowerCase().replace(/s$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const stripped = name.replace(new RegExp(words + 's?', 'i'), '').replace(/\s+/g, ' ').trim();
+  return stripped.length > 0 ? stripped : name;
+}
 /**
  * Rack order sizes offered. Each divides the 60- and 120-rack halls exactly,
  * so a hall can be filled in whole clicks rather than left with a remainder
@@ -506,7 +557,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
     actions.push({
       kind: 'hardware.buy',
       id: `hardware:${ANY_HALL}:${hardwareId}`,
-      category: 'capacity',
+      category: 'hardware',
       label: hardware.name,
       detail: `${money(costPerRack)} per rack, ${rackKw.toFixed(1)} kW each, `
         + `${Math.round(currentRackOutput(context, hardware).computeUnits).toLocaleString()} compute units. `
@@ -523,6 +574,9 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
         : undefined,
       hardwareId,
       family: hardware.family,
+      familyLabel: FAMILY_LABEL[hardware.family] ?? hardware.name,
+      variant: variantLabel(hardware.name, FAMILY_LABEL[hardware.family] ?? ''),
+      generation: hardware.generation,
       costPerRack,
       rackKw,
       spaceAvailable: space,
@@ -547,7 +601,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       actions.push({
         kind: 'hardware.retire',
         id: `retire:${group.instanceId}`,
-        category: 'capacity',
+        category: 'hardware',
         label: `Retire ${group.count} \u00d7 ${hardware.name}`,
         detail: `In ${hallName(hall)}, ${ageYears.toFixed(1)} years old, `
           + `condition ${Math.round(group.condition01 * 100)}%. `
@@ -580,7 +634,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
       actions.push({
         kind: 'hall.build',
         id: `hall:${coolingId}:${racks}`,
-        category: 'capacity',
+        category: 'halls',
         label: `${racks}-rack hall · ${cooling.name}`,
         detail: `${money(cost)} to build, about six months to commission. `
           + `Cools up to ${cooling.densityKwPerRack} kW per rack.`,
@@ -594,6 +648,7 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
           ? `At ${itMw.toFixed(1)} MW you are near this region's ${context.region.grid.capacityMw} MW interconnection limit.`
           : undefined,
         coolingId,
+        coolingName: cooling.name,
         racks,
         densityKwPerRack: cooling.densityKwPerRack,
         waterFactor: cooling.waterFactor,

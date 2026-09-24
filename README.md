@@ -53,8 +53,24 @@ breaches — each with the values that produced it.
 `npm run build:web` bundles the engine for the browser and writes `web/`. Serve
 that directory and open it, or use the published artifact. Each month the
 simulation stops and hands you the decisions the autopilot would otherwise make:
-research, contracts, hardware, halls, cooling retrofits and power. Untick a
+research, contracts, halls, hardware, cooling retrofits and power. Untick a
 category's autopilot to take it over, tick it to hand it back.
+
+Halls and hardware are separate categories although both grow capacity. A hall
+is a building - six months to commission, priced in millions, and its cooling
+fixed when it is built. A rack is stock: it earns the month it lands. Held
+apart, you can leave the property decisions to the heuristic and still choose
+what goes on the floor, and the heuristic honours the split: with the hardware
+category yours it builds shells and puts nothing in them, and with halls yours
+it fills the floor it was given and builds no more of it.
+
+Each card is a kind rather than a variant. One card per hardware family carries
+its generations, so the choice that matters - which kind of rack - is not
+buried under the choice that follows from it, and one card per cooling
+technology carries the hall sizes it is built in. Order size is picked on the
+card; a hall is committed with its own button rather than by picking a size,
+because a hall is millions of dollars and a size chip that also spends them is
+a misclick waiting to happen.
 
 The stat row across the top carries cash beside last month's cash flow, because
 a healthy balance and a business losing money every month look identical until

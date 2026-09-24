@@ -278,7 +278,7 @@ describe('save and load', () => {
       '001-contract-market', '002-hall-install-tick', '003-research-in-dollars',
       '004-annual-reports-in-state', '005-sla-shortfall-attribution',
       '006-hall-peak-throttle', '007-instance-counter-in-state', '008-rack-vintage', '009-research-budget', '010-negotiated-sla',
-      '011-month-accumulator',
+      '011-month-accumulator', '012-halls-and-hardware',
     ]);
     expect(migrated.save.saveVersion).toBe(SAVE_VERSION);
 
@@ -307,6 +307,31 @@ describe('save and load', () => {
     expect(migratedMonth.revenue).toBe(0);
     expect(migratedLastMonth.totalTicks).toBe(0);
     expect(migratedLastMonth.energyCost).toBe(0);
+  });
+
+  it('carries one capacity flag onto both halves of the decision it became', () => {
+    const engine = engineFor('autopilot-split');
+    engine.runYears(1);
+    const current = createSave(engine, registry);
+
+    // A version-12 save has one autopilot flag covering halls and hardware
+    // together, so rebuild that shape and check both halves inherit it.
+    for (const wasAuto of [true, false]) {
+      const legacy = JSON.parse(JSON.stringify(current)) as Record<string, unknown>;
+      legacy.saveVersion = 12;
+      legacy.autopilot = {
+        research: true, contracts: true, capacity: wasAuto, cooling: true, power: true,
+      };
+
+      const migrated = migrate(legacy as { saveVersion: number });
+      const autopilot = (migrated.save as unknown as { autopilot: Record<string, unknown> })
+        .autopilot;
+      expect(migrated.applied).toContain('012-halls-and-hardware');
+      expect(autopilot.halls).toBe(wasAuto);
+      expect(autopilot.hardware).toBe(wasAuto);
+      // The old key is gone rather than left beside the two that replaced it.
+      expect(autopilot.capacity).toBeUndefined();
+    }
   });
 
   it('restores a migrated save into a runnable campaign', () => {

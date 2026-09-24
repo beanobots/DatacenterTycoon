@@ -65,7 +65,10 @@ describe('the action list', () => {
     const categories = new Set(actionsFor(manualEngine()).map((action) => action.category));
     expect(categories).toContain('research');
     expect(categories).toContain('contracts');
-    expect(categories).toContain('capacity');
+    // Buildings and what goes inside them are separate decisions, and a
+    // player who has taken one over has not thereby taken the other.
+    expect(categories).toContain('halls');
+    expect(categories).toContain('hardware');
     expect(categories).toContain('power');
   });
 
@@ -464,6 +467,65 @@ describe('the fit claim on a contract offer', () => {
       expect(action.fits).toBe(false);
       expect(action.tradeOff).toContain('cooling');
     }
+  });
+});
+
+describe('halls and hardware are separate hands on the wheel', () => {
+  /**
+   * The two used to share one autopilot flag, so a player who wanted to
+   * choose the racks also inherited the property decisions.
+   */
+  const floor = (engine: SimulationEngine) => {
+    const halls = engine.state.facilities.flatMap((f) => f.halls);
+    return {
+      halls: halls.length,
+      racks: halls.flatMap((h) => h.rackGroups).reduce((n, g) => n + g.count, 0),
+    };
+  };
+
+  const withAutopilot = (seed: string, auto: Partial<Record<string, boolean>>) =>
+    new SimulationEngine(registry, {
+      scenarioId: 'scenario.fossil_grid',
+      campaignSeed: seed,
+      autopilot: { ...allAutopilot(true), ...auto } as ReturnType<typeof allAutopilot>,
+    });
+
+  it('buys no racks when the player has taken the hardware decision', () => {
+    const engine = withAutopilot('halls-only', { hardware: false });
+    // The campaign OPENS with a part-filled hall, which is the starting
+    // position rather than anything the heuristic chose, so the test is that
+    // the number does not move - not that it is zero.
+    const before = floor(engine);
+    engine.runYears(4);
+    expect(floor(engine).racks).toBe(before.racks);
+  });
+
+  it('fills the floor it was given without building more of it', () => {
+    const engine = withAutopilot('hardware-only', { halls: false });
+    const before = floor(engine);
+    engine.runYears(4);
+    const after = floor(engine);
+    expect(after.halls).toBe(before.halls);
+    expect(after.racks).toBeGreaterThan(before.racks);
+  });
+
+  it('grows the site only when it holds both halves', () => {
+    // The flags are not merely independent: they compound, because running
+    // out of floor is the thing that makes the heuristic build more of it.
+    // Holding halls alone leaves it with space it may not fill, so it builds
+    // nothing further - which is why this is worth pinning.
+    const run = (auto: Partial<Record<string, boolean>>) => {
+      const engine = withAutopilot('compound', auto);
+      const before = floor(engine);
+      engine.runYears(4);
+      return { before, after: floor(engine) };
+    };
+    const hallsOnly = run({ hardware: false });
+    const both = run({});
+
+    expect(hallsOnly.after.halls).toBe(hallsOnly.before.halls);
+    expect(both.after.halls).toBeGreaterThan(both.before.halls);
+    expect(both.after.racks).toBeGreaterThan(hallsOnly.after.racks);
   });
 });
 

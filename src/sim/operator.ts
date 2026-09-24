@@ -132,17 +132,26 @@ const GROUP_MERGE_TICKS = 90 * 24 * 4;
  * Retirement and maintenance are absent on purpose: hardware reaching end of
  * life and plant needing repair are consequences, not choices, and the systems
  * that own them run regardless of who is deciding.
+ *
+ * Halls and hardware are separate decisions although both grow capacity. A
+ * hall is a building: six months to commission, priced in millions, and what
+ * it can cool is fixed when it is built. A rack is stock: it earns the month
+ * it lands. Holding them apart lets a player leave the property decisions to
+ * the heuristic and still choose what goes on the floor, which is the split
+ * most operators actually run.
  */
-export type DecisionCategory = 'research' | 'contracts' | 'capacity' | 'cooling' | 'power';
+export type DecisionCategory =
+  'research' | 'contracts' | 'halls' | 'hardware' | 'cooling' | 'power';
 
 export const DECISION_CATEGORIES: readonly DecisionCategory[] =
-  ['research', 'contracts', 'capacity', 'cooling', 'power'];
+  ['research', 'contracts', 'halls', 'hardware', 'cooling', 'power'];
 
 export type AutopilotState = Record<DecisionCategory, boolean>;
 
 export function allAutopilot(enabled: boolean): AutopilotState {
   return {
-    research: enabled, contracts: enabled, capacity: enabled, cooling: enabled, power: enabled,
+    research: enabled, contracts: enabled, halls: enabled, hardware: enabled,
+    cooling: enabled, power: enabled,
   };
 }
 
@@ -241,7 +250,9 @@ export class OperatorSystem implements ISimulationSystem {
     else this.resolveExpiringContracts(context, tick.index);
     this.retireEndOfLife(context, tick);
     if (this.autopilot.cooling) this.retrofitCooling(context, tick);
-    if (this.autopilot.capacity) this.expand(context, tick);
+    // Either flag can bring the operator in here: the two halves of expansion
+    // are gated separately inside, and each needs the other's state to decide.
+    if (this.autopilot.halls || this.autopilot.hardware) this.expand(context, tick);
     if (this.autopilot.power) this.investInPower(context);
   }
 
@@ -640,6 +651,13 @@ export class OperatorSystem implements ISimulationSystem {
    *
    * Utilisation alone would deadlock: contracts are only signed against spare
    * capacity, so capacity that only grows when utilisation is high never grows.
+   *
+   * Racks and halls are separate autopilot decisions, so this runs whenever
+   * EITHER is on and gates each half on its own flag. It is one method rather
+   * than two because the halves depend on each other: how many racks are
+   * wanted sizes the shell, and free floor space is the reason not to build
+   * one. A player filling halls by hand still has that space counted here, so
+   * the heuristic does not start a building over floor they are about to use.
    */
   private expand(context: SimulationContext, tick: SimulationTick): void {
     const state = context.state;
@@ -699,6 +717,11 @@ export class OperatorSystem implements ISimulationSystem {
         if (space <= 0) continue;
         spaceAvailable = true;
 
+        // Space is counted even when the player owns the rack decision, so
+        // the hall half below does not start a shell over floor they are
+        // about to fill themselves.
+        if (!this.autopilot.hardware) continue;
+
         const wanted = Math.min(space, racksWanted, RACK_ORDER_LIMIT);
         const affordable = Math.floor(this.availableBudget(context) / Math.max(1, rackCost));
         const toInstall = Math.min(wanted, Math.max(affordable, 0));
@@ -716,6 +739,7 @@ export class OperatorSystem implements ISimulationSystem {
     // Building another empty shell would only add debt and cooling plant with
     // nothing in it to earn the interest back.
     if (spaceAvailable) return;
+    if (!this.autopilot.halls) return;
     if (this.buildingHalls(context) >= 1) return;
 
     // Stop at the interconnection ceiling and at the scenario's own capacity

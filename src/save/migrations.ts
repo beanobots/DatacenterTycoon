@@ -11,7 +11,7 @@
  * entire reason the migration exists.
  */
 
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
 /** Oldest version this build can still read. */
 export const MIN_SUPPORTED_SAVE_VERSION = 1;
 
@@ -279,6 +279,23 @@ const MIGRATIONS: readonly Migration[] = [
         .find((candidate) => candidate && typeof candidate === 'object');
       state.lastMonth = zeroed(shape);
       state.month = zeroed(shape);
+    },
+  },
+  {
+    from: 12, to: 13, id: '012-halls-and-hardware',
+    apply: (save) => {
+      // One "capacity" decision became two: the buildings and what goes
+      // inside them. A version-12 save holds a single autopilot flag for
+      // both, and whichever way it was set is what the player chose for the
+      // whole of expansion - so both halves inherit it rather than guessing
+      // that one of them was meant to be manual.
+      const loose = save as unknown as { autopilot?: Record<string, unknown> };
+      const autopilot = loose.autopilot;
+      if (!autopilot || typeof autopilot !== 'object') return;
+      const wasAuto = autopilot.capacity === true;
+      if (autopilot.halls === undefined) autopilot.halls = wasAuto;
+      if (autopilot.hardware === undefined) autopilot.hardware = wasAuto;
+      delete autopilot.capacity;
     },
   },
 ];
