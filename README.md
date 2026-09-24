@@ -56,6 +56,15 @@ simulation stops and hands you the decisions the autopilot would otherwise make:
 research, contracts, halls, hardware, cooling retrofits and power. Untick a
 category's autopilot to take it over, tick it to hand it back.
 
+Every campaign opens on the same site: one 60-rack hall, full, holding 30 CPU
+racks, 15 HDD archive arrays and 15 tape. Fixed rather than sized to the
+decade, so the era shows up in what the site costs to run and what the market
+will pay for it rather than in how much of it you are given. It is mixed
+because the opening contract book is mixed - the archive and tape rows are
+what let a first-year operator take the cheap long-term archive work while the
+CPU rows chase the general contracts. Because the hall is full, your first
+growth decision is a building, and the hardware cards say so.
+
 Halls and hardware are separate categories although both grow capacity. A hall
 is a building - six months to commission, priced in millions, and its cooling
 fixed when it is built. A rack is stock: it earns the month it lands. Held

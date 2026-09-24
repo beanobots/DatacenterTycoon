@@ -43,6 +43,52 @@ describe('the opening position', () => {
     expect(engine.state.facilities.flatMap((f) => f.powerAssets).length).toBeGreaterThan(0);
   });
 
+  it('opens on a full 60-rack hall of mixed kit, in every era', () => {
+    // A fixed starting position rather than one sized to the decade: the era
+    // shows up in what the site costs to run and what the market pays for it,
+    // not in how much of it the player is given.
+    for (const scenarioId of ['scenario.dry_grid', 'scenario.urban_colo',
+      'scenario.cold_cloud', 'scenario.fossil_grid']) {
+      const engine = new SimulationEngine(registry, {
+        scenarioId, campaignSeed: 'opening', autopilot: allAutopilot(false),
+      });
+      const halls = engine.state.facilities.flatMap((f) => f.halls);
+      expect(halls, scenarioId).toHaveLength(1);
+      expect(halls[0]!.rackCapacity, scenarioId).toBe(60);
+
+      const byHardware = new Map<string, number>();
+      for (const group of halls[0]!.rackGroups) {
+        byHardware.set(group.hardwareId, (byHardware.get(group.hardwareId) ?? 0) + group.count);
+      }
+      expect(Object.fromEntries(byHardware), scenarioId).toEqual({
+        'hardware.cpu.gen1': 30,
+        'hardware.storage.hdd_archive': 15,
+        'hardware.archive.tape': 15,
+      });
+      // Full: the floor the player starts with has nothing spare on it.
+      const racks = [...byHardware.values()].reduce((n, c) => n + c, 0);
+      expect(racks, scenarioId).toBe(halls[0]!.rackCapacity);
+    }
+  });
+
+  it('opens with cooling that can carry every rack it was given', () => {
+    // The fleet is mixed, so the hall has to clear the densest of the three
+    // rather than the average - a hall that cannot cool its own opening kit
+    // would throttle from the first summer.
+    for (const scenarioId of ['scenario.dry_grid', 'scenario.urban_colo',
+      'scenario.cold_cloud', 'scenario.fossil_grid']) {
+      const engine = new SimulationEngine(registry, {
+        scenarioId, campaignSeed: 'opening', autopilot: allAutopilot(false),
+      });
+      const hall = engine.state.facilities.flatMap((f) => f.halls)[0]!;
+      const ceiling = registry.cooling(hall.coolingId, scenarioId).densityKwPerRack;
+      for (const group of hall.rackGroups) {
+        const needs = registry.hardware(group.hardwareId, scenarioId).requiredCoolingKwPerRack;
+        expect(ceiling, `${scenarioId} ${group.hardwareId}`).toBeGreaterThanOrEqual(needs);
+      }
+    }
+  });
+
   it('leaves the first research and the first contract to the player', () => {
     const engine = manualEngine();
     expect(engine.state.research.active).toHaveLength(0);
@@ -607,6 +653,20 @@ describe('placing racks in a chosen hall', () => {
       `hardware:${target!.hallId}:${buy.hardwareId}`, 10);
     expect(result.ok).toBe(true);
     expect(countRacks(engine, target!.hallId)).toBe(before + 10);
+  });
+
+  it('says which problem blocks an order: a full hall or cooling that cannot carry it', () => {
+    // The two wore one message, and a full hall is now the opening position -
+    // so "no hall with cooling dense enough" was the first thing every player
+    // read about a site whose cooling was perfectly adequate.
+    const engine = manualEngine('blocked-reason');
+    const buy = actionsFor(engine).find((a) => a.kind === 'hardware.buy');
+    if (buy?.kind !== 'hardware.buy') throw new Error('expected a hardware action');
+
+    expect(buy.spaceAvailable).toBe(0);
+    expect(buy.halls.some((slot) => slot.canCool)).toBe(true);
+    expect(buy.blocked).toMatch(/full/i);
+    expect(buy.blocked).not.toMatch(/dense/i);
   });
 
   it('refuses a hall whose cooling cannot carry the density, and says so', () => {

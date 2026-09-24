@@ -569,9 +569,16 @@ export function enumerateActions(context: SimulationContext, operator: OperatorS
           + `per rack lands in this year's report.`,
       cost: costPerRack,
       affordable: budget >= costPerRack,
-      blocked: space <= 0
-        ? 'No hall with cooling dense enough and space free. Build or retrofit a hall first.'
-        : undefined,
+      // Two different problems wore one message. A full hall and a hall that
+      // cannot cool this are fixed by different things - another building
+      // versus a retrofit - and every campaign now opens on a full hall, so
+      // the wrong half of that sentence is the first thing a player reads.
+      blocked: space > 0 ? undefined
+        : hallSlots.some((slot) => slot.canCool)
+          ? 'Every hall that can cool this is full. Build another, or retire a group to free '
+            + 'the slots.'
+          : 'No hall cools densely enough for this. Retrofit one, or build a hall with '
+            + 'denser cooling.',
       hardwareId,
       family: hardware.family,
       familyLabel: FAMILY_LABEL[hardware.family] ?? hardware.name,

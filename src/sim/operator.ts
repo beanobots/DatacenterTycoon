@@ -12,7 +12,7 @@
  */
 
 import type { SimulationTick } from '../core/clock.js';
-import { clamp, clamp01 } from '../core/math.js';
+import { clamp01 } from '../core/math.js';
 import type { ISimulationSystem, SimulationContext } from './context.js';
 import { canStartResearch, researchCostUsd, startResearch } from './systems/research.js';
 import { CRITICAL_TRUST } from './systems/community.js';
@@ -72,10 +72,25 @@ const MAX_OPENING_HALL_RACKS = 220;
 const MIN_OPENING_HALL_RACKS = 48;
 /** Share of the free balance a single hall commitment may consume. */
 const MAX_HALL_SHARE_OF_BUDGET = 0.6;
-/** The opening hall. Small enough to leave capital for racks and contracts. */
-const OPENING_HALL_RACKS = 120;
-/** Share of the opening hall that comes with racks already in it. */
-const OPENING_FILL_SHARE = 0.65;
+/**
+ * The site every campaign inherits: a 60-rack hall, full on day one.
+ *
+ * Fixed rather than sized to the decade, because this is the operation the
+ * player is handed rather than a decision the heuristic makes - the same
+ * starting position in every era, so the era shows up in what it costs to
+ * run and what the market will pay for it, not in how much of it there is.
+ *
+ * Mixed rather than sixty of one thing. A floor of identical racks serves one
+ * shape of work, and the opening contract book does not have one shape: the
+ * archive and tape rows are what let a first-year operator take the cheap
+ * long-term archive contracts while the CPU rows chase the general ones.
+ */
+const OPENING_HALL_RACKS = 60;
+const OPENING_FLEET: ReadonlyArray<{ readonly hardwareId: string; readonly racks: number }> = [
+  { hardwareId: 'hardware.cpu.gen1', racks: 30 },
+  { hardwareId: 'hardware.storage.hdd_archive', racks: 15 },
+  { hardwareId: 'hardware.archive.tape', racks: 15 },
+];
 /** Racks ordered in any one month. Procurement is not instantaneous. */
 const RACK_ORDER_LIMIT = 60;
 /** Share of an over-age rack group retired each month. */
@@ -183,51 +198,30 @@ export class OperatorSystem implements ISimulationSystem {
   }
 
   /**
-   * How big the first hall should be, given the decade it opens in.
-   *
-   * The market's size is the product of how much work one contract represents
-   * and how many contracts reach the table - both 1.0 in 2025 and both far
-   * below it in 2006. Building the 2025 hall in 2006 leaves most of the room
-   * empty for a decade while its cooling plant is paid for every month.
+   * The operation the player is handed: one full hall, a grid connection and
+   * diesel standby. Everything after this is decided month by month.
    */
-  private openingHallRacks(context: SimulationContext): number {
-    const era = eraFactors(context);
-    const market = era.demandIndex * era.offerCountIndex;
-    return Math.round(clamp(
-      OPENING_HALL_RACKS * market,
-      MIN_OPENING_HALL_RACKS,
-      MAX_OPENING_HALL_RACKS,
-    ));
-  }
-
   initialize(context: SimulationContext): void {
-    // Opening move: one hall, the best cooling available at the start, enough
-    // racks to serve the first contracts, and a grid connection with diesel
-    // standby. Everything after this is decided month by month.
-    // Sized to the market of its own decade. A 2006 operation that opens with
-    // a 120-rack hall has built a room for work that will not exist for
-    // fifteen years, and spends those years paying to cool it: that single
-    // mismatch was the whole reason the earliest campaign could not be won.
-    const openingRacks = this.openingHallRacks(context);
-    this.buildHall(context, 0, openingRacks);
+    this.buildHall(context, 0, OPENING_HALL_RACKS);
     const facility = context.state.facilities[0];
     if (!facility) return;
     const hall = facility.halls[0];
     if (hall) {
       hall.constructionProgress01 = 1;
       hall.installedTick = 0;
-      // Filled further than half: the opening hall has to be able to serve a
-      // first contract on day one, and in an early decade half of a small
-      // hall is not enough capacity for even the smallest offer the market
-      // will make.
-      this.installRacks(context, hall, this.chooseHardware(context),
-        Math.floor(openingRacks * OPENING_FILL_SHARE));
+      // Full on day one. The hall has to serve a first contract immediately,
+      // and an operator whose opening floor is part empty spends its first
+      // year paying to cool space it has nothing to put in.
+      for (const row of OPENING_FLEET) {
+        this.installRacks(context, hall,
+          context.registry.hardware(row.hardwareId, 'opening-fleet'), row.racks);
+      }
     }
     // Size the opening interconnection to the first hall, not to the region's
     // whole capacity: an interconnection agreement is paid for by the megawatt,
     // and 60 MW of it serving a 1 MW hall is the most expensive idle asset an
     // operator can own. `investInPower` grows it as the load does.
-    const openingMw = Math.max(0.5, (hall?.rackCapacity ?? openingRacks)
+    const openingMw = Math.max(0.5, (hall?.rackCapacity ?? OPENING_HALL_RACKS)
       * context.balance.baseRackPowerKw * eraFactors(context).rackPowerKw / 1000 * 1.8);
     this.buildPower(context, 'power.grid', Math.min(openingMw, context.region.grid.capacityMw), true);
     this.buildPower(context, 'power.diesel_backup', Math.max(1, openingMw * 0.3), true);
