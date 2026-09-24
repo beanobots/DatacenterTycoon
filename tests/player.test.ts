@@ -241,6 +241,13 @@ describe('taking an action', () => {
 
   it('buys racks, charges for them, and books their embodied carbon', () => {
     const engine = manualEngine();
+    // The opening hall is full, so make room first. Retiring is the only way
+    // to free slots without waiting six months for a hall to commission, and
+    // it is the same move a player makes to change what a hall runs.
+    const retire = actionsFor(engine).find((a) => a.kind === 'hardware.retire');
+    expect(retire, 'expected something on the floor to retire').toBeDefined();
+    expect(act(engine, retire!.id).ok).toBe(true);
+
     const before = engine.state.company.cash;
     const racksBefore = engine.state.facilities[0]!.halls[0]!.rackGroups
       .reduce((total, group) => total + group.count, 0);
@@ -548,18 +555,24 @@ describe('halls and hardware are separate hands on the wheel', () => {
 
   it('fills the floor it was given without building more of it', () => {
     const engine = withAutopilot('hardware-only', { halls: false });
-    const before = floor(engine);
+    // The opening hall is full, so there is nothing to fill until something
+    // comes off the floor. Retiring a group is what makes the space, and
+    // refilling it is exactly the job this flag holds.
+    const retire = actionsFor(engine).find((a) => a.kind === 'hardware.retire');
+    expect(retire).toBeDefined();
+    act(engine, retire!.id);
+
+    const emptied = floor(engine);
     engine.runYears(4);
     const after = floor(engine);
-    expect(after.halls).toBe(before.halls);
-    expect(after.racks).toBeGreaterThan(before.racks);
+    expect(after.halls).toBe(emptied.halls);
+    expect(after.racks).toBeGreaterThan(emptied.racks);
   });
 
   it('grows the site only when it holds both halves', () => {
-    // The flags are not merely independent: they compound, because running
-    // out of floor is the thing that makes the heuristic build more of it.
-    // Holding halls alone leaves it with space it may not fill, so it builds
-    // nothing further - which is why this is worth pinning.
+    // The flags are not merely independent: they compound. Halls alone adds
+    // floor that stays empty, hardware alone cannot go beyond the floor it
+    // has, and only together does the site actually get bigger.
     const run = (auto: Partial<Record<string, boolean>>) => {
       const engine = withAutopilot('compound', auto);
       const before = floor(engine);
@@ -567,11 +580,19 @@ describe('halls and hardware are separate hands on the wheel', () => {
       return { before, after: floor(engine) };
     };
     const hallsOnly = run({ hardware: false });
+    const hardwareOnly = run({ halls: false });
     const both = run({});
 
-    expect(hallsOnly.after.halls).toBe(hallsOnly.before.halls);
+    // Halls alone: more buildings, and nothing put in them.
+    expect(hallsOnly.after.halls).toBeGreaterThan(hallsOnly.before.halls);
+    expect(hallsOnly.after.racks).toBe(hallsOnly.before.racks);
+    // Hardware alone: the opening hall is already full, so there is nowhere
+    // to put anything and no way to make room.
+    expect(hardwareOnly.after.halls).toBe(hardwareOnly.before.halls);
+    // Both: more floor AND more on it than either half reached alone.
     expect(both.after.halls).toBeGreaterThan(both.before.halls);
     expect(both.after.racks).toBeGreaterThan(hallsOnly.after.racks);
+    expect(both.after.racks).toBeGreaterThan(hardwareOnly.after.racks);
   });
 });
 

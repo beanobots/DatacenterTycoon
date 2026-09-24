@@ -542,9 +542,15 @@ describe('explaining an SLA breach', () => {
    * cause is attributed to something the player can act on, and that the two
    * causes needing opposite responses are never confused.
    */
-  function playerEngine(seed: string): SimulationEngine {
+  /**
+   * Every campaign opens on a hall of CPU, HDD and tape, and every workload
+   * but AI training accepts CPU - so the "nothing in your fleet can run this"
+   * breach is only reachable where AI training is on the market. The desert
+   * site opens in 2006, which is two decades too early for that.
+   */
+  function playerEngine(seed: string, scenarioId = 'scenario.dry_grid'): SimulationEngine {
     return new SimulationEngine(registry, {
-      scenarioId: 'scenario.dry_grid', campaignSeed: seed, autopilot: allAutopilot(false),
+      scenarioId, campaignSeed: seed, autopilot: allAutopilot(false),
     });
   }
 
@@ -574,8 +580,19 @@ describe('explaining an SLA breach', () => {
   });
 
   it('tells "nothing can run this" apart from "you sold too much of it"', () => {
-    const engine = playerEngine('breach-kinds');
+    const engine = playerEngine('breach-kinds', 'scenario.fossil_grid');
     engine.advanceTicks(engine.clock.ticksForDays(40));
+
+    // Make a fleet that genuinely cannot run some of the work on offer.
+    // Every campaign opens with CPU racks, and CPU is compatible with seven
+    // of the eight workloads - so from the opening position "nothing can run
+    // this" is nearly unreachable. Taking the CPU off the floor leaves
+    // storage and tape, which cannot touch compute work at all.
+    for (const action of enumerateActions(engine.context, engine.operator)) {
+      if (action.kind !== 'hardware.retire') continue;
+      if (!action.hardwareId.startsWith('hardware.cpu')) continue;
+      applyAction(engine.context, engine.operator, action.id);
+    }
 
     // Pick the two offers deliberately rather than hoping a seed produces
     // both: one for a workload the fleet cannot touch, one for a workload it
@@ -609,7 +626,7 @@ describe('explaining an SLA breach', () => {
     // Penalties used to be charged against delivered revenue, so serving
     // nothing cost nothing and serving 90% cost real money. A contract that is
     // entirely unserved has to be the most expensive outcome there is.
-    const engine = playerEngine('breach-penalty');
+    const engine = playerEngine('breach-penalty', 'scenario.fossil_grid');
     engine.advanceTicks(engine.clock.ticksForDays(40));
     signEverything(engine);
     engine.advanceTicks(engine.clock.ticksForDays(200));
@@ -806,22 +823,28 @@ describe('history that the player meets', () => {
     expect(contract!.slaUptime01).toBeGreaterThan(0.9);
   });
 
-  it('sizes the opening hall to the market of its decade', () => {
-    const early = new SimulationEngine(registry, {
-      scenarioId: 'scenario.dry_grid', campaignSeed: 'sizing',
-    });
-    const late = new SimulationEngine(registry, {
-      scenarioId: 'scenario.fossil_grid', campaignSeed: 'sizing',
-    });
-    const capacityOf = (engine: SimulationEngine) => engine.state.facilities
-      .flatMap((f) => f.halls).reduce((n, hall) => n + hall.rackCapacity, 0);
+  it('hands every decade the same site, with no room going spare', () => {
+    // This replaces a guarantee that the opening hall was SIZED to its
+    // decade. The site is fixed now, and the concern that rule existed for -
+    // a 2006 operation paying to cool a room it will not fill for fifteen
+    // years - is answered more directly: the hall is full in every era, so
+    // there is no empty room to pay for. What the decade still changes is
+    // what the site costs to run and what the market will pay for it.
+    const sites = ['scenario.dry_grid', 'scenario.urban_colo',
+      'scenario.cold_cloud', 'scenario.fossil_grid'].map((scenarioId) => ({
+      scenarioId,
+      engine: new SimulationEngine(registry, { scenarioId, campaignSeed: 'sizing' }),
+    }));
 
-    // A 2006 operation that opens with a 2020-sized hall spends fifteen years
-    // paying to cool an empty room.
-    expect(capacityOf(early)).toBeLessThan(capacityOf(late));
-    // But large enough to trade on day one: half of a tiny hall cannot serve
-    // even the smallest offer its own decade makes.
-    expect(early.state.contracts.length + early.state.contractOffers.length)
-      .toBeGreaterThan(0);
+    for (const { scenarioId, engine } of sites) {
+      const halls = engine.state.facilities.flatMap((f) => f.halls);
+      const slots = halls.reduce((n, hall) => n + hall.rackCapacity, 0);
+      const racks = halls.flatMap((h) => h.rackGroups).reduce((n, g) => n + g.count, 0);
+      expect(slots, scenarioId).toBe(60);
+      expect(racks, scenarioId).toBe(slots);
+      // And large enough to trade on day one, in its own decade's market.
+      expect(engine.state.contracts.length + engine.state.contractOffers.length, scenarioId)
+        .toBeGreaterThan(0);
+    }
   });
 });
