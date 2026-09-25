@@ -294,6 +294,7 @@
   .clock { display: flex; flex-direction: column; gap: 1px; margin-right: auto; }
   .clock .date { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
   .clock .sub { font-size: 11px; color: var(--ink-3); }
+  .turnbar .sub { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
   button.step {
     font-family: var(--sans); font-size: 13px; font-weight: 600; color: #fff;
     background: var(--accent); border: 1px solid transparent; border-radius: 6px;
@@ -504,6 +505,7 @@
       <button class="step" id="next-month" type="button">Advance month</button>
       <button class="step ghost" id="next-year" type="button">Advance year</button>
       <button class="step ghost" id="save" type="button">Save</button>
+      <span class="sub" id="autosave-status"></span>
     </div>
   </div>
   <div class="progress"><i id="bar"></i></div>
@@ -2167,14 +2169,17 @@
 
   // ---------- save storage ------------------------------------------------
   /**
-   * Where campaigns are kept.
-   *
-   * The `db` capability is durable and follows the player between devices, but
-   * a view may not be granted it - `claude.use` resolves null for reasons the
-   * page cannot distinguish - so the browser's own storage is the fallback and
-   * the page works with neither. Nothing here blocks the first paint: the save
-   * list fills in when the backend answers.
+   * Where campaigns are kept, in order of preference: the Claude artifact
+   * `db` capability, then this site's own /api/tycoon/saves (a real cloud
+   * save when the game is framed inside DCT Project - see src/app/tycoon/ and
+   * src/app/api/tycoon/saves/ in that repo), then the browser's own storage,
+   * and finally none of the above. A view may be missing any one of these for
+   * reasons the page cannot distinguish, so each is a probe, not an assumption
+   * - and nothing here blocks the first paint: the save list fills in once the
+   * backend answers.
    */
+  var SAVE_API = '/api/tycoon/saves';
+
   var store = {
     backend: 'pending',
     db: null,
@@ -2185,6 +2190,15 @@
         if (db) { this.db = db; this.backend = 'db'; return; }
       } catch (error) {
         // An unavailable capability is not an error condition for the page.
+      }
+      try {
+        // A live probe rather than an assumption from the URL: this same
+        // page can be opened as a bare static file, where fetch resolves to
+        // the surrounding site's 404 page rather than failing outright.
+        var res = await fetch(SAVE_API, { credentials: 'same-origin' });
+        if (res.ok) { this.backend = 'server'; return; }
+      } catch (error) {
+        // No network, or no such route - fall through to the browser.
       }
       this.backend = this.localAvailable() ? 'local' : 'none';
     },
@@ -2230,6 +2244,11 @@
           return [];
         }
       }
+      if (this.backend === 'server') {
+        var res = await fetch(SAVE_API, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('save list request failed (' + res.status + ')');
+        return await res.json();
+      }
       if (this.backend === 'local') {
         var map = this.readLocal();
         return Object.keys(map).map(function (id) {
@@ -2244,6 +2263,15 @@
         await this.db.doc('saves/' + id).set(record);
         return true;
       }
+      if (this.backend === 'server') {
+        var res = await fetch(SAVE_API + '/' + encodeURIComponent(id), {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record),
+        });
+        return res.ok;
+      }
       if (this.backend === 'local') {
         var map = this.readLocal();
         map[id] = record;
@@ -2257,6 +2285,12 @@
         var snap = await this.db.doc('saves/' + id).get();
         return snap.exists ? snap.data() : null;
       }
+      if (this.backend === 'server') {
+        var res = await fetch(SAVE_API + '/' + encodeURIComponent(id), { credentials: 'same-origin' });
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error('save read failed (' + res.status + ')');
+        return await res.json();
+      }
       if (this.backend === 'local') return this.readLocal()[id] || null;
       return null;
     },
@@ -2265,6 +2299,10 @@
       if (this.backend === 'db' && this.db) {
         await this.db.doc('saves/' + id).delete();
         return true;
+      }
+      if (this.backend === 'server') {
+        var res = await fetch(SAVE_API + '/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'same-origin' });
+        return res.ok;
       }
       if (this.backend === 'local') {
         var map = this.readLocal();
@@ -2276,6 +2314,7 @@
 
     describe() {
       if (this.backend === 'db') return 'Saved with this artifact, on any device you open it from.';
+      if (this.backend === 'server') return 'Saved to the cloud, on any device signed in to this site.';
       if (this.backend === 'local') return 'Saved in this browser only.';
       if (this.backend === 'pending') return 'Connecting to storage\u2026';
       return 'Storage is unavailable in this view, so campaigns cannot be saved.';
@@ -2296,28 +2335,68 @@
     return (clean(scenarioId) + '~' + clean(seed || 'default')).slice(0, 180);
   }
 
+  /** The record every save writes, and the slot it writes to - one campaign, one row, autosave or manual. */
+  function buildSaveRecord() {
+    var saved = run.save();
+    return {
+      id: slotId(saved.summary.scenarioId, saved.summary.seed),
+      record: {
+        name: saved.summary.scenarioName + ' \u00b7 ' + saved.summary.monthLabel,
+        savedAtIso: new Date().toISOString(),
+        summary: saved.summary,
+        file: saved.file,
+      },
+    };
+  }
+
   async function saveCampaign() {
     if (!run) return;
     if (store.backend === 'pending') { toast('Storage is still connecting. Try again in a moment.'); return; }
     if (store.backend === 'none') { toast('Storage is unavailable in this view.', true); return; }
 
-    var saved = run.save();
-    var id = slotId(saved.summary.scenarioId, saved.summary.seed);
-    var record = {
-      name: saved.summary.scenarioName + ' \u00b7 ' + saved.summary.monthLabel,
-      savedAtIso: new Date().toISOString(),
-      summary: saved.summary,
-      file: saved.file,
-    };
+    var built = buildSaveRecord();
     try {
-      var ok = await store.put(id, record);
+      var ok = await store.put(built.id, built.record);
       if (!ok) { toast('Could not save: storage refused the write.', true); return; }
-      toast('Saved ' + record.name + '. ' + store.describe());
+      toast('Saved ' + built.record.name + '. ' + store.describe());
+      setAutosaveStatus('Saved ' + timeAgoLabel(new Date()));
       await refreshSaveList();
     } catch (error) {
       // A write can be refused by quota or by this viewer's access level.
       toast('Could not save: ' + (error && error.message ? error.message : 'storage refused the write'), true);
     }
+  }
+
+  /**
+   * The same write as the Save button, run after every turn, without a toast:
+   * a toast on every advance would compete with the alerts an advance already
+   * shows, and "saved" is the expected outcome of a turn, not news. Failure is
+   * not news either in the sense of costing the player anything - the campaign
+   * is running in memory regardless - so it is a quiet status line, not a
+   * dialog: `pending`/`none` back ends are silently skipped, since manually
+   * pressing Save already tells the player exactly that.
+   */
+  async function autosaveCampaign() {
+    if (!run) return;
+    if (store.backend === 'pending' || store.backend === 'none') return;
+    var built = buildSaveRecord();
+    try {
+      var ok = await store.put(built.id, built.record);
+      setAutosaveStatus(ok ? 'Autosaved ' + timeAgoLabel(new Date())
+        : 'Autosave failed: storage refused the write');
+      if (ok) await refreshSaveList();
+    } catch (error) {
+      setAutosaveStatus('Autosave failed: ' + (error && error.message ? error.message : 'unknown error'));
+    }
+  }
+
+  function timeAgoLabel(date) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function setAutosaveStatus(text) {
+    var node = $('autosave-status');
+    if (node) node.textContent = text;
   }
 
   async function resumeCampaign(id) {
@@ -2350,6 +2429,7 @@
     $('clock-date').textContent = MONTHS[when.getUTCMonth()] + ' ' + when.getUTCFullYear();
     $('clock-sub').textContent = 'Month ' + (record.summary.monthsElapsed + 1)
       + ' of ' + record.summary.totalMonths + ' \u00b7 resumed';
+    setAutosaveStatus('');
     renderAlerts();
     refresh();
     window.scrollTo({ top: 0 });
@@ -2482,6 +2562,9 @@
       renderAlerts();
       refresh();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Fire-and-forget: a turn is already committed in memory once it has
+      // run, so autosave never blocks or holds up the next one.
+      autosaveCampaign();
     }, 16);
   }
 
@@ -2547,6 +2630,7 @@
     var start = new Date(run.dateIso());
     $('clock-date').textContent = MONTHS[start.getUTCMonth()] + ' ' + start.getUTCFullYear();
     $('clock-sub').textContent = 'Month 1 of ' + (years * 12) + ' \u00b7 ' + (manual ? 'you decide' : 'autopilot');
+    setAutosaveStatus('');
     renderAlerts();
     refresh();
     window.scrollTo({ top: 0 });
